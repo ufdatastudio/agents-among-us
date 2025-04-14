@@ -9,18 +9,33 @@ The Byzantine Brains project explores fault-tolerant consensus-building in distr
 - Explore novel applications of consensus algorithms in multi-agent frameworks.
 
 ## Technologies
-- **Languages**: Python (or TBD)  
-- **Frameworks**: LangChain, LiteLLM
+- **Languages**: Python, HTML, JavaScript
+- **Frameworks & Libraries**: Flask, LangChain, LiteLLM, Google Generative AI, Anthropic Claude
+- **Data Storage**: CSV-based logging (via Python's `csv` module)
+- **Frontend**: Jinja2 templates with live SSE updates for real-time simulation
 
 ## Project Structure
 /agents
-    honest_agent.py      # Implementation of an honest agent using LLMs
-    byzantine_agent.py   # Implementation of a Byzantine agent using LLMs
+    honest_agent.py        # Honest agent logic using LLMs and trust tracking
+    byzantine_agent.py     # Byzantine agent logic using LLMs for deception
+    agent_setup.py         # Agent initialization and configuration
 
 /consensus
-    consensus_module.py  # Logic for reaching consensus in the system
+    consensus_module.py    # Decision logic for reaching consensus among agents
 
-main.py                 # Main script orchestrating the consensus process
+/core
+    simulation.py          # Initializes game state and tracks current simulation data
+
+/data
+    database.py            # CSV-based logging of game events, rounds, trust, and votes
+
+/game
+    game_loop.py           # Full simulation loop: movement, discussion, voting, map rendering
+
+/web_app
+    web_app.py             # Flask app for running the simulation and streaming output
+
+main.py                   # Entry point to launch the Flask web application
 
 ## Team
 - **Neal Shankar** - Project Manager / Developer  
@@ -33,7 +48,3 @@ main.py                 # Main script orchestrating the consensus process
 
 ## Contact
 For inquiries, please reach out to the team.
-
----
-
-*This README will be updated as the project progresses.*
