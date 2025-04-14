@@ -1,5 +1,7 @@
 # The Byzantine Brains: Fault-Tolerant Consensus with LLMs
 
+![ByzantineBrains Screenshot](https://github.com/NealShankarGit/ByzantineBrains/blob/main/images/readme_screenshot.png?raw=true)
+
 ## Project Overview
 The Byzantine Brains project explores fault-tolerant consensus-building in distributed AI systems using large language models (LLMs). Inspired by the Byzantine Generals Problem, the project aims to develop a scalable, reliable system for robust decision-making in uncertain environments.
 
