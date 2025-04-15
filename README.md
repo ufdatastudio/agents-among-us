@@ -40,8 +40,8 @@ The Byzantine Brains project explores fault-tolerant consensus-building in distr
 main.py                   # Entry point to launch the Flask web application
 
 ## Team
-- **Neal Shankar** - Project Manager / Developer  
-- **Tyler Wescott** - System Architect / Developer  
+- **Neal Shankar** - Project Manager / Developer - neal.shankar@ufl.edu
+- **Tyler Wescott** - System Architect / Developer - tylerwescott@ufl.edu
 
 ## Advisor
 - **Dr. Emmanuel Dorley**  
