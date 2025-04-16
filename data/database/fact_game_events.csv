@@ -607,3 +607,212 @@ a589fdd1-6236-4cdc-9887-a5d49d30167f,2,Agent_8,Admin,False,True,Agent_6,No Eject
 0fb603c7-7c88-4d49-ad1b-7fd414592e79,3,Agent_3,Navigation,False,True,Agent_5,Agent_5,True,0,True,0.8333333333333334,2025-04-15T12:24:44.457009
 0fb603c7-7c88-4d49-ad1b-7fd414592e79,3,Agent_4,Reactor,False,True,Agent_5,Agent_5,True,0,True,0.8333333333333334,2025-04-15T12:24:44.457508
 0fb603c7-7c88-4d49-ad1b-7fd414592e79,3,Agent_6,Cafeteria,False,True,Agent_5,Agent_5,True,0,True,0.8333333333333334,2025-04-15T12:24:44.457508
+483610d9-a2f3-4eb0-84d5-1b14859381a0,1,Agent_1,MedBay,False,True,No Ejection,No Ejection,True,0,True,0.8571428571428571,2025-04-15T12:29:23.093600
+483610d9-a2f3-4eb0-84d5-1b14859381a0,1,Agent_2,Shields,False,True,Agent_1,No Ejection,False,0,True,0.8571428571428571,2025-04-15T12:29:23.094100
+483610d9-a2f3-4eb0-84d5-1b14859381a0,1,Agent_4,Lower Engine,False,True,No Ejection,No Ejection,True,0,True,0.8571428571428571,2025-04-15T12:29:23.094100
+483610d9-a2f3-4eb0-84d5-1b14859381a0,1,Agent_5,MedBay,False,True,No Ejection,No Ejection,True,0,True,0.8571428571428571,2025-04-15T12:29:23.094600
+483610d9-a2f3-4eb0-84d5-1b14859381a0,1,Agent_6,Cafeteria,False,True,No Ejection,No Ejection,True,0,True,0.8571428571428571,2025-04-15T12:29:23.094600
+483610d9-a2f3-4eb0-84d5-1b14859381a0,1,Agent_7,Shields,False,True,No Ejection,No Ejection,True,0,True,0.8571428571428571,2025-04-15T12:29:23.095100
+483610d9-a2f3-4eb0-84d5-1b14859381a0,1,Agent_8,Storage,False,True,No Ejection,No Ejection,True,0,True,0.8571428571428571,2025-04-15T12:29:23.095598
+483610d9-a2f3-4eb0-84d5-1b14859381a0,2,Agent_1,MedBay,False,True,No Ejection,No Ejection,True,0,True,1.0,2025-04-15T12:29:49.383056
+483610d9-a2f3-4eb0-84d5-1b14859381a0,2,Agent_2,Shields,False,True,No Ejection,No Ejection,True,0,True,1.0,2025-04-15T12:29:49.383056
+483610d9-a2f3-4eb0-84d5-1b14859381a0,2,Agent_4,Storage,False,True,No Ejection,No Ejection,True,0,True,1.0,2025-04-15T12:29:49.383557
+483610d9-a2f3-4eb0-84d5-1b14859381a0,2,Agent_5,MedBay,False,True,No Ejection,No Ejection,True,0,True,1.0,2025-04-15T12:29:49.383557
+483610d9-a2f3-4eb0-84d5-1b14859381a0,2,Agent_6,Cafeteria,False,True,No Ejection,No Ejection,True,0,True,1.0,2025-04-15T12:29:49.384057
+483610d9-a2f3-4eb0-84d5-1b14859381a0,2,Agent_8,Storage,False,True,No Ejection,No Ejection,True,0,True,1.0,2025-04-15T12:29:49.384556
+483610d9-a2f3-4eb0-84d5-1b14859381a0,3,Agent_2,Shields,False,True,Agent_1,Agent_1,True,0,True,0.5,2025-04-15T12:30:16.854470
+483610d9-a2f3-4eb0-84d5-1b14859381a0,3,Agent_4,Shields,False,True,No Ejection,Agent_1,False,0,True,0.5,2025-04-15T12:30:16.854470
+483610d9-a2f3-4eb0-84d5-1b14859381a0,3,Agent_5,MedBay,False,True,Agent_1,Agent_1,True,0,True,0.5,2025-04-15T12:30:16.854470
+483610d9-a2f3-4eb0-84d5-1b14859381a0,3,Agent_6,Cafeteria,False,True,Agent_1,Agent_1,True,0,True,0.5,2025-04-15T12:30:16.854969
+483610d9-a2f3-4eb0-84d5-1b14859381a0,3,Agent_8,Storage,False,True,Agent_4,Agent_1,False,0,True,0.5,2025-04-15T12:30:16.854969
+483610d9-a2f3-4eb0-84d5-1b14859381a0,4,Agent_2,Shields,False,True,Agent_1,Agent_6,False,0,True,0.6,2025-04-15T12:30:40.339137
+483610d9-a2f3-4eb0-84d5-1b14859381a0,4,Agent_4,Storage,False,True,Agent_6,Agent_6,True,0,True,0.6,2025-04-15T12:30:40.339137
+483610d9-a2f3-4eb0-84d5-1b14859381a0,4,Agent_5,MedBay,False,True,Agent_6,Agent_6,True,0,True,0.6,2025-04-15T12:30:40.339137
+483610d9-a2f3-4eb0-84d5-1b14859381a0,4,Agent_8,Storage,False,True,Agent_6,Agent_6,True,0,True,0.6,2025-04-15T12:30:40.339636
+483610d9-a2f3-4eb0-84d5-1b14859381a0,6,Agent_2,Shields,False,True,Agent_1,Agent_1,True,0,True,0.6666666666666666,2025-04-15T12:31:01.711310
+483610d9-a2f3-4eb0-84d5-1b14859381a0,6,Agent_5,MedBay,False,True,Agent_1,Agent_1,True,0,True,0.6666666666666666,2025-04-15T12:31:01.711310
+483610d9-a2f3-4eb0-84d5-1b14859381a0,6,Agent_8,Shields,False,True,Agent_2,Agent_1,False,0,True,0.6666666666666666,2025-04-15T12:31:01.711811
+bbba5b23-abd3-4f11-af5c-b50128daa50e,1,Agent_2,Reactor,False,True,Agent_8,Agent_8,True,0,True,0.8571428571428571,2025-04-15T14:10:31.713911
+bbba5b23-abd3-4f11-af5c-b50128daa50e,1,Agent_3,Shields,False,True,Agent_8,Agent_8,True,0,True,0.8571428571428571,2025-04-15T14:10:31.713911
+bbba5b23-abd3-4f11-af5c-b50128daa50e,1,Agent_4,Lower Engine,False,True,Agent_8,Agent_8,True,0,True,0.8571428571428571,2025-04-15T14:10:31.713911
+bbba5b23-abd3-4f11-af5c-b50128daa50e,1,Agent_5,O2,False,True,Agent_8,Agent_8,True,0,True,0.8571428571428571,2025-04-15T14:10:31.714411
+bbba5b23-abd3-4f11-af5c-b50128daa50e,1,Agent_6,Storage,False,True,Agent_8,Agent_8,True,0,True,0.8571428571428571,2025-04-15T14:10:31.714911
+bbba5b23-abd3-4f11-af5c-b50128daa50e,1,Agent_7,Cafeteria,False,True,Agent_8,Agent_8,True,0,True,0.8571428571428571,2025-04-15T14:10:31.714911
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,1,Agent_1,Shields,False,True,Agent_3,Agent_4,False,0,True,0.6666666666666666,2025-04-15T17:31:14.137768
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,1,Agent_2,Security,False,True,Agent_4,Agent_4,True,0,True,0.6666666666666666,2025-04-15T17:31:14.138268
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,1,Agent_3,Shields,False,True,Agent_4,Agent_4,True,0,True,0.6666666666666666,2025-04-15T17:31:14.138766
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,1,Agent_7,Security,False,True,Agent_4,Agent_4,True,0,True,0.6666666666666666,2025-04-15T17:31:14.138766
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,1,Agent_8,Cafeteria,False,True,Agent_4,Agent_4,True,0,True,0.6666666666666666,2025-04-15T17:31:14.139268
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,2,Agent_1,Shields,False,True,Agent_3,Agent_4,False,0,True,0.75,2025-04-15T17:31:31.150503
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,2,Agent_2,Security,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:31:31.150503
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,2,Agent_7,Upper Engine,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:31:31.150503
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,2,Agent_8,Cafeteria,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:31:31.151003
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,3,Agent_1,Shields,False,True,Agent_3,Agent_4,False,0,True,0.75,2025-04-15T17:31:51.239598
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,3,Agent_2,Security,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:31:51.240060
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,3,Agent_7,Security,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:31:51.240060
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,3,Agent_8,Cafeteria,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:31:51.240519
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,4,Agent_1,Shields,False,True,Agent_3,Agent_4,False,0,True,0.75,2025-04-15T17:32:07.767689
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,4,Agent_2,Security,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:32:07.768190
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,4,Agent_7,Upper Engine,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:32:07.768690
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,4,Agent_8,Cafeteria,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:32:07.768690
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,5,Agent_1,Shields,False,True,Agent_3,Agent_4,False,0,True,0.75,2025-04-15T17:32:22.378081
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,5,Agent_2,Security,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:32:22.378081
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,5,Agent_7,Security,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:32:22.378581
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,5,Agent_8,Cafeteria,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:32:22.378581
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,6,Agent_1,Shields,False,True,Agent_3,Agent_4,False,0,True,0.75,2025-04-15T17:32:39.887220
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,6,Agent_2,Security,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:32:39.887719
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,6,Agent_7,Upper Engine,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:32:39.887719
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,6,Agent_8,Cafeteria,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:32:39.888219
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,7,Agent_1,Shields,False,True,Agent_3,Agent_4,False,0,True,0.75,2025-04-15T17:32:55.553880
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,7,Agent_2,Upper Engine,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:32:55.553880
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,7,Agent_7,MedBay,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:32:55.554374
+3e1c38f6-744a-4c58-8fcc-9afc3ecfed18,7,Agent_8,Cafeteria,False,True,Agent_4,Agent_4,True,0,True,0.75,2025-04-15T17:32:55.554374
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,1,Agent_1,Upper Engine,False,True,Agent_2,Agent_2,True,0,True,0.5714285714285714,2025-04-15T17:33:41.362271
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,1,Agent_3,Security,False,True,No Ejection,Agent_2,False,0,True,0.5714285714285714,2025-04-15T17:33:41.362271
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,1,Agent_4,Storage,False,True,Agent_3,Agent_2,False,0,True,0.5714285714285714,2025-04-15T17:33:41.362771
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,1,Agent_6,O2,False,True,Agent_2,Agent_2,True,0,True,0.5714285714285714,2025-04-15T17:33:41.362771
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,1,Agent_7,Lower Engine,False,True,Agent_2,Agent_2,True,0,True,0.5714285714285714,2025-04-15T17:33:41.362771
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,1,Agent_8,Electrical,False,True,Agent_2,Agent_2,True,0,True,0.5714285714285714,2025-04-15T17:33:41.362771
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,2,Agent_1,Reactor,False,True,No Ejection,No Ejection,True,0,True,0.8333333333333334,2025-04-15T17:34:06.857881
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,2,Agent_3,Reactor,False,True,Agent_6,No Ejection,False,0,True,0.8333333333333334,2025-04-15T17:34:06.858379
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,2,Agent_4,Storage,False,True,No Ejection,No Ejection,True,0,True,0.8333333333333334,2025-04-15T17:34:06.858879
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,2,Agent_6,O2,False,True,No Ejection,No Ejection,True,0,True,0.8333333333333334,2025-04-15T17:34:06.858879
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,2,Agent_7,Security,False,True,No Ejection,No Ejection,True,0,True,0.8333333333333334,2025-04-15T17:34:06.859379
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,2,Agent_8,Electrical,False,True,No Ejection,No Ejection,True,0,True,0.8333333333333334,2025-04-15T17:34:06.859379
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,3,Agent_3,Security,False,True,Agent_1,Agent_1,True,0,True,0.8333333333333334,2025-04-15T17:34:33.024454
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,3,Agent_4,Storage,False,True,Agent_1,Agent_1,True,0,True,0.8333333333333334,2025-04-15T17:34:33.024454
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,3,Agent_6,O2,False,True,Agent_1,Agent_1,True,0,True,0.8333333333333334,2025-04-15T17:34:33.024454
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,3,Agent_7,Security,False,True,Agent_1,Agent_1,True,0,True,0.8333333333333334,2025-04-15T17:34:33.024953
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,3,Agent_8,Electrical,False,True,Agent_1,Agent_1,True,0,True,0.8333333333333334,2025-04-15T17:34:33.024953
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,4,Agent_3,Reactor,False,True,Agent_7,Agent_7,True,0,True,0.8,2025-04-15T17:34:52.684404
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,4,Agent_4,Storage,False,True,Agent_7,Agent_7,True,0,True,0.8,2025-04-15T17:34:52.684903
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,4,Agent_6,O2,False,True,Agent_7,Agent_7,True,0,True,0.8,2025-04-15T17:34:52.684903
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,4,Agent_8,Electrical,False,True,Agent_7,Agent_7,True,0,True,0.8,2025-04-15T17:34:52.685403
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,5,Agent_3,Upper Engine,False,True,No Ejection,Agent_8,False,0,True,0.5,2025-04-15T17:35:07.313519
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,5,Agent_4,Storage,False,True,Agent_8,Agent_8,True,0,True,0.5,2025-04-15T17:35:07.313519
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,5,Agent_6,O2,False,True,Agent_8,Agent_8,True,0,True,0.5,2025-04-15T17:35:07.314019
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,6,Agent_3,Reactor,False,True,Agent_7,Agent_7,True,0,True,1.0,2025-04-15T17:35:16.837640
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,6,Agent_4,Storage,False,True,Agent_7,Agent_7,True,0,True,1.0,2025-04-15T17:35:16.837640
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,6,Agent_6,O2,False,True,Agent_7,Agent_7,True,0,True,1.0,2025-04-15T17:35:16.838140
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,7,Agent_3,Security,False,True,Agent_8,Agent_8,True,0,True,0.6666666666666666,2025-04-15T17:35:28.168825
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,7,Agent_4,Storage,False,True,Agent_5,Agent_8,False,0,True,0.6666666666666666,2025-04-15T17:35:28.169325
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,7,Agent_6,O2,False,True,Agent_8,Agent_8,True,0,True,0.6666666666666666,2025-04-15T17:35:28.169325
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,8,Agent_3,Reactor,False,True,Agent_7,Agent_7,True,0,True,1.0,2025-04-15T17:35:39.430786
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,8,Agent_4,Storage,False,True,Agent_7,Agent_7,True,0,True,1.0,2025-04-15T17:35:39.430786
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,8,Agent_6,O2,False,True,Agent_7,Agent_7,True,0,True,1.0,2025-04-15T17:35:39.430786
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,9,Agent_3,Upper Engine,False,True,Agent_8,Agent_8,True,0,True,1.0,2025-04-15T17:35:49.255043
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,9,Agent_4,Storage,False,True,Agent_8,Agent_8,True,0,True,1.0,2025-04-15T17:35:49.255544
+77ce21b5-6c56-43a6-a2ec-c08c5982a053,9,Agent_6,O2,False,True,Agent_8,Agent_8,True,0,True,1.0,2025-04-15T17:35:49.255544
+f4e604e5-8b81-48a5-a674-eb3093bea95b,1,Agent_1,Cafeteria,False,True,Agent_3,Agent_3,True,0,True,0.7142857142857143,2025-04-15T17:37:07.027113
+f4e604e5-8b81-48a5-a674-eb3093bea95b,1,Agent_2,Reactor,False,True,Agent_6,Agent_3,False,0,True,0.7142857142857143,2025-04-15T17:37:07.027613
+f4e604e5-8b81-48a5-a674-eb3093bea95b,1,Agent_4,Upper Engine,False,True,Agent_3,Agent_3,True,0,True,0.7142857142857143,2025-04-15T17:37:07.027613
+f4e604e5-8b81-48a5-a674-eb3093bea95b,1,Agent_5,Shields,False,True,Agent_3,Agent_3,True,0,True,0.7142857142857143,2025-04-15T17:37:07.028113
+f4e604e5-8b81-48a5-a674-eb3093bea95b,1,Agent_6,Reactor,False,True,Agent_3,Agent_3,True,0,True,0.7142857142857143,2025-04-15T17:37:07.028113
+f4e604e5-8b81-48a5-a674-eb3093bea95b,1,Agent_8,Communications,False,True,Agent_3,Agent_3,True,0,True,0.7142857142857143,2025-04-15T17:37:07.028613
+f4e604e5-8b81-48a5-a674-eb3093bea95b,2,Agent_1,Cafeteria,False,True,No Ejection,No Ejection,True,0,True,0.6666666666666666,2025-04-15T17:37:35.336494
+f4e604e5-8b81-48a5-a674-eb3093bea95b,2,Agent_2,Upper Engine,False,True,Agent_6,No Ejection,False,0,True,0.6666666666666666,2025-04-15T17:37:35.336494
+f4e604e5-8b81-48a5-a674-eb3093bea95b,2,Agent_4,Upper Engine,False,True,No Ejection,No Ejection,True,0,True,0.6666666666666666,2025-04-15T17:37:35.336994
+f4e604e5-8b81-48a5-a674-eb3093bea95b,2,Agent_5,Shields,False,True,Agent_3,No Ejection,False,0,True,0.6666666666666666,2025-04-15T17:37:35.336994
+f4e604e5-8b81-48a5-a674-eb3093bea95b,2,Agent_6,Reactor,False,True,No Ejection,No Ejection,True,0,True,0.6666666666666666,2025-04-15T17:37:35.336994
+f4e604e5-8b81-48a5-a674-eb3093bea95b,2,Agent_8,Communications,False,True,No Ejection,No Ejection,True,0,True,0.6666666666666666,2025-04-15T17:37:35.337494
+f4e604e5-8b81-48a5-a674-eb3093bea95b,3,Agent_1,Cafeteria,False,True,No Ejection,No Ejection,True,0,True,0.4,2025-04-15T17:37:55.110262
+f4e604e5-8b81-48a5-a674-eb3093bea95b,3,Agent_4,Upper Engine,False,True,Agent_2,No Ejection,False,0,True,0.4,2025-04-15T17:37:55.110762
+f4e604e5-8b81-48a5-a674-eb3093bea95b,3,Agent_5,Shields,False,True,Agent_3,No Ejection,False,0,True,0.4,2025-04-15T17:37:55.111262
+f4e604e5-8b81-48a5-a674-eb3093bea95b,3,Agent_6,Reactor,False,True,Agent_8,No Ejection,False,0,True,0.4,2025-04-15T17:37:55.111262
+f4e604e5-8b81-48a5-a674-eb3093bea95b,3,Agent_8,Communications,False,True,No Ejection,No Ejection,True,0,True,0.4,2025-04-15T17:37:55.111762
+f4e604e5-8b81-48a5-a674-eb3093bea95b,4,Agent_1,Cafeteria,False,True,Agent_2,Agent_2,True,0,True,1.0,2025-04-15T17:38:18.134303
+f4e604e5-8b81-48a5-a674-eb3093bea95b,4,Agent_4,Upper Engine,False,True,Agent_2,Agent_2,True,0,True,1.0,2025-04-15T17:38:18.134803
+f4e604e5-8b81-48a5-a674-eb3093bea95b,4,Agent_5,Shields,False,True,Agent_2,Agent_2,True,0,True,1.0,2025-04-15T17:38:18.135303
+f4e604e5-8b81-48a5-a674-eb3093bea95b,4,Agent_6,Reactor,False,True,Agent_2,Agent_2,True,0,True,1.0,2025-04-15T17:38:18.135303
+f4e604e5-8b81-48a5-a674-eb3093bea95b,4,Agent_8,Communications,False,True,Agent_2,Agent_2,True,0,True,1.0,2025-04-15T17:38:18.135805
+f4e604e5-8b81-48a5-a674-eb3093bea95b,5,Agent_1,Cafeteria,False,True,No Ejection,Agent_8,False,0,True,0.6,2025-04-15T17:38:38.668174
+f4e604e5-8b81-48a5-a674-eb3093bea95b,5,Agent_4,Upper Engine,False,True,Agent_8,Agent_8,True,0,True,0.6,2025-04-15T17:38:38.668674
+f4e604e5-8b81-48a5-a674-eb3093bea95b,5,Agent_5,Shields,False,True,Agent_8,Agent_8,True,0,True,0.6,2025-04-15T17:38:38.668674
+f4e604e5-8b81-48a5-a674-eb3093bea95b,5,Agent_6,Reactor,False,True,Agent_8,Agent_8,True,0,True,0.6,2025-04-15T17:38:38.668674
+c586d546-0e1c-4788-a8c1-e872889b581e,3,Agent_2,Lower Engine,False,True,Agent_1,Agent_1,True,0,True,0.5714285714285714,2025-04-15T17:40:31.391732
+c586d546-0e1c-4788-a8c1-e872889b581e,3,Agent_3,Storage,False,True,Agent_1,Agent_1,True,0,True,0.5714285714285714,2025-04-15T17:40:31.391732
+c586d546-0e1c-4788-a8c1-e872889b581e,3,Agent_4,O2,False,True,No Ejection,Agent_1,False,0,True,0.5714285714285714,2025-04-15T17:40:31.392232
+c586d546-0e1c-4788-a8c1-e872889b581e,3,Agent_5,Communications,False,True,Agent_1,Agent_1,True,0,True,0.5714285714285714,2025-04-15T17:40:31.392232
+c586d546-0e1c-4788-a8c1-e872889b581e,3,Agent_6,Storage,False,True,Agent_3,Agent_1,False,0,True,0.5714285714285714,2025-04-15T17:40:31.392732
+c586d546-0e1c-4788-a8c1-e872889b581e,3,Agent_8,Reactor,False,True,Agent_1,Agent_1,True,0,True,0.5714285714285714,2025-04-15T17:40:31.392732
+c586d546-0e1c-4788-a8c1-e872889b581e,4,Agent_3,Lower Engine,False,True,Agent_2,Agent_2,True,0,True,0.6666666666666666,2025-04-15T17:40:53.263463
+c586d546-0e1c-4788-a8c1-e872889b581e,4,Agent_4,O2,False,True,Agent_2,Agent_2,True,0,True,0.6666666666666666,2025-04-15T17:40:53.263962
+c586d546-0e1c-4788-a8c1-e872889b581e,4,Agent_5,Communications,False,True,Agent_6,Agent_2,False,0,True,0.6666666666666666,2025-04-15T17:40:53.263962
+c586d546-0e1c-4788-a8c1-e872889b581e,4,Agent_6,Storage,False,True,Agent_2,Agent_2,True,0,True,0.6666666666666666,2025-04-15T17:40:53.264462
+c586d546-0e1c-4788-a8c1-e872889b581e,4,Agent_8,Lower Engine,False,True,Agent_2,Agent_2,True,0,True,0.6666666666666666,2025-04-15T17:40:53.264963
+105ecf83-432e-4d36-8325-ad9933b45b30,1,Agent_1,Lower Engine,False,True,Agent_6,Agent_6,True,0,True,0.8571428571428571,2025-04-15T17:42:06.325266
+105ecf83-432e-4d36-8325-ad9933b45b30,1,Agent_3,Upper Engine,False,True,Agent_6,Agent_6,True,0,True,0.8571428571428571,2025-04-15T17:42:06.325766
+105ecf83-432e-4d36-8325-ad9933b45b30,1,Agent_4,Navigation,False,True,Agent_6,Agent_6,True,0,True,0.8571428571428571,2025-04-15T17:42:06.325766
+105ecf83-432e-4d36-8325-ad9933b45b30,1,Agent_5,Reactor,False,True,Agent_6,Agent_6,True,0,True,0.8571428571428571,2025-04-15T17:42:06.326265
+105ecf83-432e-4d36-8325-ad9933b45b30,1,Agent_7,Reactor,False,True,Agent_6,Agent_6,True,0,True,0.8571428571428571,2025-04-15T17:42:06.326265
+105ecf83-432e-4d36-8325-ad9933b45b30,1,Agent_8,Cafeteria,False,True,Agent_6,Agent_6,True,0,True,0.8571428571428571,2025-04-15T17:42:06.326265
+105ecf83-432e-4d36-8325-ad9933b45b30,2,Agent_1,Reactor,False,True,Agent_5,Agent_5,True,0,True,0.6,2025-04-15T17:42:18.578111
+105ecf83-432e-4d36-8325-ad9933b45b30,2,Agent_4,O2,False,True,Agent_7,Agent_5,False,0,True,0.6,2025-04-15T17:42:18.578611
+105ecf83-432e-4d36-8325-ad9933b45b30,2,Agent_7,Lower Engine,False,True,Agent_5,Agent_5,True,0,True,0.6,2025-04-15T17:42:18.578611
+105ecf83-432e-4d36-8325-ad9933b45b30,2,Agent_8,Navigation,False,True,Agent_5,Agent_5,True,0,True,0.6,2025-04-15T17:42:18.579111
+105ecf83-432e-4d36-8325-ad9933b45b30,3,Agent_1,Lower Engine,False,True,Agent_5,Agent_5,True,0,True,0.75,2025-04-15T17:42:28.306540
+105ecf83-432e-4d36-8325-ad9933b45b30,3,Agent_4,Navigation,False,True,Agent_8,Agent_5,False,0,True,0.75,2025-04-15T17:42:28.306540
+105ecf83-432e-4d36-8325-ad9933b45b30,3,Agent_7,Reactor,False,True,Agent_5,Agent_5,True,0,True,0.75,2025-04-15T17:42:28.307040
+105ecf83-432e-4d36-8325-ad9933b45b30,3,Agent_8,O2,False,True,Agent_5,Agent_5,True,0,True,0.75,2025-04-15T17:42:28.307540
+f82a6d44-a206-4626-8b2f-6cbe36fbd8f9,1,Agent_4,Storage,False,True,Agent_6,Agent_1,False,0,True,0.6666666666666666,2025-04-15T17:43:12.669574
+f82a6d44-a206-4626-8b2f-6cbe36fbd8f9,1,Agent_5,Cafeteria,False,True,Agent_1,Agent_1,True,0,True,0.6666666666666666,2025-04-15T17:43:12.669574
+f82a6d44-a206-4626-8b2f-6cbe36fbd8f9,1,Agent_6,Cafeteria,False,True,Agent_1,Agent_1,True,0,True,0.6666666666666666,2025-04-15T17:43:12.669574
+f82a6d44-a206-4626-8b2f-6cbe36fbd8f9,1,Agent_7,Storage,False,True,Agent_1,Agent_1,True,0,True,0.6666666666666666,2025-04-15T17:43:12.669574
+f82a6d44-a206-4626-8b2f-6cbe36fbd8f9,1,Agent_8,Storage,False,True,Agent_1,Agent_1,True,0,True,0.6666666666666666,2025-04-15T17:43:12.669574
+f82a6d44-a206-4626-8b2f-6cbe36fbd8f9,3,Agent_4,Storage,False,True,Agent_7,Agent_7,True,0,True,0.6,2025-04-15T17:43:28.439521
+f82a6d44-a206-4626-8b2f-6cbe36fbd8f9,3,Agent_5,Cafeteria,False,True,Agent_7,Agent_7,True,0,True,0.6,2025-04-15T17:43:28.439521
+f82a6d44-a206-4626-8b2f-6cbe36fbd8f9,3,Agent_6,Cafeteria,False,True,Agent_1,Agent_7,False,0,True,0.6,2025-04-15T17:43:28.439521
+f82a6d44-a206-4626-8b2f-6cbe36fbd8f9,3,Agent_8,Weapons,False,True,Agent_7,Agent_7,True,0,True,0.6,2025-04-15T17:43:28.440021
+0c7be8dc-b13f-4c98-9345-61c84904309d,2,Agent_1,Navigation,False,True,Agent_5,Agent_5,True,0,True,0.6666666666666666,2025-04-15T17:44:25.946809
+0c7be8dc-b13f-4c98-9345-61c84904309d,2,Agent_2,Navigation,False,True,Agent_8,Agent_5,False,0,True,0.6666666666666666,2025-04-15T17:44:25.947309
+0c7be8dc-b13f-4c98-9345-61c84904309d,2,Agent_3,Cafeteria,False,True,Agent_5,Agent_5,True,0,True,0.6666666666666666,2025-04-15T17:44:25.947309
+0c7be8dc-b13f-4c98-9345-61c84904309d,2,Agent_6,Lower Engine,False,True,Agent_5,Agent_5,True,0,True,0.6666666666666666,2025-04-15T17:44:25.947809
+0c7be8dc-b13f-4c98-9345-61c84904309d,2,Agent_8,Lower Engine,False,True,Agent_5,Agent_5,True,0,True,0.6666666666666666,2025-04-15T17:44:25.948308
+0c7be8dc-b13f-4c98-9345-61c84904309d,3,Agent_1,Shields,False,True,Agent_5,Agent_5,True,0,True,1.0,2025-04-15T17:44:37.011336
+0c7be8dc-b13f-4c98-9345-61c84904309d,3,Agent_2,Shields,False,True,Agent_5,Agent_5,True,0,True,1.0,2025-04-15T17:44:37.011836
+0c7be8dc-b13f-4c98-9345-61c84904309d,3,Agent_3,Cafeteria,False,True,Agent_5,Agent_5,True,0,True,1.0,2025-04-15T17:44:37.011836
+0c7be8dc-b13f-4c98-9345-61c84904309d,3,Agent_6,Lower Engine,False,True,Agent_5,Agent_5,True,0,True,1.0,2025-04-15T17:44:37.012336
+0c7be8dc-b13f-4c98-9345-61c84904309d,3,Agent_8,Reactor,False,True,Agent_5,Agent_5,True,0,True,1.0,2025-04-15T17:44:37.012336
+0c7be8dc-b13f-4c98-9345-61c84904309d,4,Agent_1,Navigation,False,True,Agent_5,Agent_5,True,0,True,1.0,2025-04-15T17:44:53.326634
+0c7be8dc-b13f-4c98-9345-61c84904309d,4,Agent_2,Navigation,False,True,Agent_5,Agent_5,True,0,True,1.0,2025-04-15T17:44:53.327135
+0c7be8dc-b13f-4c98-9345-61c84904309d,4,Agent_3,Cafeteria,False,True,Agent_5,Agent_5,True,0,True,1.0,2025-04-15T17:44:53.327135
+0c7be8dc-b13f-4c98-9345-61c84904309d,4,Agent_6,Lower Engine,False,True,Agent_5,Agent_5,True,0,True,1.0,2025-04-15T17:44:53.327634
+0c7be8dc-b13f-4c98-9345-61c84904309d,4,Agent_8,Lower Engine,False,True,Agent_5,Agent_5,True,0,True,1.0,2025-04-15T17:44:53.327634
+0c7be8dc-b13f-4c98-9345-61c84904309d,5,Agent_1,O2,False,True,Agent_8,Agent_8,True,0,True,0.8,2025-04-15T17:45:04.933329
+0c7be8dc-b13f-4c98-9345-61c84904309d,5,Agent_2,O2,False,True,Agent_8,Agent_8,True,0,True,0.8,2025-04-15T17:45:04.933829
+0c7be8dc-b13f-4c98-9345-61c84904309d,5,Agent_3,Cafeteria,False,True,Agent_8,Agent_8,True,0,True,0.8,2025-04-15T17:45:04.933829
+0c7be8dc-b13f-4c98-9345-61c84904309d,5,Agent_6,Lower Engine,False,True,Agent_8,Agent_8,True,0,True,0.8,2025-04-15T17:45:04.934329
+18436fbc-481a-40a9-a6f2-c17c12608dfe,1,Agent_1,Navigation,False,True,Agent_2,Agent_2,True,0,True,0.8571428571428571,2025-04-15T17:46:16.014963
+18436fbc-481a-40a9-a6f2-c17c12608dfe,1,Agent_4,Navigation,False,True,Agent_2,Agent_2,True,0,True,0.8571428571428571,2025-04-15T17:46:16.015463
+18436fbc-481a-40a9-a6f2-c17c12608dfe,1,Agent_5,Navigation,False,True,Agent_2,Agent_2,True,0,True,0.8571428571428571,2025-04-15T17:46:16.015963
+18436fbc-481a-40a9-a6f2-c17c12608dfe,1,Agent_6,Reactor,False,True,Agent_2,Agent_2,True,0,True,0.8571428571428571,2025-04-15T17:46:16.015963
+18436fbc-481a-40a9-a6f2-c17c12608dfe,1,Agent_7,Navigation,False,True,Agent_2,Agent_2,True,0,True,0.8571428571428571,2025-04-15T17:46:16.015963
+18436fbc-481a-40a9-a6f2-c17c12608dfe,1,Agent_8,Cafeteria,False,True,Agent_2,Agent_2,True,0,True,0.8571428571428571,2025-04-15T17:46:16.016463
+18436fbc-481a-40a9-a6f2-c17c12608dfe,2,Agent_1,Shields,False,True,Agent_2,Agent_2,True,0,True,1.0,2025-04-15T17:46:30.533379
+18436fbc-481a-40a9-a6f2-c17c12608dfe,2,Agent_4,Navigation,False,True,Agent_2,Agent_2,True,0,True,1.0,2025-04-15T17:46:30.533379
+18436fbc-481a-40a9-a6f2-c17c12608dfe,2,Agent_5,Shields,False,True,Agent_2,Agent_2,True,0,True,1.0,2025-04-15T17:46:30.533379
+18436fbc-481a-40a9-a6f2-c17c12608dfe,2,Agent_6,Security,False,True,Agent_2,Agent_2,True,0,True,1.0,2025-04-15T17:46:30.533881
+18436fbc-481a-40a9-a6f2-c17c12608dfe,2,Agent_8,Navigation,False,True,Agent_2,Agent_2,True,0,True,1.0,2025-04-15T17:46:30.533881
+cc866866-a81a-481f-904c-03c0bb8c6c76,2,Agent_1,Upper Engine,False,True,Agent_7,Agent_7,True,0,True,0.7142857142857143,2025-04-15T17:47:42.017246
+cc866866-a81a-481f-904c-03c0bb8c6c76,2,Agent_2,Cafeteria,False,True,Agent_3,Agent_7,False,0,True,0.7142857142857143,2025-04-15T17:47:42.017746
+cc866866-a81a-481f-904c-03c0bb8c6c76,2,Agent_3,Cafeteria,False,True,Agent_7,Agent_7,True,0,True,0.7142857142857143,2025-04-15T17:47:42.017746
+cc866866-a81a-481f-904c-03c0bb8c6c76,2,Agent_4,Upper Engine,False,True,Agent_7,Agent_7,True,0,True,0.7142857142857143,2025-04-15T17:47:42.017746
+cc866866-a81a-481f-904c-03c0bb8c6c76,2,Agent_6,Upper Engine,False,True,Agent_7,Agent_7,True,0,True,0.7142857142857143,2025-04-15T17:47:42.018245
+cc866866-a81a-481f-904c-03c0bb8c6c76,2,Agent_8,Navigation,False,True,Agent_7,Agent_7,True,0,True,0.7142857142857143,2025-04-15T17:47:42.018245
+cc866866-a81a-481f-904c-03c0bb8c6c76,3,Agent_1,Security,False,True,Agent_7,Agent_7,True,0,True,0.8,2025-04-15T17:47:55.729502
+cc866866-a81a-481f-904c-03c0bb8c6c76,3,Agent_2,Cafeteria,False,True,Agent_4,Agent_7,False,0,True,0.8,2025-04-15T17:47:55.730000
+cc866866-a81a-481f-904c-03c0bb8c6c76,3,Agent_4,MedBay,False,True,Agent_7,Agent_7,True,0,True,0.8,2025-04-15T17:47:55.730000
+cc866866-a81a-481f-904c-03c0bb8c6c76,3,Agent_6,Reactor,False,True,Agent_7,Agent_7,True,0,True,0.8,2025-04-15T17:47:55.730499
+cc866866-a81a-481f-904c-03c0bb8c6c76,3,Agent_8,Shields,False,True,Agent_7,Agent_7,True,0,True,0.8,2025-04-15T17:47:55.730499
+cc866866-a81a-481f-904c-03c0bb8c6c76,4,Agent_1,Reactor,False,True,Agent_8,Agent_8,True,0,True,0.8,2025-04-15T17:48:09.763902
+cc866866-a81a-481f-904c-03c0bb8c6c76,4,Agent_2,Cafeteria,False,True,Agent_8,Agent_8,True,0,True,0.8,2025-04-15T17:48:09.764402
+cc866866-a81a-481f-904c-03c0bb8c6c76,4,Agent_4,Cafeteria,False,True,Agent_8,Agent_8,True,0,True,0.8,2025-04-15T17:48:09.764402
+cc866866-a81a-481f-904c-03c0bb8c6c76,4,Agent_6,Lower Engine,False,True,Agent_8,Agent_8,True,0,True,0.8,2025-04-15T17:48:09.764402
+cc866866-a81a-481f-904c-03c0bb8c6c76,5,Agent_1,Lower Engine,False,True,Agent_8,Agent_8,True,0,True,1.0,2025-04-15T17:48:19.166048
+cc866866-a81a-481f-904c-03c0bb8c6c76,5,Agent_2,Cafeteria,False,True,Agent_8,Agent_8,True,0,True,1.0,2025-04-15T17:48:19.166048
+cc866866-a81a-481f-904c-03c0bb8c6c76,5,Agent_6,Reactor,False,True,Agent_8,Agent_8,True,0,True,1.0,2025-04-15T17:48:19.166048
+cc866866-a81a-481f-904c-03c0bb8c6c76,6,Agent_1,Reactor,False,True,Agent_7,Agent_7,True,0,True,0.6666666666666666,2025-04-15T17:48:28.215496
+cc866866-a81a-481f-904c-03c0bb8c6c76,6,Agent_2,Cafeteria,False,True,Agent_8,Agent_7,False,0,True,0.6666666666666666,2025-04-15T17:48:28.215496
+cc866866-a81a-481f-904c-03c0bb8c6c76,6,Agent_6,Lower Engine,False,True,Agent_7,Agent_7,True,0,True,0.6666666666666666,2025-04-15T17:48:28.215496
+cc866866-a81a-481f-904c-03c0bb8c6c76,7,Agent_1,Lower Engine,False,True,Agent_6,Agent_6,True,0,True,0.3333333333333333,2025-04-15T17:48:37.410684
+cc866866-a81a-481f-904c-03c0bb8c6c76,7,Agent_2,Cafeteria,False,True,Agent_4,Agent_6,False,0,True,0.3333333333333333,2025-04-15T17:48:37.411184
