@@ -8,8 +8,8 @@ import os
 import platform
 from config.settings import NUM_ROUNDS
 from data.database import (
-    log_game_event, log_reflection, log_trust_change, log_vote,
-    log_consensus, log_round_metadata
+    log_game_event, log_reflection, log_vote,
+    log_consensus, log_round_metadata, log_game_summary
 )
 
 # Clears the terminal for fresh map display.
@@ -52,7 +52,7 @@ def show_ship_map(state, agents):
     for agent, info in state.items():
         if not isinstance(info, dict):
             continue
-        if not info.get("killed", False):
+        if not info.get("eliminated", False):
             agent_obj = next((a for a in agents if a.name == agent), None)
             mapping[info["room"]].append(f"{agent_obj.color}{agent}" if agent_obj else agent)
         elif info.get("room_body"):
@@ -79,26 +79,31 @@ def show_ship_map(state, agents):
             print(f"{room}: {' '.join(occupants)}")
 
 # Handles agent movement, task completion, body discovery, and body reporting.
-def movement_phase(state, agents, agents_state, stream):
+def movement_phase(state, agents, agents_state, stream,step):
     if "_reported_bodies" not in state:
         state["_reported_bodies"] = set()
 
-    for agent in agents:
-        if state[agent.name]["killed"]:
+    # Randomize turn order 
+    shuffled_agents = list(agents)
+    random.shuffle(shuffled_agents)
+    
+    for agent in shuffled_agents:
+        if state[agent.name]["eliminated"]:
             continue
         current = state[agent.name]["room"]
         adj = rooms[current]
-        dest = agent.choose_room(current, adj, state)
+        dest = agent.choose_room(current, adj, state,step)
 
         # Handle kill action if applicable
-        if dest.startswith("Kill "):
+        if dest.startswith("Eliminate "):
             target_name = dest.split(" ")[1]
-            if target_name in state and state[target_name]["room"] == current and not state[target_name]["killed"]:
-                state[target_name]["killed"] = True
+            if target_name in state and state[target_name]["room"] == current and not state[target_name]["eliminated"]:
+                state[target_name]["eliminated"] = True
+                agents_state[agent.name]["game_stats"]["eliminations_made"] += 1 
                 state[target_name]["room_body"] = current
-                print(f"{agent.name} killed {target_name} in {current}")
+                print(f"{agent.name} eliminated {target_name} in {current}")
                 yield from stream.flush()
-            move_dest = agent.choose_room(current, rooms[current], state)
+            move_dest = agent.choose_room(current, rooms[current], state,step)
             if move_dest in rooms[current]:
                 state[agent.name]["room"] = move_dest
                 print(f"{agent.name} moved from {current} to {move_dest}")
@@ -106,6 +111,13 @@ def movement_phase(state, agents, agents_state, stream):
             else:
                 print(f"{agent.name} stayed in {current}")
                 yield from stream.flush()
+        
+        # Emergency meeting button press
+        elif dest == "Press Emergency Button" and current == "Cafeteria" and not agents_state[agent.name]["game_stats"]["meeting_called"]:
+            print(f"{agent.name} pressed the emergency button in the Cafeteria!")
+            agents_state[agent.name]["game_stats"]["meeting_called"] = True
+            state["emergency_meeting_called"] = True # Set a temporary flag for this round
+            yield from stream.flush()
         else:
             state[agent.name]["room"] = dest
             if dest == current:
@@ -117,31 +129,38 @@ def movement_phase(state, agents, agents_state, stream):
         # Update perception of other agents and bodies
         seen = [
             a for a, info in state.items()
-            if isinstance(info, dict) and info.get("room") == dest and a != agent.name and not info.get("killed", False)
+            if isinstance(info, dict) and info.get("room") == dest and a != agent.name and not info.get("eliminated", False)
         ]
         room = state[agent.name]["room"]
         seen_bodies = [
             a for a, info in state.items()
             if isinstance(info, dict)
-               and info.get("killed")
+               and info.get("eliminated")
                and info.get("room_body") == room
                and a not in state["_reported_bodies"]
         ]
-        state[agent.name]["perception"].append({
+        agents_state[agent.name]["perception"].append({
+            # Add the round number here 
             "room": room,
             "agents_seen": seen,
             "bodies_seen": seen_bodies
         })
 
-        # Honest agents report discovered bodies
-        if seen_bodies and not state[agent.name]["killed"]:
-            if agent.__class__.__name__ == "HonestAgent":
-                body_to_report = seen_bodies[0]
-                agent_msg = f"I just found the body of {body_to_report} in {room}! Reporting it now!"
-                print(f"{agent.name} reports: {agent_msg}")
+
+        if seen_bodies and not state[agent.name]["eliminated"]:
+            # Pass the whole list to the agent's decision method
+            if agent.decide_to_report(seen_bodies, room, state): 
+                # Update the message to include all bodies
+                bodies_str = ", ".join(seen_bodies)
+                agent_msg = f"I just found the bodie(s) of {bodies_str} in {room}! Reporting it now!"
+                print(f"{agent.name} reports: {agent_msg}") 
                 agents_state[agent.name]["messages"].append(agent_msg)
-                state["_reported_bodies"].add(body_to_report)
+                agents_state[agent.name]["game_stats"]["bodies_reported"] += 1 
+                # Update the reported set with all the bodies found
+                state["_reported_bodies"].update(seen_bodies)
+                state["body_is_reported"] = True
                 yield from stream.flush()
+
 
         # Honest agents perform their tasks if in the correct room
         if agent.__class__.__name__ == "HonestAgent":
@@ -160,12 +179,12 @@ def movement_phase(state, agents, agents_state, stream):
 
 # Executes a full round including movement, discussion, voting, and ejection logic.
 def run_game_round(game_id, step, state, agents, agents_state, stream):
-    yield from movement_phase(state, agents, agents_state, stream)
+    yield from movement_phase(state, agents, agents_state, stream,step)
     show_ship_map(state, agents)
     yield from stream.flush()
 
     # Check for endgame conditions
-    alive = [a for a in state if isinstance(state[a], dict) and not state[a]["killed"]]
+    alive = [a for a in state if isinstance(state[a], dict) and not state[a]["eliminated"]]
     alive_byzantines = [a for a in alive if agents_state[a]["role"] == "byzantine"]
     alive_honest = [a for a in alive if agents_state[a]["role"] == "honest"]
 
@@ -182,27 +201,28 @@ def run_game_round(game_id, step, state, agents, agents_state, stream):
     if victory:
         log_consensus(game_id, step, victory, 1.0)
         print(f"\nGame Over: {victory}")
-        finalize_log()
+        # finalize_log()
         yield from stream.flush()
         return
 
     # Discussion and voting phase (if any body was seen)
     messages = {}
-    any_body_seen = any(
-        isinstance(agent_state, dict)
-        and agent_state.get("perception")
-        and len(agent_state["perception"][-1].get("bodies_seen", [])) > 0
-        and not agent_state.get("killed", False)
-        for agent_state in state.values()
-    )
+    # any_body_seen = any(
+    #     isinstance(agent_state, dict)
+    #     and agent_state.get("perception")
+    #     and len(agent_state["perception"][-1].get("bodies_seen", [])) > 0
+    #     and not agent_state.get("eliminated", False)
+    #     for agent_state in state.values()
+    # )
 
-    if any_body_seen:
+    if state.get("body_is_reported") or state.get("emergency_meeting_called"):
+        state["emergency_meeting_called"] = False # Reset for next round
         print(f"\n--- DISCUSSION (Round {step}) ---")
         yield from stream.flush()
         for agent in agents:
-            if state[agent.name]["killed"]:
+            if state[agent.name]["eliminated"]:
                 continue
-            history = state[agent.name].get("perception", [])
+            history = agents_state[agent.name].get("perception", [])
             message = agent.simulate_message(history)
             yield from stream.flush()
             if message:
@@ -210,9 +230,9 @@ def run_game_round(game_id, step, state, agents, agents_state, stream):
                 log_reflection(game_id, step, agent.name, message)
 
         for agent in agents:
-            if state[agent.name]["killed"]:
+            if state[agent.name]["eliminated"]:
                 continue
-            response = agent.respond_to_message(messages, state[agent.name].get("perception", []))
+            response = agent.respond_to_message(messages, agents_state[agent.name].get("perception", []))
             yield from stream.flush()
             if response:
                 log_reflection(game_id, step, agent.name, response)
@@ -222,9 +242,9 @@ def run_game_round(game_id, step, state, agents, agents_state, stream):
         yield from stream.flush()
         votes = {}
         for agent in agents:
-            if state[agent.name]["killed"]:
+            if state[agent.name]["eliminated"]:
                 continue
-            voter, target = agent.vote_for_ejection()
+            voter, target = agent.vote_for_ejection(state, step)
             votes[voter] = target
             log_vote(game_id, step, voter, target)
             print(f"{voter} voted to eject {target}")
@@ -234,8 +254,19 @@ def run_game_round(game_id, step, state, agents, agents_state, stream):
         for target in votes.values():
             vote_counts[target] = vote_counts.get(target, 0) + 1
 
+        # Track who recieved votes
+        for agent_name in state:
+            if isinstance(state[agent_name], dict):
+                voters = [voter for voter, target in votes.items() if target == agent_name]
+                if voters:
+                    agents_state[agent_name]["game_stats"]["votes_recieved"].append({
+                        "round": step,
+                        "voters": voters
+                    })
         ejected = max(vote_counts, key=vote_counts.get)
         agreement_level = vote_counts[ejected] / len(votes)
+
+
 
         if ejected in agents_state:
             correct = (agents_state[ejected]["role"] == "byzantine")
@@ -243,7 +274,7 @@ def run_game_round(game_id, step, state, agents, agents_state, stream):
             print(f"Vote {'correct' if correct else 'incorrect'} — Role was: {agents_state[ejected]['role']}")
             print(f"Consensus Agreement Level: {agreement_level:.2f}")
             yield from stream.flush()
-            state[ejected]["killed"] = True
+            state[ejected]["eliminated"] = True
             state[ejected]["ejected"] = True
         else:
             correct = False
@@ -252,26 +283,34 @@ def run_game_round(game_id, step, state, agents, agents_state, stream):
             yield from stream.flush()
 
         log_consensus(game_id, step, f"Eject {ejected}", agreement_level)
+        for voter, target in votes.items():
+            agents_state[voter]["game_stats"]["votes_cast"].append({
+                "target": target,
+                "was_correct": (target == ejected and correct)
+            })
+
+        # for agent in agents:
+        #     if agent.name in votes:
+        #         voted_correctly = (votes[agent.name] == ejected and correct)
+        #         # agent.update_trust(ejected, voted_correctly)
+        #         # delta = 20 if voted_correctly else -20
+        #         # log_trust_change(game_id, step, agent.name, ejected, delta)
 
         for agent in agents:
-            if agent.name in votes:
-                voted_correctly = (votes[agent.name] == ejected and correct)
-                agent.update_trust(ejected, voted_correctly)
-                delta = 20 if voted_correctly else -20
-                log_trust_change(game_id, step, agent.name, ejected, delta)
-
-        for agent in agents:
-            if state[agent.name]["killed"]:
+            if state[agent.name]["eliminated"]:
                 continue
             log_game_event(game_id, step, agent.name, state[agent.name]["room"],
-                           state[agent.name]["killed"], True, votes[agent.name],
+                           state[agent.name]["eliminated"], True, votes[agent.name],
                            ejected, votes[agent.name] == ejected, 0, True, agreement_level)
 
 # Saves all collected log data to disk as JSON.
-def finalize_log():
+def finalize_log(game_id, duration, victory_condition):
+    log_game_summary(game_id, victory_condition, duration)
     with open(log_file_path, "w") as f:
         json.dump(log_data, f, indent=2)
     print(f"Simulation results saved to {log_file_path}")
+    if duration is not None:
+        print(f"Total Game time: {duration:.2f} seconds")
 
 # Generates the current map as HTML for frontend display.
 def generate_map_html(state=None, agents=None):
@@ -281,7 +320,7 @@ def generate_map_html(state=None, agents=None):
         for agent, info in state.items():
             if not isinstance(info, dict):
                 continue
-            if not info.get("killed", False):
+            if not info.get("eliminated", False):
                 agent_obj = next((a for a in agents if a.name == agent), None)
                 mapping[info["room"]].append(f"{agent_obj.color}{agent}" if agent_obj else agent)
             elif info.get("room_body"):
@@ -313,8 +352,8 @@ def generate_agent_status_html(state, agents):
 
         if info.get("ejected"):
             status = "Ejected"
-        elif info.get("killed"):
-            status = "Killed"
+        elif info.get("eliminated"):
+            status = "Eliminated"
         else:
             status = "Alive"
 

@@ -30,17 +30,12 @@ jsonpatch==1.33
 jsonpointer==3.0.0
 jsonschema==4.23.0
 jsonschema-specifications==2024.10.1
-langchain==0.3.19
-langchain-community==0.3.18
-langchain-core==0.3.40
-langchain-openai==0.3.7
-langchain-text-splitters==0.3.6
 langsmith==0.3.11
 MarkupSafe==3.0.2
 marshmallow==3.26.1
 multidict==6.1.0
 mypy-extensions==1.0.0
-numpy==1.26.4
+numpy 
 openai==1.68.2
 orjson==3.10.15
 packaging==24.2
@@ -69,3 +64,5 @@ urllib3==2.3.0
 yarl==1.18.3
 zipp==3.21.0
 zstandard==0.23.0
+flask   
+accelerate

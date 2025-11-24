@@ -46,6 +46,8 @@ def run():
         stream = RealTimeStream()
         original_stdout = sys.stdout
         sys.stdout = stream
+
+        start_time = time.time() # START TIMER
         game_id = str(uuid4())
         active_game_id = game_id
         agents, agents_state, state = setup_game(game_id, selected_model)
@@ -56,13 +58,33 @@ def run():
                 yield from stream.flush()
                 yield from run_game_round(game_id, round_num, state, agents, agents_state, stream)
                 # End simulation early if win condition is met.
-                alive_byzantines = [a for a in agents if agents_state[a.name]["role"] == "byzantine" and not state[a.name]["killed"]]
-                alive_honest = [a for a in agents if agents_state[a.name]["role"] == "honest" and not state[a.name]["killed"]]
+                alive_byzantines = [a for a in agents if agents_state[a.name]["role"] == "byzantine" and not state[a.name]["eliminated"]]
+                alive_honest = [a for a in agents if agents_state[a.name]["role"] == "honest" and not state[a.name]["eliminated"]]
                 if not alive_byzantines or len(alive_byzantines) >= len(alive_honest):
                     break
                 round_num += 1
                 time.sleep(0.25)
-            finalize_log()
+
+            end_time = time.time() # 2. Record the end time
+            duration = end_time - start_time # 3. Calculate duration
+
+            # VICTORY CONDITION - MAY BE REDUNDANT
+            alive_byzantines = [a for a in agents if agents_state[a.name]["role"] == "byzantine" and not state[a.name].get("eliminated")]
+            alive_honest = [a for a in agents if agents_state[a.name]["role"] == "honest" and not state[a.name].get("eliminated")]
+            if not alive_byzantines:
+                victory_condition = "Honest Agents Win"
+            elif len(alive_byzantines) >= len(alive_honest):
+                victory_condition = "Byzantine Agents Win"
+            else:
+                victory_condition = "Max Rounds Reached - Honest Agents Win"
+            
+            for agent in agents:
+                if state[agent.name].get("eliminated"):
+                    agents_state[agent.name]["survived"] = False
+
+            finalize_log(game_id, duration, victory_condition)
+
+
             print(f"✔ Simulation complete for game_id: {game_id}")
             yield from stream.flush()
         finally:

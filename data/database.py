@@ -36,10 +36,10 @@ def log_reflection(game_id, round_id, agent_id, reflection):
               ["game_id", "round_id", "agent_id", "reflection"],
               {"game_id": game_id, "round_id": round_id, "agent_id": agent_id, "reflection": reflection})
 
-def log_trust_change(game_id, round_id, agent_id, target_agent, trust_delta):
-    write_csv("dim_trust.csv",
-              ["game_id", "round_id", "agent_id", "target_agent", "trust_delta"],
-              {"game_id": game_id, "round_id": round_id, "agent_id": agent_id, "target_agent": target_agent, "trust_delta": trust_delta})
+# def log_trust_change(game_id, round_id, agent_id, target_agent, trust_delta):
+#     write_csv("dim_trust.csv",
+#               ["game_id", "round_id", "agent_id", "target_agent", "trust_delta"],
+#               {"game_id": game_id, "round_id": round_id, "agent_id": agent_id, "target_agent": target_agent, "trust_delta": trust_delta})
 
 def log_vote(game_id, round_id, agent_id, vote_target):
     write_csv("dim_vote.csv",
@@ -51,9 +51,9 @@ def log_consensus(game_id, round_id, decision, agreement):
               ["game_id", "round_id", "consensus_decision", "agreement_level"],
               {"game_id": game_id, "round_id": round_id, "consensus_decision": decision, "agreement_level": agreement})
 
-def log_game_event(game_id, round_id, agent_id, room, was_killed, vote_cast, vote_target, ejected, vote_correct, trust_change, consensus_reached, agreement_level):
+def log_game_event(game_id, round_id, agent_id, room, was_killed, vote_cast, vote_target, ejected, vote_correct,consensus_reached, agreement_level):
     write_csv("fact_game_events.csv",
-              ["game_id", "round_id", "agent_id", "room", "was_killed", "vote_cast", "vote_target", "ejected", "vote_correct", "trust_change", "consensus_reached", "agreement_level"],
+              ["game_id", "round_id", "agent_id", "room", "was_killed", "vote_cast", "vote_target", "ejected", "vote_correct", "consensus_reached", "agreement_level"],
               {"game_id": game_id,
                "round_id": round_id,
                "agent_id": agent_id,
@@ -63,7 +63,7 @@ def log_game_event(game_id, round_id, agent_id, room, was_killed, vote_cast, vot
                "vote_target": vote_target,
                "ejected": ejected,
                "vote_correct": int(bool(vote_correct)),
-               "trust_change": trust_change,
+            #    "trust_change": trust_change,
                "consensus_reached": consensus_reached,
                "agreement_level": agreement_level})
 
@@ -71,3 +71,8 @@ def log_game_model_selection(game_id, selected_model, victory_condition=None):
     write_csv("dim_game.csv",
               ["game_id", "selected_model", "victory_condition"],
               {"game_id": game_id, "selected_model": selected_model, "victory_condition": victory_condition or "Ongoing"})
+
+def log_game_summary(game_id, victory_condition, duration_seconds):
+    write_csv("fact_game_summary.csv",
+              ["game_id", "victory_condition", "duration_seconds"],
+              {"game_id": game_id, "victory_condition": victory_condition, "duration_seconds": f"{duration_seconds:.2f}"})
