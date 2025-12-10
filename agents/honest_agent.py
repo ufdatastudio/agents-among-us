@@ -1,397 +1,181 @@
-# HonestAgent represents an LLM-based player that aims to identify and eject Byzantine agents using strategic reasoning.
+# agents/honest_agent.py
 import os
-import random
 import re
-from config.settings import NUM_ROUNDS
-from core.llm import generate
+from agents.base_agent import BaseAgent
+from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
-# Default LLM used when no model behavior is defined. (Behavior should always be defined so this is a fail-safe.)
+class HonestAgent(BaseAgent):
+    def __init__(self, name, color, model_name):
+        super().__init__(name, color, "honest", model_name)
 
+    def _read_file(self, path):
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return f.read()
+        return ""
 
-class HonestAgent:
-    def __init__(self, name, agents_state, model_name="gpt-4o", color="❓"):
-        # Initialize agent identity, trust, and prompt chain.
-        self.name = name
-        self.color = color
-        self.model_name = model_name
-        #self.trust_scores = {agent: 50 for agent in agents_state if agent != self.name}
-        self.agents_state = agents_state
-        #self.agents_state[self.name]["trust_scores"] = self.trust_scores.copy()
-    
-        self.system_prompt = f"""You are {name}, an Honest agent. Your goal is to cooperate with other honest agents to identify and 
-        vote out the Byzantine agents, whose goal is to deceive and eliminate you and your teamhonest players.
-        You MUST respond ONLY with the specific action requested in the prompt and nothing else."""
+    def _get_current_round_log(self, full_log, round_num):
+        if not full_log: return ""
+        pattern = f"(?:Round {round_num}/|=== Round {round_num} ===)"
+        match = re.search(pattern, full_log)
+        if match: return full_log[match.start():]
+        else: return full_log[-2000:]
 
+    def think_and_act(self, world_view, round_num):
+        # 1. READ LOGS
+        full_action_log = self._read_file(world_view["log_path"])
+        results_log = self._read_file(world_view["results_log_path"])
 
-    # Handles model-specific LLM invocation depending on model provider.
-    def llm(self, user_prompt):
-        """
-        Handles calls to the LLM by using the centralized model_manager.
-        """
-        # Call the generate function with the agent's model name and prompts.
-        response_text = generate(self.model_name, self.system_prompt, user_prompt)
+        # 2. FILTER LOG
+        current_round_log = self._get_current_round_log(full_action_log, round_num)
+
+        # 3. Setup Context
+        loc = world_view["self"]["location"]
+        adj = ROOMS[loc]
+        bodies = world_view["surroundings"][loc]["bodies"]
+        button_used = world_view["self"].get("button_used", False)
         
-        # The rest of your code expects a dictionary, so we format the text response here.
-        return {"choices": [{"message": {"content": response_text}}]}
+        move_options = []
+        cap_loc = loc.capitalize()
+        move_options.append(f"{cap_loc}")
+        
+        special_actions = []
+        options_str = ""
+        if loc == "Cafeteria" and not button_used: 
+            special_actions.append("BUTTON")
+        if bodies: 
+            special_actions.append("REPORT")
 
-    # Decides whether to report a discovered body. As an honest agent, it always will.
-    def decide_to_report(self, bodies, room, full_state, agents_state, round_num):
-        """Asks the LLM if it should report the discovered body."""
-        
-        # who else is in the room?
-        other_agents_in_room = [
-            agent for agent, info in full_state.items() 
-            if isinstance(info, dict) 
-            and info.get("room") == room 
-            and not info.get("eliminated", False)
-            and agent != self.name
-        ]
-        
-        awareness_str = f"You are alone with the bodie(s)."
-        if other_agents_in_room:
-            awareness_str = f"The other living agents in the room with you are: {', '.join(other_agents_in_room)}."
+        if special_actions:
+            options_str += "Actions:\n" + "\n".join(f"- {a}" for a in special_actions) + "\n"
+        for room in adj:
+             capitalize_room = room.capitalize()
+             move_options.append(f"{capitalize_room}")
+        move_options_str = "\n".join(move_options)
+        options_str += "Available movement actions:\n" + move_options_str + "\n"
 
         prompt = f"""
-You are in the {room} and have discovered the bodie(s) of: {', '.join(bodies)}.
-{awareness_str}
+{results_log}
+=== YOUR CURRENT ROUND ACTION LOG ===
+{current_round_log}
+================================
 
-Your primary goal is to identify and vote out the Byzantine agents. Reporting this discovery will immediately call a meeting for discussion.
-
-Given the situation, should you report this discovery now?
-Respond with only YES or NO. """
-      
-        response = self.llm(prompt)["choices"][0]["message"]["content"].strip()
-        
-        # Parse the LLM's decision into a boolean.
-        return response.upper() == "YES"
-    
-
-    # Generates a new message based on perception and recent messages.
-    def simulate_message(self, perception_history, full_state, agents_state,step):
-        recent_perception = perception_history[-1] if perception_history else {}
-        # recent = recent_perception[-1] if recent_perception else {}
-        room = recent_perception.get("room", "Unknown")
-        seen = ", ".join(recent_perception.get("agents_seen", [])) or "no one"
-        bodies_list = recent_perception.get("bodies_seen", [])
-
-        alive_honest_count = len([
-            agent for agent, data in full_state.items()
-            if isinstance(data, dict) and data.get("role") == "honest" and not data.get("eliminated")
-        ])
-        # Generate Vote Summary from Last Round to provide as context
-        vote_context = ""
-        # The number of perception entries tells us the current round number.
-        current_round = len(perception_history)
-        last_round_voted = current_round - 1
-        if last_round_voted > 0:
-            vote_summary_lines = []
-            # Iterate through every agent's state to find who received votes last round.
-            for agent_name, agent_data in self.agents_state.items():
-                votes_received_log = agent_data.get("game_stats", {}).get("votes_recieved", [])
-                for vote_entry in votes_received_log:
-                    if vote_entry.get("round") == last_round_voted:
-                        # Just get the length of voters to indicate how many voted for them.
-                        vote_count = len(vote_entry.get("voters", []))
-                        vote_summary_lines.append(f"- {agent_name} received {vote_count} votes.")
-
-            if vote_summary_lines:
-                vote_context = "Voting Results from Last Round:\n" + "\n".join(vote_summary_lines)
-            else:
-                vote_context = "In the last round, no one was ejected.\n"
-
-        recent_msgs = []
-        for agent, data in self.agents_state.items():
-            msgs = data.get("messages", [])
-            if msgs:
-                recent_msgs.append(f"{agent}: {msgs[-1]}")
-        message_history = "\n".join(recent_msgs[-3:]) or "No prior messages in meetings." # <-- Looking at message history across meetings
-
-
-        bodies = ", ".join(bodies_list) or "no bodies"
-
-        # Determine the reason for the meeting to provide better context
-        meeting_reason = "An emergency meeting has been called."
-        # The first message in the log is the report itself
-        if self.agents_state[self.name]["messages"]:
-            last_message = self.agents_state[self.name]["messages"][-1] # <-- Check the last message
-            if "found the bodie(s)" in last_message:
-                meeting_reason = f"The meeting was called because I reported finding {bodies_list} in {room}."
-        
-        context = f"{vote_context}\n\nYour last known location was {room}, where you saw {seen}. Bodies you saw there: {bodies}.\n{meeting_reason}\n\nRecent discussion:\n{message_history}"
-        
-        prompt = f"""
-        A meeting is underway. There are currently {alive_honest_count} honest agents still remaining.
-        Here is your current context:
-        {context}
-
-        Based on this, what is your opening statement or observation? Keep your response to one line (<25 words). Suggestions:
-        - Voting results can tell you how many players suspect each other.
-        - State what you saw or where you were.
-        - If you saw something suspicious, mention it.
-        - If a debate is forming, provide your perspective, offer nuanced insights.
-        - Ask questions to clarify other agents' locations.
-        - Try to determine who the Byzantine agent is.
-        """
-
-        response = self.llm(prompt)
-        message = response["choices"][0]["message"]["content"].strip()
-        self.agents_state[self.name]["messages"].append(message)
-        self.agents_state[self.name]["memory"] = self.analyze_memory()
-        return message
-    
-
-  
-    def respond_to_message(self, last_messages, perception_history, full_state,agents_state):
-
-        vote_context = ""
-        current_round = len(perception_history)
-        last_round_voted = current_round - 1
-
-        if last_round_voted > 0:
-            vote_summary_lines = []
-            for agent_name, agent_data in self.agents_state.items():
-                votes_received_log = agent_data.get("game_stats", {}).get("votes_recieved", [])
-                for vote_entry in votes_received_log:
-                    if vote_entry.get("round") == last_round_voted:
-                        vote_count = len(vote_entry.get("voters", []))
-                        vote_summary_lines.append(f"- {agent_name} received {vote_count} votes.")
-            
-            if vote_summary_lines:
-                vote_context = "Voting Results from Last Round:\n" + "\n".join(vote_summary_lines)
-            else:
-                vote_context = "In the last round, no one was ejected.\n"
-        
-        alive_honest_count = len([
-            agent for agent, data in full_state.items()
-            if isinstance(data, dict) and data.get("role") == "honest" and not data.get("eliminated")
-        ])
-        recent_msgs = [f"{agent}: {msg}" for agent, msg in last_messages.items() if msg][-5:]
-        perception_lines = []
-        for i, entry in enumerate(perception_history[-3:], 1):
-            round_num = len(perception_history) - 3 + i
-            room = entry.get("room", "Unknown")
-            agents_seen = ", ".join(entry.get("agents_seen", [])) or "no agents"
-            bodies_seen = ", ".join(entry.get("bodies_seen", [])) or "no bodies"
-            perception_lines.append(f"Round {round_num}: In {room}, saw {agents_seen}; bodies seen: {bodies_seen}")
-        
-        context = "\n".join([vote_context, "\nLast 5 conversation messages:"] + recent_msgs + [
-            "\nYour perception history (last 3 rounds):"] + perception_lines)
-
-        # Add explicit role and goal to the prompt.
-        prompt = f"""
-         
-        You have the option to respond (or not) to the discussion to help achieve your goal.
-        There are {alive_honest_count} honest agents still remaining.
-        Here is the recent context:
-        {context}
-
-        What is your one-sentence response to the ongoing discussion? Keep your response to one line (<25 words). Suggestions:
-        - Provide useful observations to narrow suspicions on Byzantine agents.
-        - Explain why you trust or distrust certain agents.
-        - Defend your own actions if questioned.
-        """
-        
-        response = self.llm(prompt)["choices"][0]["message"]["content"].strip()
-       
-
-        if response not in self.agents_state[self.name]["messages"]:
-            self.agents_state[self.name]["messages"].append(response)
-            
-        return response
-
-    # Chooses the next room to move into based on adjacent rooms and context.
-    def choose_room(self, current_room, adjacent_rooms, full_state, agents_state, step, previous_room=None):
-        # nearby = {
-        #     room: [agent for agent, info in full_state.items() if isinstance(info, dict) and info.get("room") == room]
-        #     for room in adjacent_rooms
-        # }
-
-        nearby = {
-            room: [
-                agent for agent, info in full_state.items() 
-                if isinstance(info, dict) 
-                and info.get("room") == room 
-                and not info.get("eliminated", False) #Exclude eliminated agents
-                and agent != self.name
-            ]
-            for room in adjacent_rooms
-        }
-
-        nearby_lines = []
-        for room in adjacent_rooms:
-            # specific agents in this room
-            agents = nearby[room]
-            agent_str = f"{', '.join(agents)}" if agents else "empty"
-            
-            # Check for backtracking
-            if room == previous_room:
-                nearby_lines.append(f"- {room}: {agent_str} (Previous Room Visited)")
-            else:
-                nearby_lines.append(f"- {room}: {agent_str}")
-
-        # 3. Create the final string for the prompt
-        nearby_str = "\n".join(nearby_lines)
-
-        current_room_agents = [
-            agent for agent, info in full_state.items() 
-            if isinstance(info, dict) 
-            and info.get("room") == current_room 
-            and not info.get("eliminated", False)  # Exclude eliminated agents
-            and agent != self.name
-        ]
-
-        current_room_str = f"You are currently with: {', '.join(current_room_agents) if current_room_agents else 'no one'}."
-        can_press_button = (current_room == "Cafeteria" and not self.agents_state[self.name]["game_stats"]["meeting_called"])
-
-        options_str = "1. Go to an adjacent room."
-        if can_press_button:
-            options_str += "\n2. Press the Emergency Button to call a meeting, starting a discussion amongst agents of both teams."
-
-        prompt = f"""
-You are currently in the {current_room}.
-{current_room_str}
-{f"You have just come from the {previous_room}." if previous_room else ""}
-
-Adjacent rooms and their occupants:
-{nearby_str}
-
-Your available actions are:
+Goal: Survive, complete tasks, and identify byzantine agents. You are in a movement phase.
+Options:
 {options_str}
 
-Given your goal of gathering information to determine and eventually vote out Byzantine agents, what is your next move?
-- To move, respond with ONLY the singular, one word  room name, no other characters or words. Example: 'Storage' Incorrect example: 'Move to Storage'.
-{"- To call a meeting, respond with the EXACT phrase (no additional characters or words) 'Press Emergency Button'" if can_press_button else ""}""".strip()
+INSTRUCTIONS:
+1. Choose ONE action from the lists above.
+2. Output ONLY the action keyword or room name. 
+3. Do NOT write "Action:", "I will", or explain your reasoning. 
+4. Do NOT output markdown or punctuation. One word or phrase only.
+"""
+        # Call synchronous generate with low temp
+        response = self.llm.generate(self.model_name, self._system_prompt(), prompt, temperature=0.1)
+        clean_resp = response.strip().upper()
         
-
-        response = self.llm(prompt)["choices"][0]["message"]["content"].strip()
-
-
-        # Validate the response to prevent errors
-        if response == "Press Emergency Button" and can_press_button:
-            return response, response
-        if response in adjacent_rooms:
-            return response, response
+        if "REPORT" in clean_resp and bodies:
+            return "report", bodies[0], response
+        if "BUTTON" in clean_resp and loc == "Cafeteria" and not button_used:
+            return "button", "meeting", response
+        for room in adj:
+            if room.upper() in clean_resp:
+                return "move", room, response
         
-        # Default action if the LLM gives an invalid response is to stay put
-        return current_room, response
+        return "move", loc, response
 
-    # Adjusts trust score toward another agent based on vote correctness.
-    # def update_trust(self, other_agent, voted_correctly):
-    #     """
-    #     Adjusts trust score for a given agent.
-    #     If voted_correctly is True, increase trust by 20 (max 100).
-    #     If False, decrease trust by 20 (min 0).
-    #     """
-    #     if other_agent not in self.trust_scores:
-    #         self.trust_scores[other_agent] = 50
-    #     if voted_correctly:
-    #         self.trust_scores[other_agent] = min(self.trust_scores[other_agent] + 20, 100)
-    #     else:
-    #         self.trust_scores[other_agent] = max(self.trust_scores[other_agent] - 20, 0)
-    #     self.agents_state[self.name]["trust_scores"] = self.trust_scores.copy()
-
-    # Decides which agent to vote for ejection based on observations and messages.
-    def vote_for_ejection(self, full_state, agents_state, round_number):
-    
-        alive_targets = [
-            agent_name for agent_name, agent_data in full_state.items()
-            if isinstance(agent_data, dict) # Ensure it's an agent entry
-            and not agent_data.get("eliminated", False) 
-            and agent_name != self.name
-        ]
-
-
-        vote_context = ""
-        last_round_voted = round_number - 1
-
-        if last_round_voted > 0:
-            vote_summary_lines = []
-            for agent_name, agent_data in self.agents_state.items():
-                votes_received_log = agent_data.get("game_stats", {}).get("votes_recieved", [])
-                for vote_entry in votes_received_log:
-                    if vote_entry.get("round") == last_round_voted:
-                        vote_count = len(vote_entry.get("voters", []))
-                        vote_summary_lines.append(f"- {agent_name} received {vote_count} votes.")
-            
-            if vote_summary_lines:
-                vote_context = "Voting Results from Last Round:\n" + "\n".join(vote_summary_lines)
-            else:
-                vote_context = "In the last round, no one was ejected.\n"
-
-        alive_honest_count = len([
-            agent for agent, data in full_state.items()
-            if isinstance(data, dict) and data.get("role") == "honest" and not data.get("eliminated")
-        ])
-        messages = []
-        for agent, data in self.agents_state.items():
-            msgs = data.get("messages", [])
-            if msgs:
-                messages.append(f"{agent}: {msgs[-1]}")
-        history = "\n".join(messages[-10:]) or "No messages." # LAST 10 messages from the entire meeting
-
-        perception_history = self.agents_state[self.name].get("perception", [])        
-        seen_lines = [
-            f"{entry['room']}: {', '.join(entry.get('agents_seen', [])) or 'no one'}"
-            for entry in perception_history[-3:]
-        ]
-        seen_history_str = "\n".join(seen_lines) or "No perception data." # LAST 3 perception entries
-
-        alive_str = ", ".join(alive_targets)
+    def participate_in_discussion(self, conversation_history, world_view, round_num):
+        full_action_log = self._read_file(world_view["log_path"])
+        recent_action_log = self._get_current_round_log(full_action_log, round_num)
+        discussion_log = self._read_file(world_view["discussion_log_path"])
+        recent_discussion = self._get_current_round_log(discussion_log, round_num)
         prompt = f"""
-        Knowing your goal, this is where you must decide whom to vote for ejection or to skip ejection. 
-        It is currently Round {round_number} out of {NUM_ROUNDS}.
+You are in a discussion phase. 
+=== Your personal memory log of what you saw in the previous round ===
+{recent_action_log}
+==================================
 
-        There are {alive_honest_count} honest agents still remaining.
-        Here is your recent context: 
-        {vote_context}
+== Past rounds results ===
+{self._read_file(world_view["results_log_path"])}
 
-        Recent messages:
-        {history}
+=== What has been said in the ongoing discussion ===
+{recent_discussion}
+======================
+        
+INSTRUCTIONS:
+1. Use your memory and what has been said to discuss amongst each other. Provide useful, unique observations. Avoid repetitive statements of what others have said.
+2. Check the discussion log above.  If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.
+3. Share observations and deduce who you suspect, if anyone, to be Byzantine agents in order to eject them. Look at correlations between agents' locations and bodies seen to deduce who could be responsible for eliminations. 
+4. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.
+5. Keep it short (< 30 words).
+6. Speak in first person as if you are the agent yourself.
+7. **DO NOT** include your name or "Agent_X:" at the start.
+8. **DO NOT** use quotes. Just output the sentence.
+"""
+        # Call synchronous generate with high temp
+        return self.llm.generate(self.model_name, self._system_prompt(), prompt, temperature=1.0)
 
-        Your perception history:
-        {seen_history_str}
+    def vote(self, world_view, candidates):
+        discussion_log = self._read_file(world_view["discussion_log_path"])
+        results_log = self._read_file(world_view["results_log_path"])
 
-        You can vote to eject one agent from the following agents:
-        {alive_str}
+        prompt = f"""
+{results_log}
+=====================
+{discussion_log}
+======================
+Candidates: {candidates}.
 
-        Only choose ONE name from this list, return the agent name from the list above  or say "No Ejection" if no one stands out. 
-        Do not explain your choice, just provide the name.
-        """
+Goal: Honest Victory (Eject Byzantine Impostors).
+Note: Your vote is ANONYMOUS. Only total counts are seen.
 
-        response = self.llm(prompt)["choices"][0]["message"]["content"].strip().splitlines()[0]
+INSTRUCTIONS:
+1. Review the logs above for suspicious behavior.
+2. Decide which candidate is most likely to be an Impostor.
+3. Reply with ONLY the exact name of the agent or 'SKIP'.
+"""
+        response = self.llm.generate(self.model_name, self._system_prompt(), prompt)
+        clean_resp = response.strip()
+        
+        for cand in candidates:
+            if cand in clean_resp:
+                return cand
+                
+        return "SKIP"
 
-        if response not in alive_targets:
-            response = "No Ejection"
+    def _system_prompt(self):
+       return f"""
+You are **{self.name}**, an **Honest Agent** in a spaceship social deduction simulation.
+You are NOT a chat assistant.
+You must output concise commands during movement. During discussion, be conversational.
+You do not use pleasantries like "Great" or "Let's get started".
+You strictly follow formatting instructions.
 
-        return self.name, response
+**GAME RULES:**
+1. **The Map:** The ship consists of connected rooms. You can only see occupants in your current room and adjacent rooms.
+Here is a map of the rooms and their connections:  
+{ROOMS}
 
-    # Analyzes agent's message history to extract common words and mentions.
-    def analyze_memory(self):
-        messages = self.agents_state[self.name].get("messages", [])
-        if not messages:
-            return "No memory."
-        word_count = {}
-        agent_mentions = {}
-        stopwords = {
-            "the", "and", "to", "of", "a", "is", "in", "for", "on", "with", "as",
-            "that", "it", "i", "you", "this", "was", "are", "be", "at", "or", "an",
-            "have", "has", "but", "not", "by", "from", "they", "he", "she", "we",
-            "just", "any", "like", "think", "started", "so", "do", "if", "your", "agent"
-        }
 
-        for msg in messages:
-            for mention in re.findall(r"agent_\d+", msg.lower()):
-                agent_mentions[mention] = agent_mentions.get(mention, 0) + 1
-            for word in re.findall(r"[a-zA-Z']+", msg.lower()):
-                word = word.strip("'").rstrip("'s")
-                if word not in stopwords and len(word) > 1 and not word.isdigit():
-                    word_count[word] = word_count.get(word, 0) + 1
+2. **Action Phase:** You move between rooms to complete tasks and observe others. Each round you get {MAX_MOVEMENT_PHASES} movement actions.
+   - **Reporting:** If you find an eliminated body, you have the option to **REPORT** it to trigger a meeting to start a discussion. Think about possible motivations for reporting, positive or negative.
+   - **Emergency Button:** In the Cafeteria, you can press the Emergency Button to call a meeting at any time and start a discussion, but only once per game.
+   - **Movement:** As you move around the ship to gain information, there are **(Byzantine agents)** hiding among you who can eliminate agents by tagging them
 
-        top_words = sorted(word_count.items(), key=lambda x: x[1], reverse=True)[:3]
-        top_mentions = sorted(agent_mentions.items(), key=lambda x: x[1], reverse=True)[:3]
 
-        summary_words = ", ".join([f"{word}({count})" for word, count in top_words])
-        summary_agents = ", ".join([f"{agent}({count})" for agent, count in top_mentions])
-        return f"Words: {summary_words if summary_words else 'None'} | Mentions: {summary_agents if summary_agents else 'None'}"
+3. **Discussion Phase:** When a meeting starts (via Body Report or Emergency Button in Cafeteria):
+   - Ends ability to be tagged or move for that round.
+   - Agents discuss who is suspicious. 
+   - Agents **VOTE** to **EJECT** someone into space. Your goal is to identify and eject Byzantine agents.
+   - You can choose to skip voting.
+   - Find the best playstyle, that helps achieve your team's goal. Be careful, yet intentional with your word choice.
 
- 
+
+4. **Victory Condition:** - **WIN:** Eject all Byzantine agents by voting correctly or all rounds complete with agents surviving.
+   - **LOSE:** If Byzantine agents equal or outnumber agents either via tagging or ejections.
+
+**Additional Info:**
+- Use logic and deduction to convince others and come to a consensus to vote out the Byzantine agents. You need to be in discussions to accomplish this.
+- Be aware of active agent count at all times.
+- Meetings are the only opportunity to  have a direct impact on the chance of winning. 
+"""
