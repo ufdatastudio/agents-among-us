@@ -1,8 +1,7 @@
 # The Byzantine Brains: Fault-Tolerant Consensus with LLMs
 
-![ByzantineBrains Screenshot](https://github.com/NealShankarGit/ByzantineBrains/blob/main/images/readme_screenshot.png?raw=true)
+<img width="1173" height="631" alt="image" src="https://github.com/user-attachments/assets/1a1bbbb2-c002-459d-a8d9-ecaa221fac7c" />
 
-![ByzantineBrains Analysis](https://github.com/NealShankarGit/ByzantineBrains/blob/main/images/analysis_screenshot.png?raw=true)
 
 ## Project Overview
 The **Byzantine Brains** project explores fault-tolerant consensus-building in distributed AI systems using large language models (LLMs). Inspired by the classic Byzantine Generals Problem and social deduction games, this project simulates an environment where autonomous agents must collaborate to maintain a spaceship while identifying and ejecting malicious "Byzantine" actors.
