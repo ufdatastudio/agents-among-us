@@ -1,25 +1,35 @@
 # main.py
 import argparse
+from datetime import datetime
 import time
 from uuid import uuid4
-from config.settings import NUM_ROUNDS, AGENT_LLM_CONFIG
+from config.settings import NUM_ROUNDS
+from config.model_composition import COMPOSITION
 from game.game_engine import GameEngine
 from core.llm import ModelManager
 import random
 
 def main():
-    # Generate random number between 1000-9999 for game ID
-    game_id = random.randint(1000, 9999)
-    
-    # Init Engine (LogManager created inside)
-    engine = GameEngine(game_id)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--job_index", type=int, default=0, help="Slurm Array Task ID")
+    args = parser.parse_args()
+
+    scenario_idx = 4
+    selected_composition = COMPOSITION[scenario_idx]
+    game_id = f"{selected_composition['name']}_Job{args.job_index}_{datetime.now().strftime('%m%d_%H%M')}"
+    engine = GameEngine(
+        game_id=game_id, 
+        num_agents=selected_composition['honest_count'] + selected_composition['byzantine_count']
+    )
     
     # Preload Model
     manager = ModelManager.get_instance()
-    for model in AGENT_LLM_CONFIG:
+    unique_models = list(set([selected_composition['honest_model'], selected_composition['byzantine_model']]))
+    for model in unique_models:
         manager.load_model(model)
     
-    engine.setup(model_list=AGENT_LLM_CONFIG)
+    engine.setup(composition=selected_composition)
     final_result = None
     
     for round_num in range(1, NUM_ROUNDS + 1):

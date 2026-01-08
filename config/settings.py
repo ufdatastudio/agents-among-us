@@ -109,9 +109,6 @@ ROOMS = {
 AGENT_COLORS = ["🔴", "🔵", "🟢", "💗", "🟠", "🟡", "⚫", "⚪", "🟣", "🟤"]
 NUM_BYZ = 2
 NUM_HONEST = 8
-AGENT_LLM_CONFIG = [
-    "meta-llama/Llama-3.1-8B-Instruct",
-    # Add more models here
-]
+
 
 QUANTIZATION = True

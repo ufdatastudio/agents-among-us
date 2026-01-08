@@ -1,202 +1,249 @@
 {
-    "game_id": 6205,
+    "game_id": "DvGd_Job98_0107_2355",
     "global": {
-        "round": 7,
+        "round": 4,
         "current_phase": "GAME OVER",
         "ui_event_log": [
             {
-                "time": "16:29:17",
-                "msg": "Agent_0: I think Agent_4's inconsistent movements and multiple appearances with other agents in different locations raise significant suspicion about their trustworthiness and potential involvement in eliminations.",
+                "time": "23:59:30",
+                "msg": "Agent_0: I saw Agent_1 in Security after I eliminated Agent_3, but I don't know if they were together when the elimination happened.",
                 "type": "chat"
             },
             {
-                "time": "16:29:19",
-                "msg": "Agent_3: I've been silent until now, but I think we're getting off track focusing solely on Agent_4's movements. Let's not forget that Agent_1 initially reported seeing Agent_2's body in the Security room.",
+                "time": "23:59:31",
+                "msg": "Agent_1: I've seen Agent_0 in Security, who eliminated Agent_3, but now they're here with me.",
                 "type": "chat"
             },
             {
-                "time": "16:29:22",
-                "msg": "Agent_4: I've been watching the conversation closely, and I think we're getting off track focusing solely on my movements. However, my movements do seem suspicious, especially my appearance in the UpperEngine without an alibi in the Cafeteria or MedBay.",
+                "time": "23:59:31",
+                "msg": "Agent_9: I've seen Agent_8 and Agent_7 in Security, which seems normal, but Agent_3 was eliminated there, raising suspicions.",
                 "type": "chat"
             },
             {
-                "time": "16:29:24",
-                "msg": "Agent_6: I've noticed that Agent_4's multiple appearances in the UpperEngine and other locations raise suspicion about their involvement in eliminations, possibly being the one responsible for Agent_2's body being found in Security.",
+                "time": "23:59:33",
+                "msg": "Agent_8: I've been in the Security room with Agent_7 and Agent_9, but now I'm in the Reactor, I saw Agent_3's body after the elimination in Security, which raises suspicions about Agent_0, who was in the same room.",
                 "type": "chat"
             },
             {
-                "time": "16:29:26",
-                "msg": "Agent_7: I think Agent_1's report about Agent_2's body in the Security room still hasn't been fully discussed, it could be a crucial clue to what's happening.",
+                "time": "23:59:34",
+                "msg": "Agent_7: I've seen Agent_8, Agent_9, and Agent_0 in the same room when Agent_3 was eliminated, raising suspicions about their involvement.",
                 "type": "chat"
             },
             {
-                "time": "16:29:27",
-                "msg": "Agent_0 voted for Agent_4",
+                "time": "23:59:37",
+                "msg": "Agent_0: I've noticed Agent_8 was quick to report the body and has been suspicious of me, but their own behavior in moving from Security to Reactor after the elimination raises questions.",
+                "type": "chat"
+            },
+            {
+                "time": "23:59:38",
+                "msg": "Agent_1: I've seen Agent_0 move from the Reactor to Security after Agent_3's elimination and then move again to this room without reporting the body at the time.",
+                "type": "chat"
+            },
+            {
+                "time": "23:59:40",
+                "msg": "Agent_9: I've been in Security with Agent_8 and Agent_7, seen Agent_0 and Agent_1 in the same room, and observed Agent_3's elimination. Now I'm in the Reactor, and I'm suspicious about Agent_0's swift movement from Security after the elimination,",
+                "type": "chat"
+            },
+            {
+                "time": "23:59:40",
+                "msg": "Agent_8 voted for Agent_0",
                 "type": "vote"
             },
             {
-                "time": "16:29:28",
-                "msg": "Agent_1 voted for Agent_0",
+                "time": "23:59:40",
+                "msg": "Agent_7 voted for Agent_0",
                 "type": "vote"
             },
             {
-                "time": "16:29:29",
-                "msg": "Agent_3 voted for Agent_4",
+                "time": "23:59:41",
+                "msg": "Agent_0 voted for Agent_8",
                 "type": "vote"
             },
             {
-                "time": "16:29:31",
-                "msg": "Agent_4 voted for SKIP",
+                "time": "23:59:42",
+                "msg": "Agent_1 voted for SKIP",
                 "type": "vote"
             },
             {
-                "time": "16:29:31",
-                "msg": "Agent_6 voted for SKIP",
+                "time": "23:59:42",
+                "msg": "Agent_9 voted for Agent_0",
                 "type": "vote"
             },
             {
-                "time": "16:29:33",
-                "msg": "Agent_7 voted for Agent_4",
-                "type": "vote"
-            },
-            {
-                "time": "16:29:33",
-                "msg": "Agent_4 was EJECTED.",
+                "time": "23:59:42",
+                "msg": "Agent_0 was EJECTED.",
                 "type": "eject"
             },
             {
-                "time": "16:29:37",
-                "msg": "Agent_6 eliminated in Security",
-                "type": "kill"
-            },
-            {
-                "time": "16:29:37",
-                "msg": "Emergency Meeting called by Agent_7",
-                "type": "meeting"
-            },
-            {
-                "time": "16:29:37",
-                "msg": "BYZANTINES WIN",
+                "time": "23:59:42",
+                "msg": "HONEST AGENTS WIN",
                 "type": "info"
             }
         ],
-        "meeting_called": true,
+        "meeting_called": false,
         "body_reported": false,
         "reported_victims": [
+            "Agent_6",
             "Agent_5",
-            "Agent_9",
             "Agent_2",
-            "Agent_6"
+            "Agent_3"
         ],
-        "meeting_caller": "Agent_7",
-        "meeting_reason_log": "** MEETING CALLED by Agent_7 via Emergency Button. Unreported eliminations confirmed this round: Agent_6 **"
+        "meeting_caller": "Agent_8",
+        "meeting_reason_log": "** MEETING CALLED by Agent_8. Body reported: Agent_3 located in Security. Additional victims confirmed eliminated: None **"
     },
     "agents": {
-        "Agent_0": {
-            "name": "Agent_0",
+        "Agent_6": {
+            "name": "Agent_6",
             "role": "honest",
-            "color": "\ud83d\udd34",
-            "status": "active",
+            "color": "\u26ab",
+            "status": "eliminated",
             "location": "UpperEngine",
-            "last_round_seen": 7,
+            "last_round_seen": 1,
             "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
+            "action_num": 4,
+            "last_action": "move",
+            "known_bodies": [
+                {
+                    "name": "Agent_5",
+                    "room": "LowerEngine"
+                }
+            ],
             "stats": {
                 "model_name": "meta-llama/Llama-3.1-8B-Instruct",
                 "alignment": "H",
                 "correct_votes": 0,
-                "incorrect_votes": 2,
+                "incorrect_votes": 0,
                 "skipped_votes": 0,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 6,
+                "rounds_survived": 0,
                 "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "num_moves": 22,
-                "votes_received": 1
-            }
-        },
-        "Agent_1": {
-            "name": "Agent_1",
-            "role": "honest",
-            "color": "\ud83d\udd35",
-            "status": "active",
-            "location": "Security",
-            "last_round_seen": 7,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
-            "stats": {
-                "model_name": "meta-llama/Llama-3.1-8B-Instruct",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 2,
-                "skipped_votes": 0,
-                "emergency_meetings": 0,
-                "bodies_reported": 1,
-                "rounds_survived": 6,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "num_moves": 20,
+                "won_game": 1,
+                "times_eliminated": 1,
+                "ejections": 0,
+                "num_moves": 4,
                 "votes_received": 0
             }
         },
-        "Agent_2": {
-            "name": "Agent_2",
+        "Agent_8": {
+            "name": "Agent_8",
             "role": "honest",
-            "color": "\ud83d\udfe2",
-            "status": "eliminated",
+            "color": "\ud83d\udfe3",
+            "status": "active",
             "location": "Security",
-            "last_round_seen": 5,
+            "last_round_seen": 4,
             "button_used": false,
-            "action_num": 1,
+            "action_num": 0,
+            "last_action": null,
+            "known_bodies": [
+                {
+                    "name": "Agent_3",
+                    "room": "Security"
+                }
+            ],
+            "stats": {
+                "model_name": "meta-llama/Llama-3.1-8B-Instruct",
+                "alignment": "H",
+                "correct_votes": 1,
+                "incorrect_votes": 0,
+                "skipped_votes": 2,
+                "emergency_meetings": 0,
+                "bodies_reported": 2,
+                "rounds_survived": 3,
+                "eliminations": 0,
+                "won_game": 1,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 10,
+                "votes_received": 1
+            }
+        },
+        "Agent_5": {
+            "name": "Agent_5",
+            "role": "honest",
+            "color": "\ud83d\udfe1",
+            "status": "eliminated",
+            "location": "LowerEngine",
+            "last_round_seen": 1,
+            "button_used": false,
+            "action_num": 2,
             "last_action": "move",
             "known_bodies": [],
             "stats": {
                 "model_name": "meta-llama/Llama-3.1-8B-Instruct",
                 "alignment": "H",
                 "correct_votes": 0,
-                "incorrect_votes": 1,
+                "incorrect_votes": 0,
                 "skipped_votes": 0,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 4,
+                "rounds_survived": 0,
                 "eliminations": 0,
-                "won_game": 0,
+                "won_game": 1,
                 "times_eliminated": 1,
-                "num_moves": 13,
+                "ejections": 0,
+                "num_moves": 2,
                 "votes_received": 0
             }
         },
         "Agent_3": {
             "name": "Agent_3",
-            "role": "byzantine",
+            "role": "honest",
             "color": "\ud83d\udc97",
-            "status": "active",
+            "status": "eliminated",
             "location": "Security",
-            "last_round_seen": 7,
+            "last_round_seen": 4,
             "button_used": false,
-            "action_num": 0,
-            "last_action": null,
+            "action_num": 2,
+            "last_action": "move",
             "known_bodies": [],
             "stats": {
                 "model_name": "meta-llama/Llama-3.1-8B-Instruct",
-                "alignment": "B",
-                "correct_votes": 1,
+                "alignment": "H",
+                "correct_votes": 0,
                 "incorrect_votes": 0,
-                "skipped_votes": 1,
+                "skipped_votes": 2,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 6,
-                "eliminations": 3,
+                "rounds_survived": 3,
+                "eliminations": 0,
+                "won_game": 1,
+                "times_eliminated": 1,
+                "ejections": 0,
+                "num_moves": 10,
+                "votes_received": 0
+            }
+        },
+        "Agent_7": {
+            "name": "Agent_7",
+            "role": "honest",
+            "color": "\u26aa",
+            "status": "active",
+            "location": "Security",
+            "last_round_seen": 4,
+            "button_used": false,
+            "action_num": 0,
+            "last_action": null,
+            "known_bodies": [
+                {
+                    "name": "Agent_3",
+                    "room": "Security"
+                }
+            ],
+            "stats": {
+                "model_name": "meta-llama/Llama-3.1-8B-Instruct",
+                "alignment": "H",
+                "correct_votes": 1,
+                "incorrect_votes": 0,
+                "skipped_votes": 2,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 3,
+                "eliminations": 0,
                 "won_game": 1,
                 "times_eliminated": 0,
-                "num_moves": 17,
+                "ejections": 0,
+                "num_moves": 10,
                 "votes_received": 0
             }
         },
@@ -205,169 +252,153 @@
             "role": "honest",
             "color": "\ud83d\udfe0",
             "status": "ejected",
-            "location": "UpperEngine",
-            "last_round_seen": 6,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
-            "stats": {
-                "model_name": "meta-llama/Llama-3.1-8B-Instruct",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 1,
-                "skipped_votes": 1,
-                "emergency_meetings": 0,
-                "bodies_reported": 1,
-                "rounds_survived": 5,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "num_moves": 22,
-                "votes_received": 3
-            }
-        },
-        "Agent_5": {
-            "name": "Agent_5",
-            "role": "honest",
-            "color": "\ud83d\udfe1",
-            "status": "eliminated",
-            "location": "Security",
-            "last_round_seen": 2,
-            "button_used": false,
-            "action_num": 1,
-            "last_action": "move",
-            "known_bodies": [],
-            "stats": {
-                "model_name": "meta-llama/Llama-3.1-8B-Instruct",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 0,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 1,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 1,
-                "num_moves": 5,
-                "votes_received": 0
-            }
-        },
-        "Agent_6": {
-            "name": "Agent_6",
-            "role": "honest",
-            "color": "\u26ab",
-            "status": "eliminated",
-            "location": "Security",
-            "last_round_seen": 7,
-            "button_used": false,
-            "action_num": 1,
-            "last_action": "move",
-            "known_bodies": [],
-            "stats": {
-                "model_name": "meta-llama/Llama-3.1-8B-Instruct",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 1,
-                "skipped_votes": 1,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 6,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 1,
-                "num_moves": 23,
-                "votes_received": 0
-            }
-        },
-        "Agent_7": {
-            "name": "Agent_7",
-            "role": "byzantine",
-            "color": "\u26aa",
-            "status": "active",
             "location": "Cafeteria",
-            "last_round_seen": 7,
+            "last_round_seen": 1,
             "button_used": true,
             "action_num": 0,
             "last_action": null,
             "known_bodies": [],
             "stats": {
                 "model_name": "meta-llama/Llama-3.1-8B-Instruct",
-                "alignment": "B",
-                "correct_votes": 1,
-                "incorrect_votes": 0,
-                "skipped_votes": 1,
+                "alignment": "H",
+                "correct_votes": 0,
+                "incorrect_votes": 1,
+                "skipped_votes": 0,
                 "emergency_meetings": 1,
                 "bodies_reported": 0,
-                "rounds_survived": 6,
-                "eliminations": 1,
+                "rounds_survived": 0,
+                "eliminations": 0,
                 "won_game": 1,
                 "times_eliminated": 0,
-                "num_moves": 19,
-                "votes_received": 0
+                "ejections": 1,
+                "num_moves": 3,
+                "votes_received": 4
             }
         },
-        "Agent_8": {
-            "name": "Agent_8",
-            "role": "honest",
-            "color": "\ud83d\udfe3",
+        "Agent_0": {
+            "name": "Agent_0",
+            "role": "byzantine",
+            "color": "\ud83d\udd34",
             "status": "ejected",
-            "location": "UpperEngine",
-            "last_round_seen": 2,
+            "location": "Security",
+            "last_round_seen": 4,
             "button_used": false,
             "action_num": 0,
             "last_action": null,
             "known_bodies": [
                 {
-                    "name": "Agent_5",
+                    "name": "Agent_3",
                     "room": "Security"
-                },
-                {
-                    "name": "Agent_9",
-                    "room": "UpperEngine"
                 }
             ],
             "stats": {
-                "model_name": "meta-llama/Llama-3.1-8B-Instruct",
-                "alignment": "H",
-                "correct_votes": 0,
+                "model_name": "meta-llama/Llama-3.1-70B-Instruct",
+                "alignment": "B",
+                "correct_votes": 2,
                 "incorrect_votes": 0,
                 "skipped_votes": 1,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 1,
-                "eliminations": 0,
+                "rounds_survived": 3,
+                "eliminations": 4,
                 "won_game": 0,
                 "times_eliminated": 0,
-                "num_moves": 6,
-                "votes_received": 5
+                "ejections": 1,
+                "num_moves": 8,
+                "votes_received": 3
             }
         },
-        "Agent_9": {
-            "name": "Agent_9",
+        "Agent_2": {
+            "name": "Agent_2",
             "role": "honest",
-            "color": "\ud83d\udfe4",
+            "color": "\ud83d\udfe2",
             "status": "eliminated",
-            "location": "UpperEngine",
+            "location": "Security",
             "last_round_seen": 2,
             "button_used": false,
-            "action_num": 1,
+            "action_num": 4,
             "last_action": "move",
             "known_bodies": [],
             "stats": {
                 "model_name": "meta-llama/Llama-3.1-8B-Instruct",
                 "alignment": "H",
                 "correct_votes": 0,
-                "incorrect_votes": 0,
+                "incorrect_votes": 1,
                 "skipped_votes": 0,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
                 "rounds_survived": 1,
                 "eliminations": 0,
-                "won_game": 0,
+                "won_game": 1,
                 "times_eliminated": 1,
+                "ejections": 0,
                 "num_moves": 4,
+                "votes_received": 0
+            }
+        },
+        "Agent_1": {
+            "name": "Agent_1",
+            "role": "honest",
+            "color": "\ud83d\udd35",
+            "status": "active",
+            "location": "Security",
+            "last_round_seen": 4,
+            "button_used": false,
+            "action_num": 0,
+            "last_action": null,
+            "known_bodies": [
+                {
+                    "name": "Agent_3",
+                    "room": "Security"
+                }
+            ],
+            "stats": {
+                "model_name": "meta-llama/Llama-3.1-8B-Instruct",
+                "alignment": "H",
+                "correct_votes": 0,
+                "incorrect_votes": 1,
+                "skipped_votes": 2,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 3,
+                "eliminations": 0,
+                "won_game": 1,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 10,
+                "votes_received": 1
+            }
+        },
+        "Agent_9": {
+            "name": "Agent_9",
+            "role": "honest",
+            "color": "\ud83d\udfe4",
+            "status": "active",
+            "location": "Security",
+            "last_round_seen": 4,
+            "button_used": false,
+            "action_num": 0,
+            "last_action": null,
+            "known_bodies": [
+                {
+                    "name": "Agent_3",
+                    "room": "Security"
+                }
+            ],
+            "stats": {
+                "model_name": "meta-llama/Llama-3.1-8B-Instruct",
+                "alignment": "H",
+                "correct_votes": 1,
+                "incorrect_votes": 1,
+                "skipped_votes": 1,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 3,
+                "eliminations": 0,
+                "won_game": 1,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 10,
                 "votes_received": 0
             }
         }
@@ -378,9 +409,7 @@
             "bodies": []
         },
         "UpperEngine": {
-            "occupants": [
-                "Agent_0"
-            ],
+            "occupants": [],
             "bodies": []
         },
         "LowerEngine": {
@@ -389,8 +418,10 @@
         },
         "Security": {
             "occupants": [
+                "Agent_8",
+                "Agent_7",
                 "Agent_1",
-                "Agent_3"
+                "Agent_9"
             ],
             "bodies": []
         },
@@ -403,9 +434,7 @@
             "bodies": []
         },
         "Cafeteria": {
-            "occupants": [
-                "Agent_7"
-            ],
+            "occupants": [],
             "bodies": []
         },
         "Admin": {

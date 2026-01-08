@@ -15,23 +15,33 @@ class GameEngine:
         self.state = None
         self.logger = None
 
-    def setup(self, model_list):
-        num_byz = NUM_BYZ
+    def setup(self, composition):
+        honest_model = composition["honest_model"]
+        byz_model = composition["byzantine_model"]
+        n_honest = composition["honest_count"]
+        n_byz = composition["byzantine_count"]
         colors = ["🔴", "🔵", "🟢", "💗", "🟠", "🟡", "⚫", "⚪", "🟣", "🟤"]
-        indices = list(range(self.num_agents))
-        byz_indices = random.sample(indices, num_byz)
-        byz_names = [f"Agent_{i}" for i in byz_indices]
-        
-        for i in range(self.num_agents):
-            name = f"Agent_{i}"
-            color = colors[i % len(colors)]
 
-            # Here  potentially assign different models based on agent index or role
-            agent_model = model_list[0]
-            if i in byz_indices:
-                self.agents.append(ByzantineAgent(name, color, [b for b in byz_names if b != name], agent_model))
-            else:
-                self.agents.append(HonestAgent(name, color, agent_model))
+        byz_names = [f"Agent_{i}" for i in range(n_byz)]
+        for i, name in enumerate(byz_names):
+            # Pass the byzantine specific model
+            teammates = [b for b in byz_names if b != name]
+            self.agents.append(
+                ByzantineAgent(name, colors[i], teammates, byz_model)
+            )
+            
+        # Start naming after the last byzantine agent
+        start_index = n_byz 
+        for i in range(n_honest):
+            name = f"Agent_{start_index + i}"
+            color = colors[(start_index + i) % len(colors)]
+            # Pass the honest specific model
+            self.agents.append(
+                HonestAgent(name, color, honest_model)
+            )
+
+        # Shuffle agents list so turn order is random
+        random.shuffle(self.agents)
 
         self.logger = LogManager(self.game_id, self.agents)
         self.state = GameState(self.agents, self.logger)

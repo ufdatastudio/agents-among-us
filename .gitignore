@@ -7,5 +7,5 @@ __pycache__/
 *.pyd
 .idea/
 env/
-logs/*
-!/logs/.gitkeep
+job_logs/
+results/

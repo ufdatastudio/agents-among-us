@@ -55,6 +55,7 @@ class GameState:
                     "won_game": 0,
                     "rounds_survived": 0,
                     "times_eliminated": 0, # if the agent was eliminated, not ejections
+                    "ejections": 0,
                     "num_moves": 0, # if stays in place, does not count as move
                     "votes_received": 0
                     
@@ -334,6 +335,7 @@ class GameState:
     def eject_agent(self, agent_name):
         self.world_data["agents"][agent_name]["status"] = "ejected"
         current_loc = self.world_data["agents"][agent_name]["location"]
+        self.world_data["agents"][agent_name]["stats"]["ejections"] += 1
 
         if agent_name in self.world_data["rooms"][current_loc]["occupants"]:
             self.world_data["rooms"][current_loc]["occupants"].remove(agent_name)
