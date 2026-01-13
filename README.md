@@ -1,10 +1,10 @@
-# The Byzantine Brains: Fault-Tolerant Consensus with LLMs
+# Agents Among Us: Fault-Tolerant Consensus with LLMs
 
 <img width="1173" height="631" alt="image" src="https://github.com/user-attachments/assets/1a1bbbb2-c002-459d-a8d9-ecaa221fac7c" />
 
 
 ## Project Overview
-The **Byzantine Brains** project explores fault-tolerant consensus-building in distributed AI systems using large language models (LLMs). Inspired by the classic Byzantine Generals Problem and social deduction games, this project simulates an environment where autonomous agents must collaborate to maintain a spaceship while identifying and ejecting malicious "Byzantine" actors.
+The project explores fault-tolerant consensus-building in distributed AI systems using large language models (LLMs). Inspired by the classic Byzantine Generals Problem and the social deduction game, Among Us, this project simulates an environment where autonomous agents must collaborate to maintain a spaceship while identifying and ejecting malicious "Byzantine" actors.
 
 The system utilizes local LLMs (specifically Llama-3.1 via Hugging Face) to drive agent logic, allowing them to perceive their environment, form memories, debate in natural language, and cast votes to achieve consensus.
 
@@ -12,7 +12,7 @@ The system utilizes local LLMs (specifically Llama-3.1 via Hugging Face) to driv
 TBD
 
 ## Technologies
-This project is built using Python and leverages state-of-the-art NLP libraries for agent cognition and Pygame for real-time visualization.
+This project is built using Python and NLP libraries for agent cognition and Pygame for real-time visualization.
 
 * **Core Language:** Python 3.10+
 * **Machine Learning:**
@@ -27,7 +27,7 @@ This project is built using Python and leverages state-of-the-art NLP libraries 
 ## Project Structure
 
 ```text
-ByzantineBrains/
+agents-among-us/
 ├── agents/                 # Agent Logic
 │   ├── base_agent.py       # Abstract base class for all agents
 │   ├── honest_agent.py     # Logic for Crewmates (Reasoning, Tasking, Voting)
@@ -53,8 +53,8 @@ Ensure you have **Python 3.10+** installed. You will also need a GPU with CUDA s
 
 ### 2. Clone the Repository
 ```bash
-git clone [https://github.com/NealShankarGit/ByzantineBrains.git](https://github.com/NealShankarGit/ByzantineBrains.git)
-cd ByzantineBrains
+git clone https://github.com/ufdatastudio/agents-among-us.git
+cd agents-among-us
 ```
 # Install PyTorch with CUDA support (adjust index-url for your specific CUDA version)
 pip install torch torchvision torchaudio --index-url [https://download.pytorch.org/whl/cu118](https://download.pytorch.org/whl/cu118)
