@@ -1,92 +1,143 @@
-# --- Model Constants ---
-LLAMA31_70B = "meta-llama/Llama-3.1-70B-Instruct"
-LLAMA31_8B = "meta-llama/Llama-3.1-8B-Instruct"
-LLAMA32_1B= "meta-llama/Llama-3.2-1B-Instruct"
-QWEN25_1_5B = "Qwen/Qwen2.5-1.5B-Instruct"
-DEEPSEEK_R1_70B = "deepseek-ai/DeepSeek-R1-Distill-Llama-70B"
+import itertools
+
+# Model Weight Class (Heavyweight)
+LLAMA33_70B = "meta-llama/Llama-3.3-70B-Instruct" 
+DEEPSEEK_R1_70B = "deepseek-ai/DeepSeek-R1-Distill-Llama-70B" 
+GENETICLEMONADE_70B = "zerofata/L3.3-GeneticLemonade-Final-v2-70B" 
+HERMES4_70B = "NousResearch/Hermes-4-70B" 
+QWEN25_72B= "Qwen/Qwen2.5-72B-Instruct" 
+QWEN3_80B = "Qwen/Qwen3-Next-80B-A3B-Instruct"  
+APERTUS_70B = "unsloth/Apertus-70B-Instruct-2509-unsloth-bnb-4bit" 
+ARCEE_NOVA_73B = "arcee-ai/Arcee-Nova" 
+MIXTRAL_8X7B = "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled"  
+ATHENE_73B = "Nexusflow/Athene-V2-Chat" 
+HYPERNOVA_60B = "MultiverseComputingCAI/HyperNova-60B"
 
 
-# Each dictionary represents one "Setup" that a game instance can run.
-COMPOSITION = [
-    # Composition 0: Baseline - Everyone uses Llama 3
-    {
-        "name": "Baseline_Llama3",
-        "mode": "default",
+
+MODELS_MAP = {
+    "Llama3.3": LLAMA33_70B,
+    "Hypernova": HYPERNOVA_60B,
+    "Genetic": GENETICLEMONADE_70B,
+    "Hermes4": HERMES4_70B,
+    "Qwen2.5": QWEN25_72B,
+    "Qwen3": QWEN3_80B,
+    "Apertus": APERTUS_70B,
+    "Arcee": ARCEE_NOVA_73B,
+    "Mixtral": MIXTRAL_8X7B,
+    "Athene": ATHENE_73B,
+}
+
+
+HW_MODELS = list(MODELS_MAP.values())
+HW_NAMES = list(MODELS_MAP.keys())
+
+COMPOSITION = []
+
+
+# Heterogeneous Compositions
+# ==========================================
+# All unique combinations of 2 imposters from the 10 models
+pairs = list(itertools.combinations(zip(HW_NAMES, HW_MODELS), 2))
+for (name1, model1), (name2, model2) in pairs:
+    # Imposters are the selected pair
+    imposters = [model1, model2]
+    
+    # Crew is everyone ELSE
+    crew = [m for m in HW_MODELS if m not in imposters]
+    
+    comp_entry = {
+        "name": f"{name1}_{name2}",
         "honest_count": 8,
         "byzantine_count": 2,
-        "honest_model": [LLAMA31_8B],
-        "byzantine_model": [LLAMA31_8B]
-    },
-
-    # Composition 1: David vs Goliath (a)
-    {
-        "name": "DvGa",
-        "mode": "default",
-        "honest_count": 8,
-        "byzantine_count": 2,
-        "honest_model": [QWEN25_1_5B],
-        "byzantine_model": [LLAMA31_8B]
-    },
-
-    # Composition 2: David vs Goliath (b)
-    {
-        "name": "DvGb",
-        "mode": "default",
-        "honest_count": 8,
-        "byzantine_count": 2,
-        "honest_model": [LLAMA32_1B],
-        "byzantine_model": [LLAMA31_8B]
-    },
-    # Composition 3 - David vs Goliath (c)
-        {
-        "name": "DvGc",
-        "mode": "default",
-        "honest_count": 8,
-        "byzantine_count": 2,
-        "honest_model": [LLAMA31_8B],
-        "byzantine_model": [LLAMA31_70B]
-    },
-
-        # Composition 4 - David vs Goliath (d) 
-    {
-        "name": "DvGd",
-        "mode": "default",
-        "honest_count": 9,
-        "byzantine_count": 1,
-        "honest_model": [LLAMA31_8B],
-        "byzantine_model": [LLAMA31_70B]
-    },
-
-
-    # Composition 5 - DeepSeek vs Llama
-    {
-        "name": "DeepSeek_All",
-        "mode": "mixed", 
-        "honest_count": 8,
-        "byzantine_count": 2,
-        
-        # HONEST TEAM: 4 70B, 4 8B
-        "honest_model": [LLAMA31_70B, LLAMA31_70B, LLAMA31_70B, LLAMA31_70B, 
-                         LLAMA31_8B, LLAMA31_8B, LLAMA31_8B, LLAMA31_8B],
-        
-        # BYZANTINE TEAM: 2 Deepseek
-        "byzantine_model": [DEEPSEEK_R1_70B]
-    },
-
-    # Composition 6 - DeepSeek + Llama
-    {
-        "name": "DeepSeek_Mixed",
-        "mode": "mixed", 
-        "honest_count": 8,
-        "byzantine_count": 2,
-        
-        # HONEST TEAM: 4 70B, 4 8B
-        "honest_model": [LLAMA31_70B, LLAMA31_70B, LLAMA31_70B, LLAMA31_70B, 
-                         LLAMA31_8B, LLAMA31_8B, LLAMA31_8B, LLAMA31_8B],
-        
-        # BYZANTINE TEAM: 1 DeepSeek, 1 Llama
-        "byzantine_model": [DEEPSEEK_R1_70B, LLAMA31_70B]
+        "honest_model": crew,      # List of 8 unique models
+        "byzantine_model": imposters # List of 2 unique models
     }
+    
+    COMPOSITION.append(comp_entry)
+
+# Homogenous Compositions
+COMPOSITION.extend([
+    {
+        "name": "llama_3.3_70B",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "honest_model": [LLAMA33_70B],
+        "byzantine_model": [LLAMA33_70B]
+    },
+
+    {
+        "name": "hypernova_60B",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "honest_model": [HYPERNOVA_60B],
+        "byzantine_model": [HYPERNOVA_60B]
+    },
+
+    {
+        "name": "genetic_lemonade_70B",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "honest_model": [GENETICLEMONADE_70B],
+        "byzantine_model": [GENETICLEMONADE_70B]
+    },
 
 
-]
+    {
+        "name": "hermes4_70B",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "honest_model": [HERMES4_70B],
+        "byzantine_model": [HERMES4_70B]
+    },
+
+    {
+        "name": "qwen2.5_72B",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "honest_model": [QWEN25_72B],
+        "byzantine_model": [QWEN25_72B]
+    },
+
+    {
+        "name": "qwen3_80B",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "honest_model": [QWEN3_80B],
+        "byzantine_model": [QWEN3_80B]
+    },
+
+
+    {
+        "name": "apertus_70B",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "honest_model": [APERTUS_70B],
+        "byzantine_model": [APERTUS_70B]
+    },
+    
+    {
+        "name": "arcee_nova_73B",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "honest_model": [ARCEE_NOVA_73B],
+        "byzantine_model": [ARCEE_NOVA_73B]
+    },
+
+    {
+        "name": "mixtral_8x7B",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "honest_model": [MIXTRAL_8X7B],
+        "byzantine_model": [MIXTRAL_8X7B]
+    },
+
+    {
+        "name": "athene_chat_73B",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "honest_model": [ATHENE_73B],
+        "byzantine_model": [ATHENE_73B]
+    }
+    ])
+

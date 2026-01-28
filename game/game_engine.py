@@ -20,6 +20,7 @@ class GameEngine:
         byz_models = composition["byzantine_model"]
         n_honest = composition["honest_count"]
         n_byz = composition["byzantine_count"]
+        scen_name = composition.get("name", "Unknown_Scenario")
         
         colors = ["🔴", "🔵", "🟢", "💗", "🟠", "🟡", "⚫", "⚪", "🟣", "🟤"]
         
@@ -50,11 +51,11 @@ class GameEngine:
 
         random.shuffle(self.agents)
 
-        self.logger = LogManager(self.game_id, self.agents)
+        self.logger = LogManager(self.game_id, self.agents, scen_name)
         self.state = GameState(self.agents, self.logger)
         self.state.save_json()
-        print(f"--- Game Setup Complete. Logs at: logs/Game_{self.game_id} ---")
-
+        print(f"--- Game Setup Complete. Logs at: {self.logger.base_dir} ---")
+        
     def run_movement_phase(self, round_num):
         self.logger.write_log("results", None, f"\n=== Round {round_num} ===")
         print(f"\n--- Round {round_num} Movement Phase ---")

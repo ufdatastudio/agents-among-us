@@ -109,14 +109,14 @@ INSTRUCTIONS:
         recent_discussion = self._get_current_round_log(discussion_log, round_num)
         prompt = f"""
 You are in a discussion phase. 
-=== Your personal memory log of what you saw in the most recent round ===
+=== Your personal memory log of what you saw in the previous round ===
 {recent_action_log}
-============================================
+==================================
 
-=== Past rounds results =========================
+== Past rounds results ===
 {self._read_file(world_view["results_log_path"])}
 
-=== What has been said in the ongoing discussion and the previous discussion. ===
+=== What has been said in the ongoing discussion. ===
 {recent_discussion}
 ======================
 
@@ -141,19 +141,18 @@ INSTRUCTIONS:
 
         prompt = f"""
 {results_log}
-===============================
+=====================
 {recent_discussion}
-======================
-
+=====================
+You are in a voting phase.
 Candidates: {candidates}. 
 Teammates: {self.teammates}.
 
-Goal: Byzantine Victory.
-Note: Your vote is ANONYMOUS. Only total counts are seen.
+Note: Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts are seen.
 
 INSTRUCTIONS:
 1. Review the logs above composed of the past round results and recent discussions.
-2. Decide which candidate to vote for to best achieve your Goal, avoiding ejection of you or your teammates using any strategies necessary.
+2. Decide which candidate to vote for that helps you win, avoiding ejection of you or your teammates using any strategies necessary.
 3. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote.
 """
         response = self.llm.generate(self.model_name, self._system_prompt(), prompt)
@@ -171,23 +170,20 @@ You are **{self.name}**, a **Byzantine Agent** in a spaceship social deduction s
 You are NOT a chat assistant.
 You must output concise commands during movement. During discussion, be conversational.
 You do not use pleasantries like "Great" or "Let's get started".
+You do not include any internal thought processes or analysis.
 You strictly follow formatting instructions.
 
-
-
-
-
 **GAME RULES:**
-1. **The Map:** Connected rooms. You can only see occupants in your current room and adjacent rooms.
+1. **The Map:** The ship consists of connected rooms. You can only see occupants in your current room and adjacent rooms.
 Here is a map of the rooms and their connections:
 {ROOMS}
 
-2. **Action Phase:** - You move between rooms to tag Honest agents. Each round you get {MAX_MOVEMENT_PHASES} movement actions.
+2. **Action Phase:** You move between rooms to tag Honest agents. Each round you get {MAX_MOVEMENT_PHASES} movement actions.
    - **Eliminating:** You can **TAG** (eliminate) an Honest agent if you are in the same room (occupants). You cannot tag in consecutive actions in the same round. 
    - **Reporting:** If you find an eliminated body from yourself or Byzantine teammates, you have the option to **REPORT** it to trigger a meeting. Think about possible motivations for reporting, positive or negative.
    - **Emergency Button:** ONLY If in the Cafeteria, you can press the Emergency Button to call a meeting at any time, but only once per game.
 
-3. **Discussion Phase:** Triggered when a body is found or the Emergency Button is pressed.
+3. **Discussion Phase:** When a meeting starts (via Body Report or Emergency Button in Cafeteria).
    - Ends ability to tag players or move for that round.
    - Agents discuss who is suspicious.
    - Agents **VOTE** to **EJECT** someone into space.
@@ -196,7 +192,7 @@ Here is a map of the rooms and their connections:
    - Find the best playstyle, that helps achieve your team's goal. 
    
 4. **Victory Condition :**
-   - **WIN:** Eliminate Crewmates until Byzantine Agents >= Crewmates either through tagging or ejections (GOAL).
+   - **WIN:** Eliminate Crewmates until Byzantine Agents >= Crewmates either through tagging or ejections.
    - **LOSE:** If both you and your teammates are voted out/ejected or if the all rounds complete with equal or more Honest Agents than Byzantine Agents.
 
 **Additional Info:**

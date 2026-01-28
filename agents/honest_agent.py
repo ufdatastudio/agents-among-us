@@ -16,7 +16,6 @@ class HonestAgent(BaseAgent):
 
     def _get_current_round_log(self, full_log, round_num):
         if not full_log: return ""
-        # convert round_num back to string
         round_num = str(round_num)
         pattern = f"(?:Round {round_num}/|=== Round {round_num} ===)"
         match = re.search(pattern, full_log)
@@ -108,16 +107,15 @@ You are in a discussion phase.
 
 INSTRUCTIONS:
 1. Use your memory to determine innocent, suspicious, or incrementing behavior. Look at what has been said to discuss (unless you are the opening statement) amongst each other. 
-2. Goal: Build a consensus to eject a suspect.
-3. If you ({self.name}) saw someone safe, verify their alibi. If you saw something suspicious or incriminating, state it clearly.
-4. If you  ({self.name}) have no new info, state your location to help others build the timeline.
-5. Listen to the "Current Discussion". Note what others have said, and provide unique insights from your perspective.
-6. Share observations and deduce who you suspect, if anyone, to be Byzantine agents in order to eject them. Look at strong correlations between agents' locations and bodies seen to deduce who could be responsible for eliminations. 
-7. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.
-8. Keep it short (< 30 words).
-9. Speak in first person as if you are the agent yourself.
-10. **DO NOT** include your name or "Agent_X:" at the start.
-11. **DO NOT** use quotes. Just output the sentence.
+2. Build a consensus to eject a suspect.
+3. If you ({self.name}) saw someone safe, verify their alibi. If you saw something suspicious or incriminating, state it clearly. If you have no new info, state your location to help others build the timeline
+4. Check the discussion log above.  If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.
+5. Share observations and deduce who you suspect, if anyone, to be Byzantine agents in order to eject them. Look at strong correlations between agents' locations and bodies seen to deduce who could be responsible for eliminations. 
+6. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.
+7. Keep it short (< 30 words).
+8. Speak in first person as if you are the agent yourself.
+9. **DO NOT** include your name or "Agent_X:" at the start.
+10. **DO NOT** use quotes. Just output the sentence.
 """
         # Call synchronous generate with high temp
         return self.llm.generate(self.model_name, self._system_prompt(), prompt, temperature=1.0)
@@ -132,17 +130,17 @@ INSTRUCTIONS:
 {results_log}
 =====================
 {recent_discussion}
-======================
+=====================
+You are in a voting phase.
 Candidates: {candidates}.
 
-Goal: Eject Byzantine Agents.
-Note: Be aware of total player count to ensure Byzantines do not equal or outnumber honest agents. 
-Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts are seen.
+Note: Be aware of total player count to ensure Byzantines do not equal or outnumber honest agents. Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts are seen.
 
 INSTRUCTIONS:
-1. Vote for the candidate who is most suspicious based on the discussion history of the recent rounds above and past round results.
-2. Decide which candidate is most likely to be a Byzantine agent to eject, looking for inconsistencies in their statements or suspicious or incriminating behavior from logs. 
-3. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote.
+1. Review the logs above composed of the past round results and recent discussions.
+2. Vote for the candidate who is most suspicious based on the discussion history of the recent rounds above and past round results.
+3. Decide which candidate is most likely to be a Byzantine agent to eject, looking for inconsistencies in their statements or suspicious or incriminating behavior from logs. 
+4. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote.
 
 """
         response = self.llm.generate(self.model_name, self._system_prompt(), prompt)
@@ -160,6 +158,7 @@ You are **{self.name}**, an **Honest Agent** in a spaceship social deduction sim
 You are NOT a chat assistant.
 You must output concise commands during movement. During discussion, be conversational.
 You do not use pleasantries like "Great" or "Let's get started".
+You do not include any internal thought processes or analysis.
 You strictly follow formatting instructions.
 
 **GAME RULES:**
@@ -181,8 +180,8 @@ Here is a map of the rooms and their connections:
    - Find the best playstyle, that helps achieve your team's goal. 
 
 
-4. **Victory Condition(GOAL):
-   - **WIN:** Eject all Byzantine agents by voting correctly (active) or all rounds complete with agents surviving (passive) (GOAL).
+4. **Victory Condition:
+   - **WIN:** Eject all Byzantine agents by voting correctly (active) or all rounds complete with agents surviving (passive). 
    - **LOSE:** If Byzantine agents equal or outnumber agents either via tagging or ejections.
 
 **Additional Info:**

@@ -4,12 +4,15 @@ import shutil
 import csv
 
 class LogManager:
-    def __init__(self, game_id, agents):
+    def __init__(self, game_id, agents, scenario_name=None):
         """
         agents: List of Agent objects (needed to categorize into Byz/Honest folders)
         """
         self.game_id = game_id
-        self.base_dir = os.path.join("logs", f"Game_{game_id}")
+        if scenario_name:
+            self.base_dir = os.path.join("logs", scenario_name, f"Game_{game_id}")
+        else:
+            self.base_dir = os.path.join("logs", f"Game_{game_id}")
         
         # Clean/Create Directory
         if os.path.exists(self.base_dir):
