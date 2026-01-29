@@ -1,3 +1,5 @@
+# live_map.py
+# Renders a live visualization of the ship and agents using pygame, reading `live_state.json` to display state and events.
 import pygame
 import json
 import os

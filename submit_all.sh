@@ -1,4 +1,6 @@
 #!/bin/bash
+# submit_all.sh
+# Submits SLURM batch jobs for a list of compositions to run experiments across the cluster.
 
 compositions=(
 #"Llama3.3_Hypernova"

@@ -1,4 +1,5 @@
 # worker.py
+# Worker process that loads LLMs and serves generation requests from the Controller via IPC files.
 import os
 os.environ["LLM_MODE"] = "WORKER"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"

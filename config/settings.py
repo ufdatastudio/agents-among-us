@@ -1,4 +1,5 @@
 # config/settings.py
+# Global settings and game constants (map, rounds, agent counts, quantization flags) used across the project.
 
 NUM_ROUNDS = 10 # 7 total rounds for real simulations
 MAX_MOVEMENT_PHASES = 4  # How many "ticks" of movement occur before a forced check/pause

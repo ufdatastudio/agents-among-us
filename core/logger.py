@@ -1,4 +1,5 @@
 # core/logger.py
+# Manages all file-based logging for games (agent logs, discussion, round results) and exports CSV stats.
 import os
 import shutil
 import csv

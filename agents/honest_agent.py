@@ -1,4 +1,5 @@
 # agents/honest_agent.py
+# Defines the behavior, prompts, and decision logic for Honest (cooperative) agents in the simulation.
 import os
 import re
 from agents.base_agent import BaseAgent
