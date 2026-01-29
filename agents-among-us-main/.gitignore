@@ -1,0 +1,15 @@
+.venv/
+venv/
+config.py
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.idea/
+env/
+job_logs/
+results/
+logs/
+config/generate_batch_list.py
+unsloth_compiled_cache/
+live_state.json
