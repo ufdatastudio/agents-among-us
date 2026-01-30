@@ -1,4 +1,5 @@
 # core/state.py
+# Maintains the authoritative game world state and provides per-agent views/observations for decision making.
 import json
 import random
 from datetime import datetime

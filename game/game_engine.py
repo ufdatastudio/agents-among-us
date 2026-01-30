@@ -1,4 +1,5 @@
 # game/engine.py
+# Implements the core game loop and phases (movement, discussion, voting), coordinating agents, state updates, and logging.
 import random
 import re
 from config.settings import MAX_MOVEMENT_PHASES, ROOMS, NUM_BYZ, NUM_HONEST

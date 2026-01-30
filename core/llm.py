@@ -1,4 +1,5 @@
 # core/llm.py
+# ModelManager: handles loading, unloading, and local/remote generation for LLMs used by agents (supports quantization and worker IPC).
 import os
 import json
 import time

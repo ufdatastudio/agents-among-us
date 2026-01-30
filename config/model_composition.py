@@ -1,3 +1,5 @@
+# config/model_composition.py
+# Defines model constants and constructs heterogeneous/homogeneous compositions used to spawn agents in experiments.
 import itertools
 
 # Model Weight Class (Heavyweight)

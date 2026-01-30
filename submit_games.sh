@@ -1,4 +1,6 @@
 #!/bin/bash
+# submit_games.sh
+# SLURM job script: launches worker processes and runs a batch of games for the specified composition.
 #SBATCH --job-name=amongus_sim        
 #SBATCH --output=job_logs/slurm_%A_%a.log
 #SBATCH --nodes=5-5                    

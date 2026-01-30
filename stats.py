@@ -1,3 +1,5 @@
+# stats.py
+# Utilities to aggregate simulation logs, produce summary CSVs, and generate visualizations across runs.
 from networkx import config
 import pandas as pd
 import glob

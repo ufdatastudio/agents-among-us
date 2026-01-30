@@ -1,4 +1,5 @@
 # main.py
+# Entrypoint for running controller sessions: parses args, sets controller environment, and orchestrates game simulations and IPC.
 import argparse
 from datetime import datetime
 import os
