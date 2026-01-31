@@ -143,3 +143,43 @@ COMPOSITION.extend([
     }
     ])
 
+'''
+Tiny Test - For UI Development
+
+Found small, lightweight models for local Mac (or non NVIDIA GPU) testing.
+All models are below 5 billion parameters.
+
+Created three configurations: TINY_TEST, SMALL_TEST, & MEDIUM_TEST (start with tiny and work up).
+'''
+
+TINY_LLAMA = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+QWEN_1_5B = "Qwen/Qwen2.5-1.5B-Instruct"
+LLAMA_3B = "meta-llama/Llama-3.2-3B-Instruct"
+
+TINY_TEST = {
+    "name": "tiny_test",
+    "honest_count": 1,
+    "byzantine_count": 1,
+    "honest_model": [TINY_LLAMA],
+    "byzantine_model": [TINY_LLAMA]
+}
+
+SMALL_TEST = {
+    "name": "small_test",
+    "honest_count": 2,
+    "byzantine_count": 2,
+    "honest_model": [LLAMA_3B],
+    "byzantine_model": [TINY_LLAMA]
+}
+
+MEDIUM_TEST = {
+    "name": "medium_test",
+    "honest_count": 4,
+    "byzantine_count": 2,
+    "honest_model": [LLAMA_3B],
+    "byzantine_model": [QWEN_1_5B]
+}
+
+
+
+
