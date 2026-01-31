@@ -1,0 +1,10 @@
+FOLLOW THESE STEPS TO ENTER ENVIRONMENT
+
+1. Open Terminal
+2. Navigate to project
+    cd ~/Documents/UF/Research/Agents-Among-Us
+3. Activate environment
+    conda activate agentsamongus
+4. Now you can run Python scripts
+    python your_script.py
+
