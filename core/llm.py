@@ -1,3 +1,65 @@
+import os
+import json
+import time
+import gc
+import re
+import logging
+import platform
+
+CURRENT_MODE = os.environ.get("LLM_MODE", "LOCAL")
+
+IS_MAC = platform.system() == "Darwin"
+
+if CURRENT_MODE != "CONTROLLER":
+    import torch
+
+    if not IS_MAC:
+        try: 
+            import unsloth 
+            import transformers
+            UNSLOTH_AVAILABLE = True
+        except ImportError:
+            import transformers
+            UNSLOTH_AVAILABLE = True
+            print("Unsloth not available.")
+    else:
+        import transformers
+        UNSLOTH_AVAILABLE = False
+
+from config.settings import QUANTIZATION
+
+# models that have prequantized versions available
+UNSLOTH = {
+    "unsloth/Apertus-70B-Instruct-2509-unsloth-bnb-4bit",
+    }
+
+MXFP4_MODELS = {
+    "MultiverseComputingCAI/HyperNova-60B",
+}
+
+TOKENIZE_MODELS = {
+    "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled",
+    "Nexusflow/Athene-V2-Chat",
+    "MultiverseComputingCAI/HyperNova-60B"
+
+}
+
+ATTENTION = {
+    'swiss-ai/Apertus-70B-Instruct-2509'
+}
+
+# Suppress heavy logging
+logging.getLogger("transformers").setLevel(logging.ERROR)
+
+
+        
+
+# ================================================================= #
+
+# NEW CODE ENDS HERE - everything below is original llm.py
+# To switch, comment out new code above and remove comment marks from below"
+
+'''
 # core/llm.py
 # ModelManager: handles loading, unloading, and local/remote generation for LLMs used by agents (supports quantization and worker IPC).
 import os
@@ -316,3 +378,4 @@ class ModelManager:
         except Exception as e:
             print(f"\n[LLM ERROR on {model_name}]: {e}")
             return "move" 
+'''
