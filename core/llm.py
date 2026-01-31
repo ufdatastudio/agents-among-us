@@ -102,7 +102,8 @@ class ModelManager:
         print(f"Loading Model: {model_name}...")  
         print(f"Device: {self._device}") # just to check device for peace of mind
 
-        try: # AI generated logic (may need tweaks)
+        # AI generated logic (may need tweaks)
+        try: 
             # Load tokenizer
             tokenizer = AutoTokenizer.from_pretrained(
                 model_name, 
@@ -187,10 +188,194 @@ class ModelManager:
                     low_cpu_mem_usage=True,
                     device_map=self._device
                 )            
-
-
-
+            
+            # Set pad token if not present
+            if tokenizer.pad_token_id is None:
+                tokenizer.pad_token_id = tokenizer.eos_token_id
+                
+            self.models[model_name] = model
+            self.tokenizers[model_name] = tokenizer
+            print(f"✓ Model {model_name} loaded successfully on {self._device}")
+            
+        except Exception as e:
+            print(f"✗ Error loading model {model_name}: {e}")
+            import traceback
+            traceback.print_exc()
+            raise e
         
+        # End of vibecoding 
+
+    def unload_all_models(self): 
+        # 1. Clear Dictionary References
+        self.models.clear()
+        self.tokenizers.clear()
+        
+        # 2. Force Python Garbage Collection
+        gc.collect()
+
+        # 3. Empty Cache
+        if self._device == "cuda" and torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+            print("CUDA cache cleared")
+        elif self._device == "mps":
+            try:
+                torch.mps.empty_cache()
+                print("MPS cache cleared")
+            except:
+                pass
+        
+        print("All models unloaded")  
+
+    def generate(self, model_name, system_prompt, user_prompt, temperature=0.1):
+        """
+        Polymorphic generate:
+        - CONTROLLER: Writes to file, waits for response.
+        - LOCAL: Runs torch directly.
+        """
+        if self.mode == "CONTROLLER":
+            return self._generate_remote(model_name, system_prompt, user_prompt, temperature)
+        else:
+            return self._generate_local(model_name, system_prompt, user_prompt, temperature)
+    
+    def _generate_remote(self, model_name, system_prompt, user_prompt, temperature):
+        """Writes request to disk and polls for response."""
+        if not self.game_id:
+            raise ValueError("Game ID not set in ModelManager. Call set_game_context first.")
+
+        request_id = f"req_{time.time()}_{os.getpid()}"
+        request_file = os.path.join(self.base_ipc_path, f"{request_id}.json")
+        response_file = os.path.join(self.base_ipc_path, f"{request_id}_response.json")
+
+        payload = {
+            "model_name": model_name,
+            "system_prompt": system_prompt,
+            "user_prompt": user_prompt,
+            "temperature": temperature,
+            "id": request_id
+        }
+
+        # 1. Write Request
+        with open(request_file, "w") as f:
+            json.dump(payload, f)        
+        
+        start_time = time.time()
+        while not os.path.exists(response_file):
+            if time.time() - start_time > 500:
+                print(f"[Timeout] Waiting for {model_name}...")
+                return "SKIP (Timeout)"
+            time.sleep(0.5)
+
+        # 3. Read Response
+        try:
+            with open(response_file, "r") as f:
+                data = json.load(f)
+            response_text = data.get("response", "")
+        except Exception as e:
+            print(f"Error reading response: {e}")
+            response_text = "ERROR"
+
+        # 4. Cleanup
+        try:
+            os.remove(request_file)
+            os.remove(response_file)
+        except:
+            pass
+
+        return response_text
+  
+    def _generate_local(self, model_name, system_prompt, user_prompt, temperature=0.1):
+        """
+        Generates response using the specified model.
+        """
+        if model_name not in self.models:
+            self.load_model(model_name)
+
+        model = self.models[model_name]
+        tokenizer = self.tokenizers[model_name]
+
+        try:
+
+            if "mixtral" in model_name.lower() or "mistral" in model_name.lower():
+                messages = [
+                    {"role": "user", "content": f"{system_prompt}\n\n{user_prompt}"}
+                ]
+            else:
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ]
+
+            if model_name in TOKENIZE_MODELS:
+                if model_name in MXFP4_MODELS: 
+                    inputs = tokenizer.apply_chat_template(
+                    messages,
+                    add_generation_prompt=True,
+                    reasoning_effort="low",
+                    tokenize=True,         
+                    return_tensors="pt",   
+                    return_dict=True       
+                ).to(model.device)
+                    
+                else: 
+                        
+                    inputs = tokenizer.apply_chat_template(
+                        messages,
+                        add_generation_prompt=True,
+                        tokenize=True,         
+                        return_tensors="pt",   
+                        return_dict=True       
+                    ).to(model.device)
+            
+            else:
+                text_prompt = tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,        
+                    add_generation_prompt=True,
+                )
+                
+                
+                inputs = tokenizer(
+                    [text_prompt], 
+                    return_tensors="pt", 
+                    add_special_tokens=False  
+                ).to(model.device)
+
+            if "token_type_ids" in inputs:
+                del inputs["token_type_ids"]
+
+            with torch.no_grad():
+                outputs = model.generate(
+                    **inputs,
+                    max_new_tokens=160,
+                    do_sample=True,
+                    temperature=temperature,
+                    eos_token_id=tokenizer.eos_token_id,
+                    pad_token_id=tokenizer.pad_token_id,
+                )
+
+            input_len = inputs['input_ids'].shape[1]
+            response = outputs[0][input_len:]
+            decoded_response = tokenizer.decode(response, skip_special_tokens=True).strip()
+            if "<think>" in decoded_response:
+                decoded_response = re.sub(r'<think>.*?</think>', '', decoded_response, flags=re.DOTALL)
+            if "assistantfinal" in decoded_response:
+                decoded_response = decoded_response.split("assistantfinal")[-1].strip()
+
+            
+            if decoded_response.count('"') % 2 != 0:
+                decoded_response += '"'
+            quotes = re.findall(r'"([^"]*)"', decoded_response)
+
+            if quotes:
+                decoded_response = quotes[-1]
+            
+            return decoded_response
+            
+        except Exception as e:
+            print(f"\n[LLM ERROR on {model_name}]: {e}")
+            return "move" 
+
 
 # ================================================================= #
 
