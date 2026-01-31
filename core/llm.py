@@ -15,15 +15,15 @@ if CURRENT_MODE != "CONTROLLER":
 
     if not IS_MAC:
         try: 
-            import unsloth 
-            import transformers
+            from unsloth import FastLanguageModel
+            from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
             UNSLOTH_AVAILABLE = True
         except ImportError:
-            import transformers
-            UNSLOTH_AVAILABLE = True
+            from transformers import AutoTokenizer, AutoModelForCausalLM
+            UNSLOTH_AVAILABLE = False
             print("Unsloth not available.")
     else:
-        import transformers
+        from transformers import AutoTokenizer, AutoModelForCausalLM
         UNSLOTH_AVAILABLE = False
 
 from config.settings import QUANTIZATION
@@ -54,25 +54,29 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 class ModelManager:
     _instance = None
     
-    # detect operating system
-    if IS_MAC:
-        if torch.backends .mps.is_available() and torch.backends.mps.is_built():
-            self._device = "mps"
-            print("Using Apple Silicon GPU (MPS).")
+    def __init__(self):
+        self.models = {}
+        self.tokenizers = {}
+        
+        # detect operating system
+        if IS_MAC:
+            if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+                self._device = "mps"
+                print("Using Apple Silicon GPU (MPS).")
+            else:
+                self._device = "cpu"
+                print("Using Apple Silicon CPU (MPS unavailable).")
         else:
-            self._device = "cpu"
-            print("Using Apple Silicon CPU (MPS unavailable).")
-    else:
-        if torch.cude.is_avilable():
-            self.device = "cude"
-            print("Using NVIDIA (CUDA) GPU.")
-        else:
-            self.device = "cpu"
-            print("Using CPU (CUDA unavailable).")
-    
-    self.mode = os.environ.get("LLM_MODE", "LOCAL") # LOCAL, CONTROLLER, WORKER
-    self.game_id = None
-    self.base_ipc_path = None
+            if torch.cuda.is_available():
+                self._device = "cuda"
+                print("Using NVIDIA (CUDA) GPU.")
+            else:
+                self._device = "cpu"
+                print("Using CPU (CUDA unavailable).")
+        
+        self.mode = os.environ.get("LLM_MODE", "LOCAL") # LOCAL, CONTROLLER, WORKER
+        self.game_id = None
+        self.base_ipc_path = None
 
     @classmethod
     def get_instance(cls):
@@ -100,7 +104,7 @@ class ModelManager:
             return
 
         print(f"Loading Model: {model_name}...")  
-        print(f"Device: {self._device}") # just to check device for peace of mind
+        print(f"Device: {self._device}") # just check again device for peace of mind
 
         # AI generated logic (may need tweaks)
         try: 
@@ -187,7 +191,7 @@ class ModelManager:
                     trust_remote_code=True,
                     low_cpu_mem_usage=True,
                     device_map=self._device
-                )            
+                )
             
             # Set pad token if not present
             if tokenizer.pad_token_id is None:
@@ -195,37 +199,33 @@ class ModelManager:
                 
             self.models[model_name] = model
             self.tokenizers[model_name] = tokenizer
-            print(f"✓ Model {model_name} loaded successfully on {self._device}")
+            print(f"Model {model_name} loaded successfully.")
             
         except Exception as e:
-            print(f"✗ Error loading model {model_name}: {e}")
+            print(f"Error loading model {model_name}: {e}")
             import traceback
             traceback.print_exc()
             raise e
-        
-        # End of vibecoding 
 
-    def unload_all_models(self): 
+    def unload_all_models(self):
+        """Clear models from memory."""
+        
         # 1. Clear Dictionary References
         self.models.clear()
         self.tokenizers.clear()
         
         # 2. Force Python Garbage Collection
         gc.collect()
-
-        # 3. Empty Cache
+        
+        # 3. Empty PyTorch CUDA/MPS Cache
         if self._device == "cuda" and torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
-            print("CUDA cache cleared")
         elif self._device == "mps":
             try:
                 torch.mps.empty_cache()
-                print("MPS cache cleared")
             except:
                 pass
-        
-        print("All models unloaded")  
 
     def generate(self, model_name, system_prompt, user_prompt, temperature=0.1):
         """
@@ -237,7 +237,7 @@ class ModelManager:
             return self._generate_remote(model_name, system_prompt, user_prompt, temperature)
         else:
             return self._generate_local(model_name, system_prompt, user_prompt, temperature)
-    
+
     def _generate_remote(self, model_name, system_prompt, user_prompt, temperature):
         """Writes request to disk and polls for response."""
         if not self.game_id:
@@ -374,7 +374,7 @@ class ModelManager:
             
         except Exception as e:
             print(f"\n[LLM ERROR on {model_name}]: {e}")
-            return "move" 
+            return "move"
 
 
 # ================================================================= #

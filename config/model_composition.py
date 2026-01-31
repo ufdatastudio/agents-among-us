@@ -180,6 +180,4 @@ MEDIUM_TEST = {
     "byzantine_model": [QWEN_1_5B]
 }
 
-
-
-
+COMPOSITION.extend([TINY_TEST, SMALL_TEST, MEDIUM_TEST])
