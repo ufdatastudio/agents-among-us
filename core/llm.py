@@ -51,6 +51,29 @@ ATTENTION = {
 # Suppress heavy logging
 logging.getLogger("transformers").setLevel(logging.ERROR)
 
+class ModelManager:
+    _instance = None
+    
+    # detect operating system
+    if IS_MAC:
+        if torch.backends .mps.is_available() and torch.backends.mps.is_built():
+            self._device = "mps"
+            print("Using Apple Silicon GPU (MPS).")
+        else:
+            self._device = "cpu"
+            print("Using Apple Silicon CPU (MPS unavailable).")
+    else:
+        if torch.cude.is_avilable():
+            self.device = "cude"
+            print("Using NVIDIA (CUDA) GPU.")
+        else:
+            self.device = "cpu"
+            print("Using CPU (CUDA unavailable).")
+    
+    self.mode = os.environ.get("LLM_MODE", "LOCAL") # LOCAL, CONTROLLER, WORKER
+    self.game_id = None
+    self.base_ipc_path = None
+
 
         
 
