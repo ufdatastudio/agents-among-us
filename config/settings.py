@@ -112,4 +112,4 @@ NUM_BYZ = 2
 NUM_HONEST = 8
 
 
-QUANTIZATION = True
+QUANTIZATION = False # Switch to False when on MacOS/non-NVIDIA GPU systems.
