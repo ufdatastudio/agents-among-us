@@ -74,6 +74,121 @@ class ModelManager:
     self.game_id = None
     self.base_ipc_path = None
 
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+        
+    def set_game_context(self, game_id, comp_name):
+        """Called by main.py to set up the IPC path."""
+        self.game_id = game_id
+        self.base_ipc_path = os.path.join("logs", comp_name, f"Game_{game_id}", "ipc")
+        os.makedirs(self.base_ipc_path, exist_ok=True)
+
+    def load_model(self, model_name):
+        """
+        Loads a model if it's not already in memory.
+        Tweaked to work on Mac as well.
+        """ 
+
+        if self.mode == "CONTROLLER":
+            print(f"[Controller] Model '{model_name}' marked for remote execution.")
+            return
+
+        if model_name in self.models:
+            return
+
+        print(f"Loading Model: {model_name}...")  
+        print(f"Device: {self._device}") # just to check device for peace of mind
+
+        try: # AI generated logic (may need tweaks)
+            # Load tokenizer
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_name, 
+                trust_remote_code=True
+            )
+            
+            # Fix enumrate typo if present
+            if tokenizer.chat_template and "enumrate" in tokenizer.chat_template:
+                tokenizer.chat_template = tokenizer.chat_template.replace("enumrate", "enumerate")
+
+            # Determine dtype based on device
+            if self._device == "cuda":
+                if torch.cuda.is_bf16_supported():
+                    compute_dtype = torch.bfloat16
+                else:
+                    compute_dtype = torch.float16
+            elif self._device == "mps":
+                compute_dtype = torch.float16  # MPS works well with float16
+            else:
+                compute_dtype = torch.float32  # CPU uses float32
+            
+            print(f"Using dtype: {compute_dtype}")
+            
+            # Check if we should use quantization
+            is_unsloth = model_name in UNSLOTH
+            is_mxfp4 = model_name in MXFP4_MODELS
+            
+            use_bnb_quantization = (
+                QUANTIZATION 
+                and self._device == "cuda"
+                and UNSLOTH_AVAILABLE
+                and not is_unsloth
+                and not is_mxfp4
+            )
+
+            # Load model based on configuration
+            if use_bnb_quantization:
+                print("--> Loading with BitsAndBytes quantization...")
+                quantization_config = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_quant_type="nf4",
+                    bnb_4bit_compute_dtype=compute_dtype,
+                    bnb_4bit_use_double_quant=True,
+                )
+                
+                model = AutoModelForCausalLM.from_pretrained(
+                    model_name,
+                    quantization_config=quantization_config,
+                    trust_remote_code=True,
+                    use_safetensors=True,
+                    device_map="auto"
+                )
+                
+            elif is_mxfp4:
+                print("--> Loading MXFP4 model...")
+                model = AutoModelForCausalLM.from_pretrained(
+                    model_name,
+                    trust_remote_code=True,
+                    use_safetensors=True,
+                    device_map="auto",
+                    torch_dtype=compute_dtype
+                )
+                
+            elif is_unsloth and UNSLOTH_AVAILABLE and self._device == "cuda":
+                print("--> Loading via Unsloth FastLanguageModel...")
+                model, tokenizer = FastLanguageModel.from_pretrained(
+                    model_name=model_name,
+                    max_seq_length=32678,
+                    dtype=compute_dtype,
+                    load_in_4bit=True,
+                    device_map="auto",
+                )
+                FastLanguageModel.for_inference(model)
+                
+            else:
+                # Standard loading (Mac, CPU, or non-quantized)
+                print("--> Loading standard model (no quantization)...")
+                model = AutoModelForCausalLM.from_pretrained(
+                    model_name,
+                    torch_dtype=compute_dtype,
+                    trust_remote_code=True,
+                    low_cpu_mem_usage=True,
+                    device_map=self._device
+                )            
+
+
 
         
 
