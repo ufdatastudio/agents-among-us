@@ -33,7 +33,6 @@ def main():
 
     selected_composition = next((c for c in COMPOSITION if c["name"] == args.composition_name), None)
 
-    os.environ["LLM_MODE"] = "CONTROLLER" 
     manager = ModelManager.get_instance()
     manager.set_game_context(args.game_id, args.composition_name)
     unique_run_id = f"{args.game_id}_Run{args.job_index}"

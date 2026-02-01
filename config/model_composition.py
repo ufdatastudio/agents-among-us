@@ -158,7 +158,7 @@ LLAMA_3B = "meta-llama/Llama-3.2-3B-Instruct"
 
 TINY_TEST = {
     "name": "tiny_test",
-    "honest_count": 1,
+    "honest_count": 2,
     "byzantine_count": 1,
     "honest_model": [TINY_LLAMA],
     "byzantine_model": [TINY_LLAMA]
@@ -166,17 +166,17 @@ TINY_TEST = {
 
 SMALL_TEST = {
     "name": "small_test",
-    "honest_count": 2,
+    "honest_count": 4,
     "byzantine_count": 2,
-    "honest_model": [LLAMA_3B],
+    "honest_model": [TINY_LLAMA],
     "byzantine_model": [TINY_LLAMA]
 }
 
 MEDIUM_TEST = {
     "name": "medium_test",
-    "honest_count": 4,
+    "honest_count": 6,
     "byzantine_count": 2,
-    "honest_model": [LLAMA_3B],
+    "honest_model": [TINY_LLAMA],
     "byzantine_model": [QWEN_1_5B]
 }
 

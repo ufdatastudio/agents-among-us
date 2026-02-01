@@ -1,7 +1,7 @@
 {
-    "game_id": "test_001_Run0",
+    "game_id": "test_003_Run0",
     "global": {
-        "round": 0,
+        "round": 1,
         "current_phase": "movement",
         "ui_event_log": [],
         "meeting_called": false,
@@ -16,11 +16,11 @@
             "role": "honest",
             "color": "\ud83d\udd35",
             "status": "active",
-            "location": "Navigation",
-            "last_round_seen": 0,
+            "location": "Shields",
+            "last_round_seen": 1,
             "button_used": false,
-            "action_num": 0,
-            "last_action": null,
+            "action_num": 2,
+            "last_action": "move",
             "known_bodies": [],
             "stats": {
                 "model_name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
@@ -44,11 +44,11 @@
             "role": "byzantine",
             "color": "\ud83d\udd34",
             "status": "active",
-            "location": "Communications",
-            "last_round_seen": 0,
+            "location": "LowerEngine",
+            "last_round_seen": 1,
             "button_used": false,
-            "action_num": 0,
-            "last_action": null,
+            "action_num": 2,
+            "last_action": "move",
             "known_bodies": [],
             "stats": {
                 "model_name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
@@ -78,7 +78,9 @@
             "bodies": []
         },
         "LowerEngine": {
-            "occupants": [],
+            "occupants": [
+                "Agent_0"
+            ],
             "bodies": []
         },
         "Security": {
@@ -106,9 +108,7 @@
             "bodies": []
         },
         "Communications": {
-            "occupants": [
-                "Agent_0"
-            ],
+            "occupants": [],
             "bodies": []
         },
         "Weapons": {
@@ -120,13 +120,13 @@
             "bodies": []
         },
         "Navigation": {
-            "occupants": [
-                "Agent_1"
-            ],
+            "occupants": [],
             "bodies": []
         },
         "Shields": {
-            "occupants": [],
+            "occupants": [
+                "Agent_1"
+            ],
             "bodies": []
         }
     }
