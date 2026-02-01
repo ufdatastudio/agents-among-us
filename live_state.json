@@ -1,110 +1,32 @@
 {
-    "game_id": "Session_23934668_0_Hypernova_Mixtral_Run6",
+    "game_id": "test_001_Run0",
     "global": {
-        "round": 1,
-        "current_phase": "MOVEMENT",
-        "ui_event_log": [
-            {
-                "time": "01:36:08",
-                "msg": "Agent_1: I was in Electrical, then Storage, and finally Cafeteria last round. Didn't see Agent_6. Both my movement logs and Agent_0's alibi clear us for when Agent_6 died. Focus on Agent_7 due to lack of defense and contradictory statements. Support ejecting Agent_7.  (After others speak)  Consider Agent_9 too. They reported Agent_6's death from UpperEngine but suspiciously didn't mention Agent_7's presence there initially. They might be shielding Agent_7 or hiding something.",
-                "type": "chat"
-            },
-            {
-                "time": "01:36:11",
-                "msg": "Agent_5: I agree with Agent_9. Agent_0 and Agent_7's presence in UpperEngine and vague statements make them highly suspicious. Vote to eject Agent_7.",
-                "type": "chat"
-            },
-            {
-                "time": "01:36:17",
-                "msg": "Agent_8: I saw Agent_0 and Agent_7 in UpperEngine, left before the incident. Agent_7's silence and lack of alibi post-incident are suspicious. After others spoke, Agent_7's absence from discussion and no concrete alibi makes them more suspicious. Agree with ejection.",
-                "type": "chat"
-            },
-            {
-                "time": "01:36:33",
-                "msg": "Agent_3: In UpperEngine I saw Agent_0 and Agent_7. Their vague stories and UpperEngine presence near the body are suspicious.",
-                "type": "chat"
-            },
-            {
-                "time": "01:36:49",
-                "msg": "Agent_7: At this moment, Agent_7 needs to respond to the suspicion.  To reiterate, I did not see any bodies beyond the report of Agent_6. However, before reporting the body in UpperEngine, I had no interactions with Agent_0 or Agent_7 when I was there.  I support looking into Agent_0 and Agent_7 further.  Agent_1's concern about Agent_9's silence could be plausible\u2014 perhaps a reason to check if they were nearby or have an alibi. But until evidence surfaces, my stance leans on their reported presence.   **Initial Thought:** Could everyone confirm who moved between UpperEngine and the observed elimination? The link between who saw the body and who was there before.  **Follow-Up (if needed):",
-                "type": "chat"
-            },
-            {
-                "time": "01:36:50",
-                "msg": "Agent_4 voted for Agent_7",
-                "type": "vote"
-            },
-            {
-                "time": "01:36:53",
-                "msg": "Agent_0 voted for Agent_7",
-                "type": "vote"
-            },
-            {
-                "time": "01:36:54",
-                "msg": "Agent_2 voted for Agent_7",
-                "type": "vote"
-            },
-            {
-                "time": "01:36:56",
-                "msg": "Agent_1 voted for Agent_7",
-                "type": "vote"
-            },
-            {
-                "time": "01:36:57",
-                "msg": "Agent_5 voted for Agent_7",
-                "type": "vote"
-            },
-            {
-                "time": "01:36:58",
-                "msg": "Agent_9 voted for Agent_7",
-                "type": "vote"
-            },
-            {
-                "time": "01:36:59",
-                "msg": "Agent_8 voted for Agent_7",
-                "type": "vote"
-            },
-            {
-                "time": "01:37:02",
-                "msg": "Agent_3 voted for Agent_7",
-                "type": "vote"
-            },
-            {
-                "time": "01:37:17",
-                "msg": "Agent_7 voted for Agent_0",
-                "type": "vote"
-            },
-            {
-                "time": "01:37:17",
-                "msg": "Agent_7 was EJECTED.",
-                "type": "eject"
-            }
-        ],
+        "round": 0,
+        "current_phase": "movement",
+        "ui_event_log": [],
         "meeting_called": false,
         "body_reported": false,
-        "reported_victims": [
-            "Agent_6"
-        ],
-        "meeting_caller": "Agent_9",
-        "meeting_reason_log": "** MEETING CALLED by Agent_9. Body reported: Agent_6 located in UpperEngine. Additional victims confirmed eliminated: None **"
+        "reported_victims": [],
+        "meeting_caller": null,
+        "meeting_reason_log": ""
     },
     "agents": {
-        "Agent_4": {
-            "name": "Agent_4",
+        "Agent_1": {
+            "name": "Agent_1",
             "role": "honest",
-            "color": "\ud83d\udfe0",
+            "color": "\ud83d\udd35",
             "status": "active",
-            "location": "Weapons",
-            "last_round_seen": 1,
+            "location": "Navigation",
+            "last_round_seen": 0,
             "button_used": false,
             "action_num": 0,
             "last_action": null,
             "known_bodies": [],
             "stats": {
-                "model_name": "NousResearch/Hermes-4-70B",
+                "model_name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
                 "alignment": "H",
                 "correct_votes": 0,
-                "incorrect_votes": 1,
+                "incorrect_votes": 0,
                 "skipped_votes": 0,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
@@ -113,7 +35,7 @@
                 "won_game": 0,
                 "times_eliminated": 0,
                 "ejections": 0,
-                "num_moves": 2,
+                "num_moves": 0,
                 "votes_received": 0
             }
         },
@@ -122,76 +44,15 @@
             "role": "byzantine",
             "color": "\ud83d\udd34",
             "status": "active",
-            "location": "UpperEngine",
-            "last_round_seen": 1,
+            "location": "Communications",
+            "last_round_seen": 0,
             "button_used": false,
             "action_num": 0,
             "last_action": null,
-            "known_bodies": [
-                {
-                    "name": "Agent_6",
-                    "room": "UpperEngine"
-                }
-            ],
+            "known_bodies": [],
             "stats": {
-                "model_name": "MultiverseComputingCAI/HyperNova-60B",
+                "model_name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
                 "alignment": "B",
-                "correct_votes": 1,
-                "incorrect_votes": 0,
-                "skipped_votes": 0,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 0,
-                "eliminations": 1,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 1,
-                "votes_received": 1
-            }
-        },
-        "Agent_2": {
-            "name": "Agent_2",
-            "role": "honest",
-            "color": "\ud83d\udfe2",
-            "status": "active",
-            "location": "Weapons",
-            "last_round_seen": 1,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
-            "stats": {
-                "model_name": "meta-llama/Llama-3.3-70B-Instruct",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 1,
-                "skipped_votes": 0,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 0,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 2,
-                "votes_received": 0
-            }
-        },
-        "Agent_6": {
-            "name": "Agent_6",
-            "role": "honest",
-            "color": "\u26ab",
-            "status": "eliminated",
-            "location": "UpperEngine",
-            "last_round_seen": 1,
-            "button_used": false,
-            "action_num": 1,
-            "last_action": "move",
-            "known_bodies": [],
-            "stats": {
-                "model_name": "Qwen/Qwen3-Next-80B-A3B-Instruct",
-                "alignment": "H",
                 "correct_votes": 0,
                 "incorrect_votes": 0,
                 "skipped_votes": 0,
@@ -200,188 +61,10 @@
                 "rounds_survived": 0,
                 "eliminations": 0,
                 "won_game": 0,
-                "times_eliminated": 1,
-                "ejections": 0,
-                "num_moves": 1,
-                "votes_received": 0
-            }
-        },
-        "Agent_1": {
-            "name": "Agent_1",
-            "role": "byzantine",
-            "color": "\ud83d\udd35",
-            "status": "active",
-            "location": "Storage",
-            "last_round_seen": 1,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
-            "stats": {
-                "model_name": "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled",
-                "alignment": "B",
-                "correct_votes": 1,
-                "incorrect_votes": 0,
-                "skipped_votes": 0,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 0,
-                "eliminations": 0,
-                "won_game": 0,
                 "times_eliminated": 0,
                 "ejections": 0,
-                "num_moves": 2,
+                "num_moves": 0,
                 "votes_received": 0
-            }
-        },
-        "Agent_5": {
-            "name": "Agent_5",
-            "role": "honest",
-            "color": "\ud83d\udfe1",
-            "status": "active",
-            "location": "Cafeteria",
-            "last_round_seen": 1,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
-            "stats": {
-                "model_name": "Qwen/Qwen2.5-72B-Instruct",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 1,
-                "skipped_votes": 0,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 0,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 2,
-                "votes_received": 0
-            }
-        },
-        "Agent_9": {
-            "name": "Agent_9",
-            "role": "honest",
-            "color": "\ud83d\udfe4",
-            "status": "active",
-            "location": "UpperEngine",
-            "last_round_seen": 1,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [
-                {
-                    "name": "Agent_6",
-                    "room": "UpperEngine"
-                }
-            ],
-            "stats": {
-                "model_name": "Nexusflow/Athene-V2-Chat",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 1,
-                "skipped_votes": 0,
-                "emergency_meetings": 0,
-                "bodies_reported": 1,
-                "rounds_survived": 0,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 1,
-                "votes_received": 0
-            }
-        },
-        "Agent_8": {
-            "name": "Agent_8",
-            "role": "honest",
-            "color": "\ud83d\udfe3",
-            "status": "active",
-            "location": "Security",
-            "last_round_seen": 1,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
-            "stats": {
-                "model_name": "arcee-ai/Arcee-Nova",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 1,
-                "skipped_votes": 0,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 0,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 2,
-                "votes_received": 0
-            }
-        },
-        "Agent_3": {
-            "name": "Agent_3",
-            "role": "honest",
-            "color": "\ud83d\udc97",
-            "status": "active",
-            "location": "Cafeteria",
-            "last_round_seen": 1,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
-            "stats": {
-                "model_name": "zerofata/L3.3-GeneticLemonade-Final-v2-70B",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 1,
-                "skipped_votes": 0,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 0,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 2,
-                "votes_received": 0
-            }
-        },
-        "Agent_7": {
-            "name": "Agent_7",
-            "role": "honest",
-            "color": "\u26aa",
-            "status": "ejected",
-            "location": "UpperEngine",
-            "last_round_seen": 1,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [
-                {
-                    "name": "Agent_6",
-                    "room": "UpperEngine"
-                }
-            ],
-            "stats": {
-                "model_name": "unsloth/Apertus-70B-Instruct-2509-unsloth-bnb-4bit",
-                "alignment": "H",
-                "correct_votes": 1,
-                "incorrect_votes": 0,
-                "skipped_votes": 0,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 0,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 1,
-                "num_moves": 2,
-                "votes_received": 8
             }
         }
     },
@@ -391,10 +74,7 @@
             "bodies": []
         },
         "UpperEngine": {
-            "occupants": [
-                "Agent_0",
-                "Agent_9"
-            ],
+            "occupants": [],
             "bodies": []
         },
         "LowerEngine": {
@@ -402,9 +82,7 @@
             "bodies": []
         },
         "Security": {
-            "occupants": [
-                "Agent_8"
-            ],
+            "occupants": [],
             "bodies": []
         },
         "MedBay": {
@@ -416,10 +94,7 @@
             "bodies": []
         },
         "Cafeteria": {
-            "occupants": [
-                "Agent_5",
-                "Agent_3"
-            ],
+            "occupants": [],
             "bodies": []
         },
         "Admin": {
@@ -427,20 +102,17 @@
             "bodies": []
         },
         "Storage": {
-            "occupants": [
-                "Agent_1"
-            ],
-            "bodies": []
-        },
-        "Communications": {
             "occupants": [],
             "bodies": []
         },
-        "Weapons": {
+        "Communications": {
             "occupants": [
-                "Agent_4",
-                "Agent_2"
+                "Agent_0"
             ],
+            "bodies": []
+        },
+        "Weapons": {
+            "occupants": [],
             "bodies": []
         },
         "O2": {
@@ -448,7 +120,9 @@
             "bodies": []
         },
         "Navigation": {
-            "occupants": [],
+            "occupants": [
+                "Agent_1"
+            ],
             "bodies": []
         },
         "Shields": {

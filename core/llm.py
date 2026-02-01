@@ -5,14 +5,13 @@ import gc
 import re
 import logging
 import platform
+import torch
 
 CURRENT_MODE = os.environ.get("LLM_MODE", "LOCAL")
 
 IS_MAC = platform.system() == "Darwin"
 
 if CURRENT_MODE != "CONTROLLER":
-    import torch
-
     if not IS_MAC:
         try: 
             from unsloth import FastLanguageModel
@@ -104,7 +103,7 @@ class ModelManager:
             return
 
         print(f"Loading Model: {model_name}...")  
-        print(f"Device: {self._device}") # just check again device for peace of mind
+        print(f"Device: {self._device}") # just to check device for peace of mind
 
         # AI generated logic (may need tweaks)
         try: 

@@ -14,3 +14,4 @@ config/generate_batch_list.py
 unsloth_compiled_cache/
 live_state.json
 Extra Documents/
+# Log directories

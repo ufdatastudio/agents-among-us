@@ -3,8 +3,18 @@
 import argparse
 from datetime import datetime
 import os
-os.environ["LLM_MODE"] = "CONTROLLER"
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+import platform
+
+# Auto-detect: LOCAL on Mac, CONTROLLER on HiperGator
+
+IS_MAC = platform.system() == "Darwin"
+if IS_MAC:
+    os.environ["LLM_MODE"] = "LOCAL"
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""  # Empty on Mac, not -1
+else:
+    os.environ["LLM_MODE"] = "CONTROLLER"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 import time
 from uuid import uuid4
 from config.settings import NUM_ROUNDS
