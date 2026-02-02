@@ -1,16 +1,21 @@
 {
-    "game_id": "test_005_Run0",
+    "game_id": "test_small_001_Run0",
     "global": {
-        "round": 3,
+        "round": 2,
         "current_phase": "GAME OVER",
         "ui_event_log": [
             {
-                "time": "15:37:35",
-                "msg": "Agent_2 eliminated in Cafeteria",
+                "time": "15:54:21",
+                "msg": "Agent_3 eliminated in Storage",
                 "type": "kill"
             },
             {
-                "time": "15:39:01",
+                "time": "15:59:29",
+                "msg": "Agent_5 eliminated in Cafeteria",
+                "type": "kill"
+            },
+            {
+                "time": "16:04:21",
                 "msg": "BYZANTINES WIN",
                 "type": "info"
             }
@@ -24,39 +29,44 @@
     "agents": {
         "Agent_1": {
             "name": "Agent_1",
-            "role": "honest",
+            "role": "byzantine",
             "color": "\ud83d\udd35",
             "status": "active",
-            "location": "Security",
-            "last_round_seen": 3,
+            "location": "UpperEngine",
+            "last_round_seen": 2,
             "button_used": false,
             "action_num": 0,
             "last_action": null,
-            "known_bodies": [],
+            "known_bodies": [
+                {
+                    "name": "Agent_5",
+                    "room": "Cafeteria"
+                }
+            ],
             "stats": {
                 "model_name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-                "alignment": "H",
+                "alignment": "B",
                 "correct_votes": 0,
                 "incorrect_votes": 0,
                 "skipped_votes": 0,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 2,
-                "eliminations": 0,
-                "won_game": 0,
+                "rounds_survived": 1,
+                "eliminations": 2,
+                "won_game": 1,
                 "times_eliminated": 0,
                 "ejections": 0,
-                "num_moves": 12,
+                "num_moves": 6,
                 "votes_received": 0
             }
         },
-        "Agent_2": {
-            "name": "Agent_2",
+        "Agent_5": {
+            "name": "Agent_5",
             "role": "honest",
-            "color": "\ud83d\udfe2",
+            "color": "\ud83d\udfe1",
             "status": "eliminated",
             "location": "Cafeteria",
-            "last_round_seen": 3,
+            "last_round_seen": 2,
             "button_used": false,
             "action_num": 1,
             "last_action": "move",
@@ -69,12 +79,45 @@
                 "skipped_votes": 0,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 2,
+                "rounds_survived": 1,
                 "eliminations": 0,
                 "won_game": 0,
                 "times_eliminated": 1,
                 "ejections": 0,
-                "num_moves": 9,
+                "num_moves": 4,
+                "votes_received": 0
+            }
+        },
+        "Agent_2": {
+            "name": "Agent_2",
+            "role": "honest",
+            "color": "\ud83d\udfe2",
+            "status": "active",
+            "location": "O2",
+            "last_round_seen": 2,
+            "button_used": false,
+            "action_num": 0,
+            "last_action": null,
+            "known_bodies": [
+                {
+                    "name": "Agent_5",
+                    "room": "Cafeteria"
+                }
+            ],
+            "stats": {
+                "model_name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+                "alignment": "H",
+                "correct_votes": 0,
+                "incorrect_votes": 0,
+                "skipped_votes": 0,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 1,
+                "eliminations": 0,
+                "won_game": 0,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 8,
                 "votes_received": 0
             }
         },
@@ -84,13 +127,13 @@
             "color": "\ud83d\udd34",
             "status": "active",
             "location": "UpperEngine",
-            "last_round_seen": 3,
+            "last_round_seen": 2,
             "button_used": false,
             "action_num": 0,
             "last_action": null,
             "known_bodies": [
                 {
-                    "name": "Agent_2",
+                    "name": "Agent_5",
                     "room": "Cafeteria"
                 }
             ],
@@ -102,23 +145,82 @@
                 "skipped_votes": 0,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 2,
-                "eliminations": 1,
+                "rounds_survived": 1,
+                "eliminations": 0,
                 "won_game": 1,
                 "times_eliminated": 0,
                 "ejections": 0,
-                "num_moves": 10,
+                "num_moves": 7,
+                "votes_received": 0
+            }
+        },
+        "Agent_4": {
+            "name": "Agent_4",
+            "role": "honest",
+            "color": "\ud83d\udfe0",
+            "status": "active",
+            "location": "Reactor",
+            "last_round_seen": 2,
+            "button_used": false,
+            "action_num": 0,
+            "last_action": null,
+            "known_bodies": [],
+            "stats": {
+                "model_name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+                "alignment": "H",
+                "correct_votes": 0,
+                "incorrect_votes": 0,
+                "skipped_votes": 0,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 1,
+                "eliminations": 0,
+                "won_game": 0,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 8,
+                "votes_received": 0
+            }
+        },
+        "Agent_3": {
+            "name": "Agent_3",
+            "role": "honest",
+            "color": "\ud83d\udc97",
+            "status": "eliminated",
+            "location": "Storage",
+            "last_round_seen": 1,
+            "button_used": false,
+            "action_num": 1,
+            "last_action": "move",
+            "known_bodies": [],
+            "stats": {
+                "model_name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+                "alignment": "H",
+                "correct_votes": 0,
+                "incorrect_votes": 0,
+                "skipped_votes": 0,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 0,
+                "eliminations": 0,
+                "won_game": 0,
+                "times_eliminated": 1,
+                "ejections": 0,
+                "num_moves": 1,
                 "votes_received": 0
             }
         }
     },
     "rooms": {
         "Reactor": {
-            "occupants": [],
+            "occupants": [
+                "Agent_4"
+            ],
             "bodies": []
         },
         "UpperEngine": {
             "occupants": [
+                "Agent_1",
                 "Agent_0"
             ],
             "bodies": []
@@ -128,9 +230,7 @@
             "bodies": []
         },
         "Security": {
-            "occupants": [
-                "Agent_1"
-            ],
+            "occupants": [],
             "bodies": []
         },
         "MedBay": {
@@ -144,7 +244,7 @@
         "Cafeteria": {
             "occupants": [],
             "bodies": [
-                "Agent_2"
+                "Agent_5"
             ]
         },
         "Admin": {
@@ -153,7 +253,9 @@
         },
         "Storage": {
             "occupants": [],
-            "bodies": []
+            "bodies": [
+                "Agent_3"
+            ]
         },
         "Communications": {
             "occupants": [],
@@ -164,7 +266,9 @@
             "bodies": []
         },
         "O2": {
-            "occupants": [],
+            "occupants": [
+                "Agent_2"
+            ],
             "bodies": []
         },
         "Navigation": {

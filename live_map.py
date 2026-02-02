@@ -8,7 +8,7 @@ import subprocess
 import sys
 
 # --- CONFIGURATION ---
-WIDTH, HEIGHT = 2500, 1300
+WIDTH, HEIGHT = 2500, 1300 
 BACKGROUND_COLOR = (15, 15, 35) 
 ROOM_COLOR = (40, 40, 80)
 ROOM_BORDER = (100, 100, 200)

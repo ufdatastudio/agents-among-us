@@ -1,0 +1,107 @@
+=== Action Log for Agent_2 ===
+
+Round 1/10
+Players Remaining: 6
+Current Location: [Navigation]
+  -> Occupants: []
+Adjacent Location(s):
+    [Weapons] -> Occupants: ['Agent_5']
+    [O2] -> Occupants: None
+    [Shields] -> Occupants: None
+Bodies Seen: None
+
+Action 1 Selected: move -> Weapons
+======================
+
+
+Current Location: [Weapons]
+  -> Occupants: ['Agent_5']
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: None
+    [O2] -> Occupants: None
+    [Navigation] -> Occupants: None
+    [Shields] -> Occupants: None
+Bodies Seen: None
+
+Action 2 Selected: move -> O2
+======================
+
+
+Current Location: [O2]
+  -> Occupants: []
+Adjacent Location(s):
+    [Weapons] -> Occupants: None
+    [Navigation] -> Occupants: None
+    [Shields] -> Occupants: None
+Bodies Seen: None
+
+Action 3 Selected: move -> Weapons
+======================
+
+
+Current Location: [Weapons]
+  -> Occupants: ['Agent_5']
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: None
+    [O2] -> Occupants: None
+    [Navigation] -> Occupants: None
+    [Shields] -> Occupants: None
+Bodies Seen: None
+
+Action 4 Selected: move -> O2
+======================
+
+
+Round 2/10
+Players Remaining: 5
+Current Location: [O2]
+  -> Occupants: []
+Adjacent Location(s):
+    [Weapons] -> Occupants: None
+    [Navigation] -> Occupants: None
+    [Shields] -> Occupants: None
+Bodies Seen: None
+
+Action 1 Selected: move -> Weapons
+======================
+
+
+Current Location: [Weapons]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: ['Agent_1', 'Agent_0']
+    [O2] -> Occupants: None
+    [Navigation] -> Occupants: None
+    [Shields] -> Occupants: None
+Bodies Seen: None
+
+Action 2 Selected: move -> Cafeteria
+======================
+
+
+Current Location: [Cafeteria]
+  -> Occupants: []
+Adjacent Location(s):
+    [UpperEngine] -> Occupants: ['Agent_1', 'Agent_0']
+    [MedBay] -> Occupants: None
+    [Weapons] -> Occupants: None
+    [Admin] -> Occupants: None
+    [Storage] -> Occupants: None
+Bodies Seen: Agent_5 (in Cafeteria)
+
+Action 3 Selected: move -> Weapons
+======================
+
+
+Current Location: [Weapons]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: None
+    [O2] -> Occupants: None
+    [Navigation] -> Occupants: None
+    [Shields] -> Occupants: None
+Bodies Seen: Agent_5 (in Cafeteria)
+
+Action 4 Selected: move -> O2
+======================
+
