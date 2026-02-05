@@ -25,7 +25,6 @@ class GameState:
             "rooms": {room_name: {"occupants": [], "bodies": []} for room_name in ROOMS}
         }
 
-        # Initialize Data
         for agent in agents:
             start_room = random.choice(list(ROOMS.keys()))
             #start_room = "Cafeteria"
@@ -41,7 +40,7 @@ class GameState:
                 "action_num": agent.action_num,
                 "last_action": None,
                 "known_bodies": [],
-                # --- STATS TRACKING ---
+                # STATS TRACKING 
                 "stats": {
                     "model_name": agent.model_name,
                     "alignment": alignment,
@@ -68,7 +67,6 @@ class GameState:
         timestamp = datetime.now().strftime("%H:%M:%S")
         entry = {"time": timestamp, "msg": message, "type": category}
         
-        # Keep only last 15 events to prevent JSON bloat
         log = self.world_data["global"]["ui_event_log"]
         log.append(entry)
         if len(log) > 15:
@@ -116,7 +114,7 @@ class GameState:
                 agent_data["known_bodies"].append({"name": body, "room": loc})
 
 
-        # --- 1. Calculate Stats ---
+        # Calculate Stats 
         active_honest = len([a for n, a in self.world_data["agents"].items() 
                              if a["role"] == "honest" and a["status"] == "active"])
         total_active = len([a for n, a in self.world_data["agents"].items() 
@@ -134,7 +132,7 @@ class GameState:
         for body in current_room_bodies:
             visible_bodies.append({"name": body, "room": loc})
     
-        # --- 2. Build Surroundings ---
+        # Build Surroundings 
         surroundings = {loc: {"occupants": occupants, "bodies": current_room_bodies}}
         adj_log_str = ""
         if loc in ROOMS:
@@ -146,7 +144,7 @@ class GameState:
                 occ = [p for p in self.world_data["rooms"][neighbor]["occupants"] if p != agent_name]
                 adj_log_str += f"\n    [{neighbor}] -> Occupants: {occ if occ else 'None'}"
 
-        # --- 3. Role Specific (Teammates) ---
+        # Role Specific (Teammates) 
         teammate_str = ""
         if agent_data["role"] == "byzantine":
             teammates = [a.name for a in self.agents if a.role == "byzantine" and a.name != agent_name]
@@ -156,7 +154,6 @@ class GameState:
                 tm_status.append(f"{tm}: {status}")
             teammate_str = f"Teammate(s) Status: {' || '.join(tm_status)}\n"
 
-        # --- 4. Conditional Header ---
         header_str = ""
         # Only check/update header if we are actually logging
         if log_to_file and agent_data["last_round_seen"] < round_num:
@@ -169,7 +166,6 @@ class GameState:
 
 
 
-        # --- 5. Construct Observation Block ---
         # Only construct and write this string if we are in the movement phase
         if log_to_file:
 
@@ -260,14 +256,13 @@ class GameState:
 
         newly_discovered = list(set(newly_discovered))
 
-        # --- FIND BODY LOCATION ---
+        # FIND BODY LOCATION
         body_location = "Unknown Location"
         # Search all rooms to find where the body is currently located
         for room_name, room_data in self.world_data["rooms"].items():
             if body_name in room_data["bodies"]:
                 body_location = room_name
                 break
-        # --------------------------
 
         # Log to Discussion file
         victims_str = ", ".join(newly_discovered)
@@ -319,7 +314,6 @@ class GameState:
             f"======================\n"
         )
         for name, data in self.world_data["agents"].items():
-            # We log this for all agents so they know why the movement phase stopped
             self.logger.write_log("agent", name, end_msg)
 
     def _clear_all_bodies(self):

@@ -13,3 +13,5 @@ logs/
 config/generate_batch_list.py
 unsloth_compiled_cache/
 live_state.json
+xclusive
+environment.yml

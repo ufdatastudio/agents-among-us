@@ -22,7 +22,6 @@ MAX_MOVEMENT_PHASES = 4  # How many "ticks" of movement occur before a forced ch
 # }
 
 ROOMS = {
-    # --- Left Side (Reactor & Engines) ---
     "Reactor": [
         "Security", 
         "UpperEngine", 
@@ -80,7 +79,6 @@ ROOMS = {
         "Shields"
     ],
 
-    # --- Right Side (Navigation & Support) ---
     "Weapons": [
         "Cafeteria", 
         "O2", 
@@ -111,4 +109,4 @@ NUM_BYZ = 2
 NUM_HONEST = 8
 
 
-QUANTIZATION = True
+QUANTIZATION = False

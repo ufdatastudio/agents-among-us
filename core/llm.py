@@ -2,16 +2,15 @@
 import os
 import json
 import time
-import gc
 import re
-import logging
 
-CURRENT_MODE = os.environ.get("LLM_MODE", "LOCAL")
-if CURRENT_MODE != "CONTROLLER":
+if os.environ.get("LLM_MODE", "LOCAL") != "CONTROLLER":
     import torch
     import gc
     from unsloth import FastLanguageModel
-    from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+    from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, Mxfp4Config, AutoConfig
+    from transformers.utils import logging
+    logging.disable_progress_bar()
 
 
 from config.settings import QUANTIZATION
@@ -28,16 +27,10 @@ MXFP4_MODELS = {
 TOKENIZE_MODELS = {
     "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled",
     "Nexusflow/Athene-V2-Chat",
-    "MultiverseComputingCAI/HyperNova-60B"
+    "MultiverseComputingCAI/HyperNova-60B",
+    "swiss-ai/Apertus-70B-Instruct-2509",
 
 }
-
-ATTENTION = {
-    'swiss-ai/Apertus-70B-Instruct-2509'
-}
-
-# Suppress heavy logging
-logging.getLogger("transformers").setLevel(logging.ERROR)
 
 class ModelManager:
     _instance = None
@@ -46,7 +39,7 @@ class ModelManager:
         self.models = {}
         self.tokenizers = {}
         self._device = "cuda"
-        self.mode = os.environ.get("LLM_MODE", "LOCAL") # LOCAL, CONTROLLER, WORKER
+        self.mode = os.environ.get("LLM_MODE", "LOCAL") # LOCAL, CONTROLLER
         self.game_id = None
         self.base_ipc_path = None
 
@@ -73,20 +66,20 @@ class ModelManager:
 
         if model_name in self.models:
             return
-
-        print(f"Loading Model: {model_name}...")
         
+        gc.collect()
+        torch.cuda.empty_cache()
+
+        initial_free, total = torch.cuda.mem_get_info()
+        print(f"Loading Model: {model_name}:  [Memory] Before Load: {initial_free/1024**3:.2f} GB free", flush=True)
+
         try:
             
             tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
             if tokenizer.chat_template and "enumrate" in tokenizer.chat_template:
                 tokenizer.chat_template = tokenizer.chat_template.replace("enumrate", "enumerate")
 
-            if torch.cuda.is_available() and torch.cuda.is_bf16_supported():
-                compute_dtype = torch.bfloat16
-            else:
-                compute_dtype = torch.float16
-            
+          
             is_unsloth = model_name in UNSLOTH
             is_mxfp4 = model_name in MXFP4_MODELS
 
@@ -101,7 +94,7 @@ class ModelManager:
                 quantization_config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=compute_dtype,
+                bnb_4bit_compute_dtype=torch.bfloat16,
                 bnb_4bit_use_double_quant=True,
             ) 
                 
@@ -110,7 +103,8 @@ class ModelManager:
                     quantization_config=quantization_config,
                     trust_remote_code=True,
                     use_safetensors=True,
-                    device_map="auto"
+                    device_map="auto",
+                    dtype=torch.bfloat16,
 
                 )
 
@@ -123,18 +117,30 @@ class ModelManager:
                     trust_remote_code=True,
                     use_safetensors=True,
                     device_map="auto",
-                    torch_dtype=compute_dtype
+                    dtype=torch.bfloat16,
                 )
-            else:
-                print(f"--> Loading via UNSLOTH FastLanguageModel...")
-                model, tokenizer = FastLanguageModel.from_pretrained(
-                        model_name=model_name,
-                        max_seq_length=32678,
-                        dtype=compute_dtype,
-                        load_in_4bit=True,
-                        device_map="auto",
-                    )
-                FastLanguageModel.for_inference(model)
+            
+
+                # model, tokenizer = FastLanguageModel.from_pretrained(
+                #         model_name=model_name,
+                #         max_seq_length=8192,
+                #         load_in_4bit=True,
+                #         device_map="auto",
+                #         dtype=torch.bfloat16,
+                #         gpu_memory_utilization=0.25
+                #     )
+                # FastLanguageModel.for_inference(model)
+
+
+
+                # model = AutoModelForCausalLM.from_pretrained(
+                #     model_name,
+                #     trust_remote_code=True,
+                #     device_map="auto",
+                #     torch_dtype=torch.bfloat16, 
+                # )
+
+
 
 
             if tokenizer.pad_token_id is None:
@@ -142,12 +148,15 @@ class ModelManager:
                 
             self.models[model_name] = model
             self.tokenizers[model_name] = tokenizer
-            print(f"Model {model_name} loaded successfully.")
-            
+            torch.cuda.empty_cache()
+
+            final_free, _ = torch.cuda.mem_get_info()
+            mem_taken = (initial_free - final_free) / 1024**3
+            print(f"Loaded {model_name} | VRAM Usage: {mem_taken:.2f} GiB | Memory Remaining: {final_free / 1024**3:.2f} GiB", flush=True)
+
         except Exception as e:
             print(f"Error loading model {model_name}: {e}")
             raise e
-
 
 
     def unload_all_models(self):
@@ -162,9 +171,7 @@ class ModelManager:
         # 3. Empty PyTorch CUDA Cache
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-            torch.cuda.synchronize() # Wait for all kernels to finish
-
-
+            torch.cuda.synchronize() 
 
     def generate(self, model_name, system_prompt, user_prompt, temperature=0.1):
         """
@@ -183,7 +190,8 @@ class ModelManager:
         if not self.game_id:
             raise ValueError("Game ID not set in ModelManager. Call set_game_context first.")
 
-        request_id = f"req_{time.time()}_{os.getpid()}"
+        safe_model_name = model_name.replace("/", "_").replace("-", "_")
+        request_id = f"req_{safe_model_name}_{time.time()}_{os.getpid()}"
         request_file = os.path.join(self.base_ipc_path, f"{request_id}.json")
         response_file = os.path.join(self.base_ipc_path, f"{request_id}_response.json")
 
@@ -197,14 +205,16 @@ class ModelManager:
 
         # 1. Write Request
         with open(request_file, "w") as f:
-            json.dump(payload, f)        
+            json.dump(payload, f)
+            f.flush()
+            os.fsync(f.fileno())        
         
         start_time = time.time()
         while not os.path.exists(response_file):
-            if time.time() - start_time > 500:
+            if time.time() - start_time > 180:
                 print(f"[Timeout] Waiting for {model_name}...")
                 return "SKIP (Timeout)"
-            time.sleep(0.5)
+            time.sleep(0.05)
 
         # 3. Read Response
         try:
