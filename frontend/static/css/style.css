@@ -115,7 +115,7 @@ body {
 }
 
 /* ============================================
-   CONFIG PAGE - SETTINGS FORM
+   CONFIG PAGE STYLES
    ============================================ */
 
 .config-container {
@@ -127,6 +127,10 @@ body {
     font-size: 3rem;
     color: #3d7bff;
     margin-bottom: 40px;
+    text-shadow:
+        0 0 10px rgba(61, 123, 255, 0.6),
+        0 0 20px rgba(61, 123, 255, 0.4),
+        0 0 30px rgba(61, 123, 255, 0.3);
 }
 
 #configForm {
@@ -236,7 +240,7 @@ body {
     border-collapse: collapse;
     background: rgba(0, 0, 0, 0.3);
     border-radius: 10px;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .agent-table thead {
@@ -265,6 +269,18 @@ body {
     color: #6b9bff;
     font-size: 1.2rem;
     text-align: center;
+}
+
+/* Model column: slightly narrower (only this column constrained) */
+.agent-table th:nth-child(2),
+.agent-table td:nth-child(2) {
+    max-width: 425px;
+}
+
+/* Role column: slightly wider (only this column constrained) */
+.agent-table th:nth-child(3),
+.agent-table td:nth-child(3) {
+    min-width: 10px;
 }
 
 .table-select {
@@ -296,6 +312,97 @@ body {
 
 .role-select option[value="honest"] {
     color: #6bffb3;
+}
+
+/* Color Picker (sprite-based dropdown) */
+.color-picker-cell {
+    min-width: 140px;
+}
+
+.color-picker {
+    position: relative;
+    width: 100%;
+}
+
+.color-picker-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: left;
+}
+
+.color-picker-trigger:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.color-picker-trigger:focus {
+    outline: none;
+    border-color: #3d7bff;
+    box-shadow: 0 0 10px rgba(61, 123, 255, 0.3);
+}
+
+.color-picker-sprite {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.color-picker-label {
+    flex: 1;
+}
+
+.color-picker-dropdown {
+    position: absolute;
+    left: 0;
+    top: 100%;
+    margin-top: 4px;
+    min-width: 100%;
+    max-height: 280px;
+    overflow-y: auto;
+    background: rgba(26, 26, 62, 0.98);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+}
+
+.color-picker-dropdown[hidden] {
+    display: none;
+}
+
+.color-picker-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: #ffffff;
+    transition: background 0.2s ease;
+}
+
+.color-picker-option:hover {
+    background: rgba(61, 123, 255, 0.25);
+}
+
+.color-picker-option-disabled {
+    opacity: 0.45;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.color-picker-option .color-picker-sprite {
+    width: 28px;
+    height: 28px;
 }
 
 /* Button Group */
