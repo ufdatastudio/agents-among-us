@@ -1,13 +1,9 @@
-"""
-Flask app for Agents Among Us Frontend
-Serves the UI and provides API endpoints for game control
-"""
-
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 import subprocess
 import os
 import json
 import sys
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = 'agents-among-us-secret-key'

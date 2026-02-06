@@ -43,14 +43,6 @@ body {
     letter-spacing: 4px;
 }
 
-.subtitle {
-    font-size: 1.2rem;
-    color: #a0a0ff;
-    margin-bottom: 60px;
-    font-weight: 300;
-    letter-spacing: 2px;
-}
-
 /* Menu Buttons */
 .menu {
     display: flex;
@@ -122,17 +114,246 @@ body {
     box-shadow: 0 10px 30px rgba(61, 255, 107, 0.5);
 }
 
-/* Footer */
-.footer {
-    margin-top: 40px;
-    color: #808080;
-    font-size: 0.9rem;
+/* ============================================
+   CONFIG PAGE - SETTINGS FORM
+   ============================================ */
+
+.config-container {
+    max-width: 1000px;
+    padding: 20px;
 }
 
-.version {
+.config-title {
+    font-size: 3rem;
+    color: #3d7bff;
+    margin-bottom: 40px;
+}
+
+#configForm {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 40px;
+    backdrop-filter: blur(10px);
+}
+
+.form-section {
+    margin-bottom: 40px;
+}
+
+.section-title {
+    font-size: 1.8rem;
+    color: #6b9bff;
+    margin-bottom: 20px;
+    border-bottom: 2px solid rgba(107, 155, 255, 0.3);
+    padding-bottom: 10px;
+}
+
+.form-group {
+    margin-bottom: 25px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #a0a0ff;
+    letter-spacing: 1px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 15px 20px;
+    font-size: 1.1rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+    transition: all 0.3s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #3d7bff;
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 20px rgba(61, 123, 255, 0.3);
+}
+
+.form-hint {
+    display: block;
     margin-top: 5px;
-    font-size: 0.8rem;
-    color: #606060;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+}
+
+/* Input with Button Layout */
+.input-with-button {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.agent-count-input {
+    flex: 1;
+    max-width: 300px;
+}
+
+.confirm-btn {
+    padding: 15px 30px;
+    font-size: 1rem;
+    font-weight: bold;
+    background: linear-gradient(135deg, #3d7bff 0%, #0043c7 100%);
+    border: 2px solid #6b9bff;
+    border-radius: 10px;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+.confirm-btn:hover {
+    background: linear-gradient(135deg, #6b9bff 0%, #3d7bff 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(61, 123, 255, 0.4);
+}
+
+.confirm-btn:active {
+    transform: translateY(0);
+}
+
+/* Agent Configuration Table */
+.table-wrapper {
+    overflow-x: auto;
+    margin-top: 20px;
+}
+
+.agent-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.agent-table thead {
+    background: linear-gradient(135deg, #3d7bff 0%, #0043c7 100%);
+}
+
+.agent-table th {
+    padding: 15px;
+    text-align: left;
+    font-size: 1.1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.agent-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.agent-table tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.agent-num {
+    font-weight: bold;
+    color: #6b9bff;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+.table-select {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.table-select:focus {
+    outline: none;
+    border-color: #3d7bff;
+    box-shadow: 0 0 10px rgba(61, 123, 255, 0.3);
+}
+
+.table-select option {
+    background: #1a1a3e;
+    color: #ffffff;
+}
+
+.role-select option[value="byzantine"] {
+    color: #ff6b6b;
+}
+
+.role-select option[value="honest"] {
+    color: #6bffb3;
+}
+
+/* Button Group */
+.button-group {
+    display: flex;
+    gap: 20px;
+    margin-top: 40px;
+}
+
+.config-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px 30px;
+    font-size: 1.3rem;
+    font-weight: bold;
+    text-decoration: none;
+    border-radius: 12px;
+    border: 3px solid;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    letter-spacing: 1px;
+    background: none; /* Override default button styling */
+}
+
+.config-btn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+}
+
+.config-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Start Game Button - Green */
+.start-game-btn {
+    background: linear-gradient(135deg, #3dff6b 0%, #00c743 100%);
+    border-color: #6bffb3;
+    color: #ffffff;
+}
+
+.start-game-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #6bffb3 0%, #3dff6b 100%);
+    box-shadow: 0 8px 25px rgba(61, 255, 107, 0.5);
+}
+
+/* Back Button - Gray */
+.back-btn {
+    background: linear-gradient(135deg, #555555 0%, #333333 100%);
+    border-color: #777777;
+    color: #ffffff;
+}
+
+.back-btn:hover {
+    background: linear-gradient(135deg, #777777 0%, #555555 100%);
+    box-shadow: 0 8px 25px rgba(85, 85, 85, 0.5);
 }
 
 /* ============================================
@@ -144,8 +365,8 @@ body {
         font-size: 2.5rem;
     }
     
-    .subtitle {
-        font-size: 1rem;
+    .config-title {
+        font-size: 2rem;
     }
     
     .menu-btn {
@@ -155,6 +376,23 @@ body {
     
     .btn-icon {
         font-size: 1.4rem;
+    }
+    
+    #configForm {
+        padding: 25px;
+    }
+    
+    .button-group {
+        flex-direction: column;
+    }
+    
+    .agent-table {
+        font-size: 0.9rem;
+    }
+    
+    .agent-table th,
+    .agent-table td {
+        padding: 8px;
     }
 }
 
@@ -167,5 +405,10 @@ body {
     .menu-btn {
         font-size: 1rem;
         padding: 12px 25px;
+    }
+    
+    .config-btn {
+        font-size: 1.1rem;
+        padding: 15px 25px;
     }
 }
