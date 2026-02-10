@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Simulation - Agents Among Us</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Top Bar: Game Parameters -->
+        <header class="game-header">
+            <div class="game-params">
+                <span class="param-item">
+                    <strong>Game ID:</strong> <span id="gameId">{{ game_id }}</span>
+                </span>
+                <span class="param-item">
+                    <strong>Total Agents:</strong> <span id="totalAgents">-</span>
+                </span>
+                <span class="param-item">
+                    <strong>Byzantine:</strong> <span id="byzantineCount">-</span>
+                </span>
+                <span class="param-item">
+                    <strong>Honest:</strong> <span id="honestCount">-</span>
+                </span>
+                <span class="param-item">
+                    <strong>Current Round:</strong> <span id="currentRound">-</span>/<span id="totalRounds">-</span>
+                </span>
+                <span class="param-item">
+                    <strong>Status:</strong> <span id="gameStatus">-</span>
+                </span>
+            </div>
+            <div class="game-controls">
+                <button type="button" class="control-btn pause-btn" id="pauseBtn">⏸ Pause</button>
+                <button type="button" class="control-btn reverse-btn" id="reverseBtn">⏮ Reverse</button>
+                <button type="button" class="control-btn exit-btn" id="exitBtn">Exit to Home</button>
+            </div>
+        </header>
+
+        <!-- Left Sidebar: Agent Status Table -->
+        <aside class="agent-sidebar">
+            <h3>Agent Status</h3>
+            <div class="status-table-wrapper">
+                <table class="status-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Model</th>
+                            <th>Color</th>
+                            <th>Status</th>
+                            <th>Votes</th>
+                            <th>Kills</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statusTableBody">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </aside>
+
+        <!-- Center: Map Display -->
+        <main class="map-container">
+            <div class="map-wrapper">
+                <img src="{{ url_for('static', filename='images/AgentsAmongUsMap.png') }}" alt="Game Map" class="map-image" id="mapImage">
+                <div class="agent-markers" id="agentMarkers">
+                    <!-- Agent markers positioned by JavaScript -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom: Live Feed -->
+        <section class="live-feed">
+            <h3>Live Feed</h3>
+            <div class="feed-content" id="feedContent">
+                <!-- Events added by JavaScript -->
+            </div>
+        </section>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+</body>
+</html>

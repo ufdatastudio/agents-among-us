@@ -128,166 +128,51 @@ function createAgentRow(index) {
     roleCell.appendChild(roleSelect);
     row.appendChild(roleCell);
 
-    // Column 4: Color picker with sprite images (custom dropdown)
-    const colorCell = createColorPickerCell(index, defaults.color);
+    // Column 4: Color display (hardcoded, read-only - assigned by agent number)
+    const colorCell = createColorDisplayCell(index);
     row.appendChild(colorCell);
 
     return row;
 }
 
 /**
- * Creates a table cell with a custom color dropdown showing Among Us sprites.
+ * Creates a table cell displaying the agent's color (hardcoded, read-only).
+ * Colors are assigned automatically: Agent 1=Red, 2=Orange, 3=Yellow, 4=Lime, etc.
  * Uses a hidden input for form submission (name="agent_{agentIndex}_color").
  * @param {number} agentIndex - 0-based agent index
- * @param {string} selectedValue - initial color value (e.g. "red")
  * @returns {HTMLTableCellElement}
  */
-function createColorPickerCell(agentIndex, selectedValue) {
-    const selected = COLORS.find(function (c) { return c.value === selectedValue; }) || COLORS[0];
+function createColorDisplayCell(agentIndex) {
+    // Assign color based on agent number (0-indexed maps to COLORS array)
+    const color = COLORS[agentIndex] || COLORS[0];
     const cell = document.createElement("td");
-    cell.className = "color-picker-cell";
+    cell.className = "color-display-cell";
 
+    // Hidden input for form submission
     const hiddenInput = document.createElement("input");
     hiddenInput.type = "hidden";
     hiddenInput.name = "agent_" + agentIndex + "_color";
-    hiddenInput.value = selected.value;
-    hiddenInput.setAttribute("data-color-picker-value", "1");
+    hiddenInput.value = color.value;
 
-    const wrapper = document.createElement("div");
-    wrapper.className = "color-picker";
-
-    const trigger = document.createElement("button");
-    trigger.type = "button";
-    trigger.className = "color-picker-trigger table-select";
-    trigger.setAttribute("aria-haspopup", "listbox");
-    trigger.setAttribute("aria-expanded", "false");
-    const triggerImg = document.createElement("img");
-    triggerImg.src = selected.spriteUrl;
-    triggerImg.alt = selected.name;
-    triggerImg.className = "color-picker-sprite";
-    const triggerLabel = document.createElement("span");
-    triggerLabel.className = "color-picker-label";
-    triggerLabel.textContent = selected.name;
-    trigger.appendChild(triggerImg);
-    trigger.appendChild(triggerLabel);
-
-    const dropdown = document.createElement("div");
-    dropdown.className = "color-picker-dropdown";
-    dropdown.setAttribute("role", "listbox");
-    dropdown.hidden = true;
-
-    COLORS.forEach(function (c) {
-        const option = document.createElement("div");
-        option.className = "color-picker-option";
-        option.setAttribute("role", "option");
-        option.setAttribute("data-value", c.value);
-        const optImg = document.createElement("img");
-        optImg.src = c.spriteUrl;
-        optImg.alt = c.name;
-        optImg.className = "color-picker-sprite";
-        const optLabel = document.createElement("span");
-        optLabel.textContent = c.name;
-        option.appendChild(optImg);
-        option.appendChild(optLabel);
-        option.addEventListener("click", function () {
-            if (this.classList.contains("color-picker-option-disabled")) return;
-            hiddenInput.value = c.value;
-            triggerImg.src = c.spriteUrl;
-            triggerImg.alt = c.name;
-            triggerLabel.textContent = c.name;
-            closeColorPickerDropdown(dropdown);
-            trigger.setAttribute("aria-expanded", "false");
-        });
-        dropdown.appendChild(option);
-    });
-
-    trigger.addEventListener("click", function (e) {
-        e.stopPropagation();
-        var isOpen = !dropdown.hidden;
-        closeAllColorPickers();
-        if (!isOpen) {
-            dropdown.colorPickerWrapper = wrapper;
-            dropdown.colorPickerAgentIndex = agentIndex;
-            document.body.appendChild(dropdown);
-            updateColorPickerDisabledOptions(dropdown, agentIndex);
-            var rect = trigger.getBoundingClientRect();
-            dropdown.style.position = "fixed";
-            dropdown.style.top = (rect.bottom + 4) + "px";
-            dropdown.style.left = rect.left + "px";
-            dropdown.style.minWidth = rect.width + "px";
-            dropdown.hidden = false;
-            trigger.setAttribute("aria-expanded", "true");
-        }
-    });
-
-    wrapper.appendChild(hiddenInput);
-    wrapper.appendChild(trigger);
-    wrapper.appendChild(dropdown);
-    cell.appendChild(wrapper);
+    // Display container (read-only)
+    const display = document.createElement("div");
+    display.className = "color-display";
+    
+    const spriteImg = document.createElement("img");
+    spriteImg.src = color.spriteUrl;
+    spriteImg.alt = color.name;
+    spriteImg.className = "color-display-sprite";
+    
+    const label = document.createElement("span");
+    label.className = "color-display-label";
+    label.textContent = color.name;
+    
+    display.appendChild(spriteImg);
+    display.appendChild(label);
+    
+    cell.appendChild(hiddenInput);
+    cell.appendChild(display);
     return cell;
-}
-
-/**
- * Returns the set of color values currently selected by other agents (excluding the given agent index).
- * Used to disable those options in this agent's color dropdown so each agent has a unique color.
- */
-function getUsedColorsExcept(agentIndex) {
-    var used = new Set();
-    var inputs = document.querySelectorAll('input[name^="agent_"][name$="_color"]');
-    inputs.forEach(function (input) {
-        var match = input.name.match(/^agent_(\d+)_color$/);
-        if (match && parseInt(match[1], 10) !== agentIndex && input.value) {
-            used.add(input.value);
-        }
-    });
-    return used;
-}
-
-/**
- * Disables color options in this dropdown that are already selected by other agents.
- * @param {HTMLElement} dropdown - The .color-picker-dropdown element
- * @param {number} agentIndex - 0-based index of the agent this picker belongs to
- */
-function updateColorPickerDisabledOptions(dropdown, agentIndex) {
-    var used = getUsedColorsExcept(agentIndex);
-    dropdown.querySelectorAll(".color-picker-option").forEach(function (option) {
-        var value = option.getAttribute("data-value");
-        if (used.has(value)) {
-            option.classList.add("color-picker-option-disabled");
-            option.setAttribute("aria-disabled", "true");
-        } else {
-            option.classList.remove("color-picker-option-disabled");
-            option.removeAttribute("aria-disabled");
-        }
-    });
-}
-
-/**
- * Closes one color picker dropdown and returns it to its wrapper (if it was moved to body).
- * @param {HTMLElement} dropdown - The .color-picker-dropdown element
- */
-function closeColorPickerDropdown(dropdown) {
-    dropdown.hidden = true;
-    dropdown.style.position = "";
-    dropdown.style.top = "";
-    dropdown.style.left = "";
-    dropdown.style.minWidth = "";
-    if (dropdown.colorPickerWrapper) {
-        dropdown.colorPickerWrapper.appendChild(dropdown);
-        dropdown.colorPickerWrapper = null;
-    }
-}
-
-/**
- * Closes all color picker dropdowns on the page (returns them to their wrappers and hides).
- */
-function closeAllColorPickers() {
-    document.querySelectorAll(".color-picker-dropdown").forEach(function (el) {
-        closeColorPickerDropdown(el);
-    });
-    document.querySelectorAll(".color-picker-trigger[aria-expanded=\"true\"]").forEach(function (el) {
-        el.setAttribute("aria-expanded", "false");
-    });
 }
 
 /**
@@ -318,26 +203,6 @@ function validateRounds() {
         alert("Number of rounds must be between 1 and 20.");
         input.focus();
         return false;
-    }
-    return true;
-}
-
-/**
- * Validates that every agent has a unique color. Called on form submit.
- * @returns {boolean} true if all colors are unique
- */
-function validateUniqueColors() {
-    var values = [];
-    document.querySelectorAll('input[name^="agent_"][name$="_color"]').forEach(function (input) {
-        if (input.value) values.push(input.value);
-    });
-    var seen = new Set();
-    for (var i = 0; i < values.length; i++) {
-        if (seen.has(values[i])) {
-            alert("Each agent must have a unique color. Two or more agents share the same color.");
-            return false;
-        }
-        seen.add(values[i]);
     }
     return true;
 }
@@ -387,14 +252,10 @@ function validateByzantineCount() {
 }
 
 /**
- * Form submit handler: validate rounds, unique colors, and Byzantine count before allowing submit.
+ * Form submit handler: validate rounds and Byzantine count before allowing submit.
  */
 function onConfigSubmit(e) {
     if (!validateRounds()) {
-        e.preventDefault();
-        return false;
-    }
-    if (!validateUniqueColors()) {
         e.preventDefault();
         return false;
     }
@@ -420,9 +281,4 @@ window.addEventListener("DOMContentLoaded", function () {
     if (form) {
         form.addEventListener("submit", onConfigSubmit);
     }
-
-    // Close color picker dropdowns when clicking outside
-    document.addEventListener("click", function () {
-        closeAllColorPickers();
-    });
 });

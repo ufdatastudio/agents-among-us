@@ -1,5 +1,4 @@
 {
-  "description": "Among Us crewmate character sprites by color. Use these URLs for UI (config color picker, game avatars, etc.).",
   "order": ["red", "orange", "yellow", "lime", "green", "cyan", "blue", "purple", "brown", "pink", "white", "black"],
   "sprites": {
     "red": "https://preview.redd.it/an871k4o1sn51.png?width=440&format=png&auto=webp&s=85dcd6cb73b8760802e254ee14dfa3c7ab444591",
