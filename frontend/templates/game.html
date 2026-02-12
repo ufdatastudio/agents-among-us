@@ -15,19 +15,19 @@
                     <strong>Game ID:</strong> <span id="gameId">{{ game_id }}</span>
                 </span>
                 <span class="param-item">
-                    <strong>Total Agents:</strong> <span id="totalAgents">-</span>
+                    <strong>Total Agents:</strong> <span id="totalAgents">{{ num_agents if num_agents else '-' }}</span>
                 </span>
                 <span class="param-item">
-                    <strong>Byzantine:</strong> <span id="byzantineCount">-</span>
+                    <strong>Byzantine:</strong> <span id="byzantineCount">{{ byzantine_count if byzantine_count else '-' }}</span>
                 </span>
                 <span class="param-item">
-                    <strong>Honest:</strong> <span id="honestCount">-</span>
+                    <strong>Honest:</strong> <span id="honestCount">{{ honest_count if honest_count else '-' }}</span>
                 </span>
                 <span class="param-item">
-                    <strong>Current Round:</strong> <span id="currentRound">-</span>/<span id="totalRounds">-</span>
+                    <strong>Current Round:</strong> <span id="currentRound">-</span>/<span id="totalRounds">{{ num_rounds if num_rounds else '-' }}</span>
                 </span>
                 <span class="param-item">
-                    <strong>Status:</strong> <span id="gameStatus">-</span>
+                    <strong>Status:</strong> <span id="gameStatus">Initializing...</span>
                 </span>
             </div>
             <div class="game-controls">

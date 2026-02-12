@@ -26,8 +26,9 @@ const ROOM_COORDINATES = {
     "MedBay": { x: 250, y: 350 }
 };
 
-// Color mapping for agent markers
+// Color mapping for agent markers (config sends slugs e.g. "red"; backend may send slug or emoji)
 const COLOR_MAP = {
+    // slug keys (from config / backend custom composition)
     "red": "#C51111",
     "orange": "#EF7D0D",
     "yellow": "#F5F557",
@@ -39,8 +40,26 @@ const COLOR_MAP = {
     "brown": "#71491E",
     "pink": "#ED54BA",
     "white": "#D6E0F0",
-    "black": "#3F474E"
+    "black": "#3F474E",
+    // emoji keys (legacy / fallback from backend)
+    "🔴": "#C51111",
+    "🟠": "#EF7D0D",
+    "🟡": "#F5F557",
+    "🟢": "#117F2D",
+    "🟣": "#6B2FBB",
+    "🟤": "#71491E",
+    "🔵": "#132ED1",
+    "🔷": "#38FEDC",
+    "💗": "#ED54BA",
+    "🟩": "#50EF39",
+    "⚪": "#D6E0F0",
+    "⚫": "#3F474E"
 };
+function getAgentColor(colorKey) {
+    if (!colorKey || typeof colorKey !== "string") return "#888888";
+    var key = colorKey.trim().toLowerCase();
+    return COLOR_MAP[key] || COLOR_MAP[colorKey.trim()] || "#888888";
+}
 
 // Model name abbreviations
 function getModelAbbreviation(modelName) {
@@ -137,18 +156,21 @@ function updateAgentPositions(agents) {
         const x = roomCoords.x * scaleX;
         const y = roomCoords.y * scaleY;
         
-        // Extract agent number from key (e.g., "Agent_0" -> 0)
-        const agentNum = agentKey.replace("Agent_", "");
-        const color = COLOR_MAP[agent.color] || "#000000";
+        // Extract agent number from key (e.g., "Agent_0" -> 0) and display as 1-based
+        const agentNumRaw = agentKey.replace("Agent_", "");
+        const agentIndex = parseInt(agentNumRaw, 10);
+        const displayNum = Number.isNaN(agentIndex) ? agentNumRaw : agentIndex + 1;
+
+        const color = getAgentColor(agent.color);
         
         // Create marker element
         const marker = document.createElement("div");
         marker.className = "agent-marker";
-        marker.id = "marker-" + agentNum;
+        marker.id = "marker-" + agentNumRaw;
         marker.style.backgroundColor = color;
         marker.style.left = x + "px";
         marker.style.top = y + "px";
-        marker.textContent = agentNum;
+        marker.textContent = displayNum;
         marker.title = agentKey + " - " + agent.location;
         
         // Add status class if dead
@@ -181,25 +203,28 @@ function updateStatusTable(agents) {
     
     agentKeys.forEach(function(agentKey) {
         const agent = agents[agentKey];
-        const agentNum = agentKey.replace("Agent_", "");
+        const agentNumRaw = agentKey.replace("Agent_", "");
+        const agentIndex = parseInt(agentNumRaw, 10);
+        const displayNum = Number.isNaN(agentIndex) ? agentNumRaw : agentIndex + 1;
         
         const row = document.createElement("tr");
         
-        // Agent number
+        // Agent number (1-based for display)
         const numCell = document.createElement("td");
-        numCell.textContent = agentNum;
+        numCell.textContent = displayNum;
         row.appendChild(numCell);
         
         // Model (abbreviated)
         const modelCell = document.createElement("td");
-        modelCell.textContent = getModelAbbreviation(agent.model);
+        const modelName = agent.stats && agent.stats.model_name ? agent.stats.model_name : agent.model;
+        modelCell.textContent = getModelAbbreviation(modelName);
         row.appendChild(modelCell);
         
         // Color indicator
         const colorCell = document.createElement("td");
         const colorIndicator = document.createElement("span");
         colorIndicator.className = "agent-color-indicator";
-        colorIndicator.style.backgroundColor = COLOR_MAP[agent.color] || "#000000";
+        colorIndicator.style.backgroundColor = getAgentColor(agent.color);
         colorCell.appendChild(colorIndicator);
         row.appendChild(colorCell);
         
@@ -223,13 +248,19 @@ function updateStatusTable(agents) {
         
         // Votes received
         const votesCell = document.createElement("td");
-        votesCell.textContent = agent.votes_received || 0;
+        const votesValue = agent.stats && typeof agent.stats.votes_received !== "undefined"
+            ? agent.stats.votes_received
+            : agent.votes_received;
+        votesCell.textContent = votesValue || 0;
         row.appendChild(votesCell);
         
         // Kills (only for Byzantine)
         const killsCell = document.createElement("td");
         if (agent.role === "byzantine") {
-            killsCell.textContent = agent.eliminations || 0;
+            const elimValue = agent.stats && typeof agent.stats.eliminations !== "undefined"
+                ? agent.stats.eliminations
+                : agent.eliminations;
+            killsCell.textContent = elimValue || 0;
         } else {
             killsCell.textContent = "n/a";
         }
@@ -243,13 +274,31 @@ function updateStatusTable(agents) {
  * Updates the live feed with new events
  */
 function updateLiveFeed(events) {
-    if (!events || !Array.isArray(events)) return;
-    
     const feedContent = document.getElementById("feedContent");
     if (!feedContent) return;
     
+    if (!events || !Array.isArray(events)) {
+        if (feedContent.children.length === 0) {
+            feedContent.innerHTML = "<div class=\"feed-event\"><span class=\"feed-timestamp\">[--]</span><span class=\"feed-text\">No events yet. Game may still be starting.</span></div>";
+        }
+        return;
+    }
+    
     // Only add new events (after lastEventCount)
     const newEvents = events.slice(lastEventCount);
+    
+    if (newEvents.length === 0 && feedContent.children.length === 0) {
+        feedContent.innerHTML = "<div class=\"feed-event\"><span class=\"feed-timestamp\">[--]</span><span class=\"feed-text\">No events yet.</span></div>";
+        return;
+    }
+    
+    // Remove placeholder if we're about to add real events
+    if (newEvents.length > 0 && feedContent.children.length === 1) {
+        var first = feedContent.querySelector(".feed-text");
+        if (first && first.textContent.indexOf("No events yet") !== -1) {
+            feedContent.innerHTML = "";
+        }
+    }
     
     newEvents.forEach(function(event) {
         const eventDiv = document.createElement("div");
@@ -268,10 +317,7 @@ function updateLiveFeed(events) {
         feedContent.appendChild(eventDiv);
     });
     
-    // Update last event count
     lastEventCount = events.length;
-    
-    // Auto-scroll to bottom
     feedContent.scrollTop = feedContent.scrollHeight;
 }
 
@@ -292,28 +338,88 @@ async function updateGameState() {
         
         const data = await response.json();
         
-        // Update game parameters
-        if (data.game_info) {
-            updateGameParams(data.game_info);
+        if (data.status === 'waiting') {
+            const statusEl = document.getElementById("gameStatus");
+            if (statusEl) statusEl.textContent = "Waiting for game to start...";
+            return;
         }
         
-        // Update agent positions on map
-        if (data.agents) {
+        if (data.status === 'error') {
+            const statusEl = document.getElementById("gameStatus");
+            if (statusEl) {
+                statusEl.textContent = "Error: " + (data.message || "Unknown error");
+                statusEl.style.color = "#ff4444";
+            }
+            
+            // If backend process crashed, show alert and stop polling
+            if (data.process_ended) {
+                alert("⚠️ Backend Process Crashed!\n\n" + (data.message || "Unknown error") + "\n\nCheck the terminal for detailed error messages.");
+                if (pollingInterval) {
+                    clearInterval(pollingInterval);
+                    pollingInterval = null;
+                }
+            }
+            return;
+        }
+        
+        if (data) {
+            let gameInfo = null;
+            if (data.game_info) {
+                gameInfo = data.game_info;
+            } else if (data.agents && Object.keys(data.agents).length > 0) {
+                const agents = data.agents || {};
+                const agentKeys = Object.keys(agents);
+                const totalAgents = agentKeys.length;
+                let byzCount = 0;
+                let honestCount = 0;
+                agentKeys.forEach(function(key) {
+                    const a = agents[key];
+                    if (!a || !a.role) return;
+                    if (a.role === "byzantine") byzCount++;
+                    else if (a.role === "honest") honestCount++;
+                });
+                
+                gameInfo = {
+                    game_id: data.game_id,
+                    total_agents: totalAgents,
+                    byzantine_count: byzCount,
+                    honest_count: honestCount,
+                    round: data.global && typeof data.global.round !== "undefined" ? data.global.round : undefined,
+                    total_rounds: data.global && typeof data.global.total_rounds !== "undefined" ? data.global.total_rounds : undefined,
+                    status: data.global && data.global.current_phase ? data.global.current_phase : data.status
+                };
+            }
+            
+            if (gameInfo) {
+                updateGameParams(gameInfo);
+            }
+        }
+        
+        if (data.agents && Object.keys(data.agents).length > 0) {
             updateAgentPositions(data.agents);
-        }
-        
-        // Update status table
-        if (data.agents) {
             updateStatusTable(data.agents);
         }
         
-        // Update live feed
-        if (data.events) {
-            updateLiveFeed(data.events);
+        if (data) {
+            var events = [];
+            if (Array.isArray(data.events)) {
+                events = data.events;
+            } else if (data.global && Array.isArray(data.global.ui_event_log)) {
+                events = data.global.ui_event_log.map(function(ev) {
+                    return {
+                        timestamp: ev.time,
+                        text: ev.msg,
+                        type: ev.type
+                    };
+                });
+            }
+            updateLiveFeed(events);
         }
         
     } catch (error) {
         console.error("Error updating game state:", error);
+        const statusEl = document.getElementById("gameStatus");
+        if (statusEl) statusEl.textContent = "Error loading state";
     }
 }
 

@@ -1,3 +1,8 @@
+"""
+Agents Among Us - Flask Web Application
+Complete backend integration with all API routes
+"""
+
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session, send_file
 import subprocess
 import os
@@ -7,6 +12,7 @@ import glob
 import pandas as pd
 from datetime import datetime
 import signal
+import threading
 
 app = Flask(__name__)
 app.secret_key = 'agents-among-us-secret-key-change-in-production'
@@ -22,40 +28,66 @@ current_game_process = None
 os.makedirs(DATA_DIR, exist_ok=True)
 
 
-# page routes
+# =============================================================================
+# PAGE ROUTES
+# =============================================================================
 
 @app.route('/') 
 def index():
-    return render_template('index.html') #home page (main menu)
+    return render_template('index.html')
 
 
 @app.route('/config')
 def config():
-    return render_template('config.html') # settings (config) page
+    return render_template('config.html')
 
 
 @app.route('/game')
 def game():
-    game_id = session.get('game_id', 'unknown') 
-    return render_template('game.html', game_id=game_id) # main game view
+    game_id = session.get('game_id', 'unknown')
+    num_agents = session.get('num_agents', 0)
+    num_rounds = session.get('num_rounds', 0)
+    composition = session.get('composition', '')
+    
+    byzantine_count = 0
+    honest_count = 0
+    if composition:
+        try:
+            comp_file = os.path.join(BACKEND_PATH, 'config', f'{composition}.json')
+            if os.path.exists(comp_file):
+                with open(comp_file, 'r') as f:
+                    comp_data = json.load(f)
+                    byzantine_count = comp_data.get('byzantine_count', 0)
+                    honest_count = comp_data.get('honest_count', 0)
+        except:
+            pass
+    
+    return render_template('game.html', 
+                         game_id=game_id,
+                         num_agents=num_agents,
+                         num_rounds=num_rounds,
+                         byzantine_count=byzantine_count,
+                         honest_count=honest_count)
 
 
 @app.route('/stats')
 def stats():
-    return render_template('stats.html') # stats page
+    return render_template('stats.html')
 
 
 @app.route('/win')
 def win():
     winner = request.args.get('winner', 'Unknown')
-    return render_template('win.html', winner=winner) # win screen (not implemented yet)
+    return render_template('win.html', winner=winner)
 
 
-# game control api routes
+# =============================================================================
+# GAME CONTROL API ROUTES
+# =============================================================================
 
 @app.route('/start_game', methods=['POST'])
-# launch the backend simulation with custom configuration. Receives form data from config page, creates custom composition, starts game.
 def start_game():
+    """Launch the backend simulation with custom configuration"""
     global current_game_process
     
     try:
@@ -86,12 +118,31 @@ def start_game():
             else:
                 honest_count += 1
         
-        # create custom composition JSON
+        # convert agents array to backend-expected format
+        honest_models = []
+        byzantine_models = []
+        honest_colors = []
+        byzantine_colors = []
+        
+        for agent in agents:
+            model_name = agent['model']
+            color_slug = (agent.get('color') or 'red').lower().strip()
+            if agent['role'] == 'honest':
+                honest_models.append(model_name)
+                honest_colors.append(color_slug)
+            else:
+                byzantine_models.append(model_name)
+                byzantine_colors.append(color_slug)
+        
+        # create custom composition JSON in backend-expected format
         composition = {
             "name": f"custom_{game_id}",
             "honest_count": honest_count,
             "byzantine_count": byzantine_count,
-            "agents": agents,
+            "honest_model": honest_models,
+            "byzantine_model": byzantine_models,
+            "honest_colors": honest_colors,
+            "byzantine_colors": byzantine_colors,
             "num_rounds": num_rounds
         }
         
@@ -106,9 +157,16 @@ def start_game():
         session['num_agents'] = num_agents
         session['num_rounds'] = num_rounds
         
-        # build command to run backend
+        # reset live state so we don't show a previous game's snapshot
+        try:
+            if os.path.exists(LIVE_STATE_FILE):
+                os.remove(LIVE_STATE_FILE)
+        except Exception as e:
+            print(f"⚠️  Could not clear live_state.json: {e}")
+        
+        # FIXED: Use the custom composition instead of hardcoded tiny_test
         cmd = [
-            sys.executable,  # Use same Python interpreter
+            sys.executable,
             os.path.join(BACKEND_PATH, 'main.py'),
             '--composition_name', f'custom_{game_id}',
             '--game_id', game_id,
@@ -128,11 +186,28 @@ def start_game():
             cmd,
             cwd=BACKEND_PATH,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            universal_newlines=True
         )
         
-        # redirect to game page
+        # start background thread to stream output to terminal
+        def stream_output(process):
+            """Stream subprocess output to terminal in real-time"""
+            try:
+                for line in iter(process.stdout.readline, ''):
+                    if line:
+                        print(line.rstrip())
+                        sys.stdout.flush()
+            except Exception as e:
+                print(f"⚠️  Error streaming output: {e}")
+            finally:
+                process.stdout.close()
+        
+        output_thread = threading.Thread(target=stream_output, args=(current_game_process,), daemon=True)
+        output_thread.start()
+        
         return redirect(url_for('game'))
         
     except Exception as e:
@@ -143,8 +218,8 @@ def start_game():
 
 
 @app.route('/stop_game', methods=['POST'])
-# stop the currently running game
 def stop_game():
+    """Stop the currently running game"""
     global current_game_process
     
     try:
@@ -160,9 +235,25 @@ def stop_game():
 
 
 @app.route('/api/game_state')
-# read live_state.json and return current game state. This is polled by the game page every 2 seconds.
 def get_game_state():
+    """Read live_state.json and return current game state"""
+    global current_game_process
+    
     try:
+        # check if backend process is still running
+        if current_game_process is not None:
+            poll_result = current_game_process.poll()
+            if poll_result is not None:
+                if poll_result != 0:
+                    current_game_process = None
+                    return jsonify({
+                        'status': 'error',
+                        'message': f'Backend process crashed (exit code: {poll_result}). Check terminal for errors.',
+                        'process_ended': True
+                    })
+                else:
+                    current_game_process = None
+        
         # check if live_state.json exists
         if not os.path.exists(LIVE_STATE_FILE):
             return jsonify({
@@ -188,8 +279,8 @@ def get_game_state():
 
 
 @app.route('/api/game_status')
-#check if game is still running
 def get_game_status():
+    """Check if game is still running"""
     global current_game_process
     
     if current_game_process:
@@ -209,18 +300,12 @@ def get_game_status():
 
 @app.route('/api/stats/all')
 def get_all_stats():
-    """
-    Return all data from frontend_stats.csv.
-    Used by stats page to display tables.
-    """
+    """Return all data from frontend_stats.csv"""
     try:
         if not os.path.exists(MASTER_CSV):
             return jsonify([])
         
-        # Read CSV
         df = pd.read_csv(MASTER_CSV)
-        
-        # Convert to list of dicts
         data = df.to_dict('records')
         
         return jsonify(data)
@@ -232,18 +317,15 @@ def get_all_stats():
 
 @app.route('/api/stats/refresh', methods=['POST'])
 def refresh_stats():
-    """
-    Scan logs/ folder for new games and append to frontend_stats.csv.
-    Returns count of new games added.
-    """
+    """Scan logs/ folder for new games and append to frontend_stats.csv"""
     try:
-        # Load existing game IDs to avoid duplicates
+        # load existing game IDs to avoid duplicates
         existing_game_ids = set()
         if os.path.exists(MASTER_CSV):
             existing_df = pd.read_csv(MASTER_CSV)
             existing_game_ids = set(existing_df['game_id'].unique())
         
-        # Find all stats.csv files in logs
+        # find all stats.csv files in logs
         pattern = os.path.join(BACKEND_PATH, 'logs', '*', 'Game_*_Run0', 'stats.csv')
         csv_files = glob.glob(pattern)
         
@@ -255,22 +337,19 @@ def refresh_stats():
         new_data = []
         
         for csv_file in csv_files:
-            # Extract metadata from path
-            # logs/tiny_test/Game_test_005_Run0/stats.csv
+            # extract metadata from path: logs/tiny_test/Game_test_005_Run0/stats.csv
             parts = csv_file.split(os.sep)
             composition = parts[-3]
             game_folder = parts[-2]
             game_id = game_folder.replace('Game_', '').replace('_Run0', '')
             
-            # Skip if already in database
             if game_id in existing_game_ids:
                 continue
             
             try:
-                # Read the game CSV
                 df = pd.read_csv(csv_file)
                 
-                # Add metadata columns
+                # add metadata columns
                 df.insert(0, 'composition', composition)
                 df.insert(1, 'game_id', game_id)
                 df['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -282,15 +361,13 @@ def refresh_stats():
             except Exception as e:
                 print(f"  ❌ Error reading {csv_file}: {e}")
         
-        # Append new data to master CSV
+        # append new data to master CSV
         if new_data:
             combined = pd.concat(new_data, ignore_index=True)
             
             if os.path.exists(MASTER_CSV):
-                # Append without header
                 combined.to_csv(MASTER_CSV, mode='a', header=False, index=False)
             else:
-                # Create with header
                 combined.to_csv(MASTER_CSV, mode='w', header=True, index=False)
             
             print(f"\n✅ Added {new_games} new games to database\n")
@@ -325,7 +402,7 @@ def export_stats():
 
 @app.route('/api/stats/clear', methods=['POST'])
 def clear_stats():
-    """Delete frontend_stats.csv (with confirmation)"""
+    """Delete frontend_stats.csv"""
     try:
         if os.path.exists(MASTER_CSV):
             os.remove(MASTER_CSV)
@@ -369,8 +446,6 @@ def health_check():
     })
 
 
-# error handling
-
 @app.errorhandler(404)
 def not_found(e):
     return render_template('index.html'), 404
@@ -380,8 +455,6 @@ def not_found(e):
 def server_error(e):
     return jsonify({'error': 'Internal server error'}), 500
 
-
-# main
 
 if __name__ == '__main__':
     print("\n" + "="*60)
