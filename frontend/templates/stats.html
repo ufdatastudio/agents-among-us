@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Statistics - Agents Among Us</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header with navigation -->
+        <div class="stats-header">
+            <h1>Statistics</h1>
+            <div class="header-buttons">
+                <a href="/" class="btn">Back to Menu</a>
+                <button type="button" class="btn" onclick="refreshData()">Refresh Data</button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="stats-tabs">
+            <button type="button" class="stats-tab active" data-tab="summary" onclick="showTab('summary', event)">All Games Summary</button>
+            <button type="button" class="stats-tab" data-tab="game-list" onclick="showTab('game-list', event)">Game List</button>
+        </div>
+
+        <!-- Tab 1: All Games Summary -->
+        <div id="summary" class="stats-tab-content active">
+            <!-- Summary box (simple counts derived from raw rows) -->
+            <div class="summary-box">
+                <p>Total Games: <span id="total-games">0</span></p>
+                <p>Total Agents Played: <span id="total-agents">0</span></p>
+                <p>Honest Wins: <span id="honest-wins">0</span></p>
+                <p>Byzantine Wins: <span id="byz-wins">0</span></p>
+            </div>
+
+            <h2>All Data</h2>
+            <!-- Table controls -->
+            <div class="table-controls">
+                <input type="text" id="search-input" placeholder="Search..." />
+                <select id="model-filter">
+                    <option value="">All Models</option>
+                </select>
+                <select id="role-filter">
+                    <option value="">All Roles</option>
+                    <option value="H">Honest</option>
+                    <option value="B">Byzantine</option>
+                </select>
+            </div>
+
+            <!-- All data table -->
+            <div class="stats-table-wrapper">
+                <table id="all-data-table">
+                    <thead>
+                        <tr>
+                            <th data-col="game" onclick="sortAllData('game')">Game</th>
+                            <th data-col="agent" onclick="sortAllData('agent')">Agent</th>
+                            <th data-col="model" onclick="sortAllData('model')">Model</th>
+                            <th data-col="role" onclick="sortAllData('role')">Role</th>
+                            <th data-col="won" onclick="sortAllData('won')">Won</th>
+                            <th data-col="kills" onclick="sortAllData('kills')">Kills</th>
+                            <th data-col="votes" onclick="sortAllData('votes')">Votes</th>
+                            <th data-col="correct" onclick="sortAllData('correct')">Correct</th>
+                            <th data-col="rounds" onclick="sortAllData('rounds')">Rounds</th>
+                        </tr>
+                    </thead>
+                    <tbody id="all-data-tbody">
+                        <!-- Filled by stats.js -->
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="entry-count">Showing <span id="entry-count">0</span> entries</p>
+
+            <div class="button-group">
+                <button type="button" class="btn" onclick="exportCSV()">Export CSV</button>
+                <button type="button" class="btn" onclick="clearAllData()">Clear All Data</button>
+            </div>
+        </div>
+
+        <!-- Tab 2: Game List -->
+        <div id="game-list" class="stats-tab-content">
+            <h2>Game History</h2>
+
+            <div class="stats-table-wrapper">
+                <table id="game-table">
+                    <thead>
+                        <tr>
+                            <th>Game ID</th>
+                            <th>Composition</th>
+                            <th>Agents</th>
+                            <th>Winner</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="game-tbody">
+                        <!-- Filled by stats.js -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Game details section -->
+            <div id="game-details" class="game-details" style="display: none;">
+                <h2>Game: <span id="detail-game-id"></span></h2>
+                <div class="summary-box">
+                    <p>Composition: <span id="detail-comp"></span></p>
+                    <p>Winner: <span id="detail-winner"></span></p>
+                    <p>Date: <span id="detail-date"></span></p>
+                </div>
+
+                <h3>Raw Agent Data</h3>
+                <div class="stats-table-wrapper">
+                    <table id="detail-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Model</th>
+                                <th>Role</th>
+                                <th>Won</th>
+                                <th>Correct</th>
+                                <th>Incorrect</th>
+                                <th>Skipped</th>
+                                <th>Emerg</th>
+                                <th>Bodies</th>
+                                <th>Rounds</th>
+                                <th>Kills</th>
+                                <th>Elim</th>
+                                <th>Eject</th>
+                                <th>Moves</th>
+                                <th>Votes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detail-tbody">
+                            <!-- Filled by stats.js -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn" onclick="downloadGameCSV()">Download Game CSV</button>
+                    <button type="button" class="btn" onclick="hideGameDetails()">Back to List</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/stats.js') }}"></script>
+</body>
+</html>
+

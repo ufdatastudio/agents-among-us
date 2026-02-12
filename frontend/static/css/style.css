@@ -596,3 +596,109 @@ hr {
         padding: 4px 2px;
     }
 }
+
+/* ============================================
+   STATISTICS PAGE
+   ============================================ */
+
+.stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #000000;
+    padding-bottom: 10px;
+}
+
+.header-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.stats-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #cccccc;
+}
+
+.stats-tab {
+    padding: 10px 20px;
+    border: 1px solid #cccccc;
+    border-bottom: none;
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.stats-tab + .stats-tab {
+    margin-left: 5px;
+}
+
+.stats-tab.active {
+    background: #000000;
+    color: #ffffff;
+}
+
+.stats-tab-content {
+    display: none;
+}
+
+.stats-tab-content.active {
+    display: block;
+}
+
+.summary-box {
+    border: 1px solid #cccccc;
+    background: #f9f9f9;
+    padding: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    font-size: 0.95rem;
+}
+
+.table-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 20px 0 10px 0;
+}
+
+.table-controls input,
+.table-controls select {
+    padding: 8px 10px;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    font-size: 0.95rem;
+}
+
+.stats-table-wrapper {
+    max-height: 400px;
+    overflow: auto;
+}
+
+#all-data-table th {
+    cursor: pointer;
+}
+
+.entry-count {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #666666;
+}
+
+#game-tbody tr {
+    cursor: pointer;
+}
+
+#game-tbody tr:hover {
+    background: #e0e0e0;
+}
+
+.game-details {
+    margin-top: 25px;
+}
+
+.game-details h2 {
+    margin-top: 0;
+}
