@@ -1,104 +1,251 @@
 /**
- * Game Simulation Page - Real-time updates and display
- * Polls /api/game_state every 2 seconds and updates the UI
+ * Game Simulation Page - CORRECTED COORDINATES
+ * Measured directly from actual map image
+ * Press 'D' for debug overlay
  */
 
 // ============================================================================
-// ROOM COORDINATES
-// Map room names to X/Y pixel positions on the map image
-// These will need to be adjusted based on the actual map image dimensions
+// ROOM COORDINATES - MANUALLY MEASURED FROM ACTUAL MAP
 // ============================================================================
 
 const ROOM_COORDINATES = {
-    "Cafeteria": { x: 400, y: 300 },
-    "Weapons": { x: 100, y: 150 },
-    "O2": { x: 200, y: 100 },
-    "Navigation": { x: 300, y: 120 },
-    "Shields": { x: 350, y: 200 },
-    "Communications": { x: 450, y: 400 },
-    "Storage": { x: 500, y: 350 },
-    "Admin": { x: 420, y: 280 },
-    "Electrical": { x: 550, y: 450 },
-    "LowerEngine": { x: 600, y: 500 },
-    "UpperEngine": { x: 150, y: 400 },
-    "Security": { x: 180, y: 480 },
-    "Reactor": { x: 100, y: 550 },
-    "MedBay": { x: 250, y: 350 }
+    "Reactor": { x: 23.0, y: 53.6 },       // Clock (bottom-left circular) (FIXED)
+    "UpperEngine": { x: 26.4, y: 23.6 },   // Air Cooling (top-left) (FIXED)
+    "LowerEngine": { x: 32.2, y: 83.9 },   // Liquid Cooling (bottom-left) (FIXED)
+    "Security": { x: 40.0, y: 42.6 },      // Logs (center-left) (FIXED)
+    "MedBay": { x: 35.8, y: 11.5 },        // Diagnostics (top-center) (FIXED)
+    "Electrical": { x: 39.9, y: 59.8 },    // Bus (center-left) (FIXED)
+    "Cafeteria": { x: 49.5, y: 21.6 },     // CPU (center) (FIXED)
+    "Admin": { x: 57.4, y: 53.1 },         // BIOS (center-right) (FIXED)
+    "Storage": { x: 49.6, y: 82.0 },       // SSD (bottom-center) (FIXED)
+    "Weapons": { x: 70.9, y: 16.1 },       // GPU (top-right) (FIXED)
+    "O2": { x: 61.6, y: 33.9 },            // VRM (center-right) (FIXED)
+    "Navigation": { x: 79.8, y: 43.5 },    // Network (far right) (FIXED) 
+    "Shields": { x: 70.9, y: 67.3 },       // Firewall (right) (FIXED)
+    "Communications": { x: 70.9, y: 90.2 } // IO (bottom-right) (FIXED)
 };
 
-// Color mapping for agent markers (config sends slugs e.g. "red"; backend may send slug or emoji)
-const COLOR_MAP = {
-    // slug keys (from config / backend custom composition)
-    "red": "#C51111",
-    "orange": "#EF7D0D",
-    "yellow": "#F5F557",
-    "lime": "#50EF39",
-    "green": "#117F2D",
-    "cyan": "#38FEDC",
-    "blue": "#132ED1",
-    "purple": "#6B2FBB",
-    "brown": "#71491E",
-    "pink": "#ED54BA",
-    "white": "#D6E0F0",
-    "black": "#3F474E",
-    // emoji keys (legacy / fallback from backend)
-    "🔴": "#C51111",
-    "🟠": "#EF7D0D",
-    "🟡": "#F5F557",
-    "🟢": "#117F2D",
-    "🟣": "#6B2FBB",
-    "🟤": "#71491E",
-    "🔵": "#132ED1",
-    "🔷": "#38FEDC",
-    "💗": "#ED54BA",
-    "🟩": "#50EF39",
-    "⚪": "#D6E0F0",
-    "⚫": "#3F474E"
+// Map labels to show in debug (what's actually written on the map)
+const ROOM_LABELS = {
+    "Reactor": "Clock",
+    "UpperEngine": "Air Cooling",
+    "LowerEngine": "Liquid Cooling",
+    "Security": "Logs",
+    "MedBay": "Diagnostics",
+    "Electrical": "Bus",
+    "Cafeteria": "CPU",
+    "Admin": "BIOS",
+    "Storage": "SSD",
+    "Weapons": "GPU",
+    "O2": "VRM",
+    "Navigation": "Network",
+    "Shields": "Firewall",
+    "Communications": "IO"
 };
+
+const ROOM_HOUSING = {
+    "Reactor": { width: 6, height: 12 },
+    "UpperEngine": { width: 6, height: 12 },
+    "LowerEngine": { width: 6, height: 12 },
+    "Security": { width: 5, height: 10 },
+    "MedBay": { width: 5, height: 10 },
+    "Electrical": { width: 5, height: 10 },
+    "Cafeteria": { width: 8, height: 16 },
+    "Admin": { width: 5, height: 10 },
+    "Storage": { width: 10, height: 10 },
+    "Weapons": { width: 10, height: 10 },
+    "O2": { width: 5, height: 10 },
+    "Navigation": { width: 6, height: 12 },
+    "Shields": { width: 10, height: 10 },
+    "Communications": { width: 6, height: 12 }
+};
+
+const ROOM_CONNECTIONS = [
+    ["Reactor", "Security"], ["Reactor", "UpperEngine"], ["Reactor", "LowerEngine"],
+    ["Security", "UpperEngine"], ["Security", "LowerEngine"],
+    ["UpperEngine", "LowerEngine"], ["UpperEngine", "MedBay"], ["UpperEngine", "Cafeteria"],
+    ["LowerEngine", "Electrical"], ["LowerEngine", "Storage"],
+    ["MedBay", "Cafeteria"], ["Electrical", "Storage"],
+    ["Cafeteria", "Admin"], ["Cafeteria", "Storage"], ["Cafeteria", "Weapons"],
+    ["Admin", "Storage"],
+    ["Weapons", "O2"], ["Weapons", "Navigation"], ["Weapons", "Shields"],
+    ["O2", "Navigation"], ["O2", "Shields"],
+    ["Navigation", "Shields"],
+    ["Storage", "Shields"], ["Storage", "Communications"],
+    ["Shields", "Communications"]
+];
+
+// ============================================================================
+// DEBUG OVERLAY
+// ============================================================================
+
+let debugOverlayVisible = false;
+let debugCanvas = null;
+
+function createDebugCanvas() {
+    if (debugCanvas) return debugCanvas;
+    
+    const mapContainer = document.querySelector(".map-container") || document.getElementById("map-container");
+    if (!mapContainer) return null;
+    
+    const canvas = document.createElement("canvas");
+    canvas.id = "debug-overlay";
+    canvas.style.position = "absolute";
+    canvas.style.top = "0";
+    canvas.style.left = "0";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.pointerEvents = "none";
+    canvas.style.zIndex = "1000";
+    canvas.style.display = "none";
+    
+    mapContainer.style.position = "relative";
+    mapContainer.appendChild(canvas);
+    
+    const rect = mapContainer.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    
+    debugCanvas = canvas;
+    return canvas;
+}
+
+function drawDebugOverlay() {
+    const canvas = createDebugCanvas();
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if (!debugOverlayVisible) return;
+    
+    // Map boundary
+    ctx.strokeStyle = "#FF0000";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+    
+    // Calculate room positions
+    const roomPos = {};
+    Object.keys(ROOM_COORDINATES).forEach(room => {
+        const coord = ROOM_COORDINATES[room];
+        roomPos[room] = {
+            x: (coord.x / 100) * canvas.width,
+            y: (coord.y / 100) * canvas.height
+        };
+    });
+    
+    // Draw pathways
+    ctx.strokeStyle = "#00FFFF";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ROOM_CONNECTIONS.forEach(([r1, r2]) => {
+        if (roomPos[r1] && roomPos[r2]) {
+            ctx.beginPath();
+            ctx.moveTo(roomPos[r1].x, roomPos[r1].y);
+            ctx.lineTo(roomPos[r2].x, roomPos[r2].y);
+            ctx.stroke();
+        }
+    });
+    ctx.setLineDash([]);
+    
+    // Draw housing boxes and labels
+    Object.keys(ROOM_COORDINATES).forEach(room => {
+        const coord = ROOM_COORDINATES[room];
+        const housing = ROOM_HOUSING[room];
+        const mapLabel = ROOM_LABELS[room] || room;
+        const x = (coord.x / 100) * canvas.width;
+        const y = (coord.y / 100) * canvas.height;
+        const w = (housing.width / 100) * canvas.width;
+        const h = (housing.height / 100) * canvas.height;
+        
+        // Housing box
+        ctx.strokeStyle = "#FFFF00";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x - w/2, y - h/2, w, h);
+        
+        // Center dot
+        ctx.fillStyle = "#FF00FF";
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Room label (show MAP name, not backend name)
+        ctx.font = "12px monospace";
+        ctx.fillStyle = "#FFFFFF";
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 3;
+        ctx.strokeText(mapLabel, x + 10, y - 10);
+        ctx.fillText(mapLabel, x + 10, y - 10);
+        
+        // Coordinates
+        ctx.font = "10px monospace";
+        const text = `${coord.x.toFixed(1)}%, ${coord.y.toFixed(1)}%`;
+        ctx.strokeText(text, x + 10, y + 5);
+        ctx.fillText(text, x + 10, y + 5);
+    });
+    
+    // Legend
+    ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+    ctx.fillRect(10, 10, 280, 140);
+    ctx.font = "14px Arial";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText("🔍 DEBUG MODE (Press 'D' to toggle)", 20, 30);
+    ctx.font = "12px Arial";
+    ctx.fillStyle = "#FF0000"; ctx.fillText("■ Red: Hard map boundary", 20, 55);
+    ctx.fillStyle = "#00FFFF"; ctx.fillText("■ Cyan: Room pathways", 20, 75);
+    ctx.fillStyle = "#FFFF00"; ctx.fillText("■ Yellow: Agent housing boxes", 20, 95);
+    ctx.fillStyle = "#FF00FF"; ctx.fillText("■ Magenta: Room centers", 20, 115);
+}
+
+function toggleDebug() {
+    debugOverlayVisible = !debugOverlayVisible;
+    if (debugCanvas) {
+        debugCanvas.style.display = debugOverlayVisible ? "block" : "none";
+    }
+    drawDebugOverlay();
+    console.log(debugOverlayVisible ? "🔍 Debug ON" : "🔍 Debug OFF");
+}
+
+// ============================================================================
+// GAME LOGIC
+// ============================================================================
+
+const COLOR_MAP = {
+    "red": "#C51111", "orange": "#EF7D0D", "yellow": "#F5F557",
+    "lime": "#50EF39", "green": "#117F2D", "cyan": "#38FEDC",
+    "blue": "#132ED1", "purple": "#6B2FBB", "brown": "#71491E",
+    "pink": "#ED54BA", "white": "#D6E0F0", "black": "#3F474E",
+    "🔴": "#C51111", "🟠": "#EF7D0D", "🟡": "#F5F557",
+    "🟢": "#117F2D", "🟣": "#6B2FBB", "🟤": "#71491E",
+    "🔵": "#132ED1", "🔷": "#38FEDC", "💗": "#ED54BA",
+    "🟩": "#50EF39", "⚪": "#D6E0F0", "⚫": "#3F474E"
+};
+
 function getAgentColor(colorKey) {
     if (!colorKey || typeof colorKey !== "string") return "#888888";
     var key = colorKey.trim().toLowerCase();
     return COLOR_MAP[key] || COLOR_MAP[colorKey.trim()] || "#888888";
 }
 
-// Model name abbreviations
 function getModelAbbreviation(modelName) {
     if (!modelName) return "Unknown";
     if (modelName.includes("TinyLlama")) return "TinyLlama";
     if (modelName.includes("Qwen")) {
         if (modelName.includes("1.5B")) return "Qwen 1.5B";
-        if (modelName.includes("72B")) return "Qwen 72B";
-        if (modelName.includes("80B")) return "Qwen 80B";
         return "Qwen";
     }
-    if (modelName.includes("Llama-3.2")) return "Llama 3.2";
-    if (modelName.includes("Llama-3.3")) return "Llama 3.3";
+    if (modelName.includes("Llama")) return "Llama";
     if (modelName.includes("DeepSeek")) return "DeepSeek";
-    if (modelName.includes("GeneticLemonade")) return "Genetic";
-    if (modelName.includes("Hermes")) return "Hermes";
-    if (modelName.includes("Arcee")) return "Arcee";
     return modelName.split("/").pop().substring(0, 10);
 }
-
-// ============================================================================
-// STATE MANAGEMENT
-// ============================================================================
 
 let lastEventCount = 0;
 let agentMarkers = {};
 let isPaused = false;
 let pollingInterval = null;
 
-// ============================================================================
-// UPDATE FUNCTIONS
-// ============================================================================
-
-/**
- * Updates game parameters in the header
- */
 function updateGameParams(gameInfo) {
     if (!gameInfo) return;
-    
     const gameIdEl = document.getElementById("gameId");
     const totalAgentsEl = document.getElementById("totalAgents");
     const byzantineEl = document.getElementById("byzantineCount");
@@ -118,83 +265,77 @@ function updateGameParams(gameInfo) {
     }
 }
 
-/**
- * Updates agent positions on the map
- */
 function updateAgentPositions(agents) {
     if (!agents) return;
-    
     const markersContainer = document.getElementById("agentMarkers");
     if (!markersContainer) return;
-    
     const mapImage = document.getElementById("mapImage");
     if (!mapImage) return;
-    
-    // Get map dimensions
     const mapRect = mapImage.getBoundingClientRect();
-    const mapWidth = mapImage.naturalWidth || mapRect.width;
-    const mapHeight = mapImage.naturalHeight || mapRect.height;
     
-    // Clear existing markers
     markersContainer.innerHTML = "";
     agentMarkers = {};
     
-    // Create markers for each agent
+    const agentsByRoom = {};
     Object.keys(agents).forEach(function(agentKey) {
         const agent = agents[agentKey];
         if (!agent.location) return;
+        if (!agentsByRoom[agent.location]) agentsByRoom[agent.location] = [];
+        agentsByRoom[agent.location].push({key: agentKey, agent: agent});
+    });
+    
+    Object.keys(agentsByRoom).forEach(function(roomName) {
+        const roomAgents = agentsByRoom[roomName];
+        const roomCoords = ROOM_COORDINATES[roomName];
+        const housing = ROOM_HOUSING[roomName] || { width: 3, height: 3 };
         
-        const roomCoords = ROOM_COORDINATES[agent.location];
         if (!roomCoords) {
-            console.warn("Unknown room:", agent.location);
+            console.warn("Unknown room:", roomName);
             return;
         }
         
-        // Calculate position relative to displayed map size
-        const scaleX = mapRect.width / mapWidth;
-        const scaleY = mapRect.height / mapHeight;
-        const x = roomCoords.x * scaleX;
-        const y = roomCoords.y * scaleY;
-        
-        // Extract agent number from key (e.g., "Agent_0" -> 0) and display as 1-based
-        const agentNumRaw = agentKey.replace("Agent_", "");
-        const agentIndex = parseInt(agentNumRaw, 10);
-        const displayNum = Number.isNaN(agentIndex) ? agentNumRaw : agentIndex + 1;
-
-        const color = getAgentColor(agent.color);
-        
-        // Create marker element
-        const marker = document.createElement("div");
-        marker.className = "agent-marker";
-        marker.id = "marker-" + agentNumRaw;
-        marker.style.backgroundColor = color;
-        marker.style.left = x + "px";
-        marker.style.top = y + "px";
-        marker.textContent = displayNum;
-        marker.title = agentKey + " - " + agent.location;
-        
-        // Add status class if dead
-        if (agent.status === "eliminated" || agent.status === "voted_off") {
-            marker.style.opacity = "0.5";
-        }
-        
-        markersContainer.appendChild(marker);
-        agentMarkers[agentKey] = marker;
+        roomAgents.forEach(function(item, index) {
+            const agentKey = item.key;
+            const agent = item.agent;
+            const row = Math.floor(index / 2);
+            const col = index % 2;
+            const offsetX = (col - 0.5) * (housing.width / 2);
+            const offsetY = (row - 0.5) * (housing.height / 2);
+            const x_percent = roomCoords.x + offsetX;
+            const y_percent = roomCoords.y + offsetY;
+            const x = (x_percent / 100) * mapRect.width;
+            const y = (y_percent / 100) * mapRect.height;
+            
+            const agentNumRaw = agentKey.replace("Agent_", "");
+            const agentIndex = parseInt(agentNumRaw, 10);
+            const displayNum = Number.isNaN(agentIndex) ? agentNumRaw : agentIndex + 1;
+            const color = getAgentColor(agent.color);
+            
+            const marker = document.createElement("div");
+            marker.className = "agent-marker";
+            marker.id = "marker-" + agentNumRaw;
+            marker.style.backgroundColor = color;
+            marker.style.left = x + "px";
+            marker.style.top = y + "px";
+            marker.textContent = displayNum;
+            marker.title = agentKey + " - " + roomName;
+            
+            if (agent.status === "eliminated" || agent.status === "voted_off") {
+                marker.style.opacity = "0.5";
+            }
+            
+            markersContainer.appendChild(marker);
+            agentMarkers[agentKey] = marker;
+        });
     });
 }
 
-/**
- * Updates the agent status table
- */
 function updateStatusTable(agents) {
     if (!agents) return;
-    
     const tbody = document.getElementById("statusTableBody");
     if (!tbody) return;
-    
     tbody.innerHTML = "";
     
-    // Sort agents by number
     const agentKeys = Object.keys(agents).sort(function(a, b) {
         const numA = parseInt(a.replace("Agent_", ""));
         const numB = parseInt(b.replace("Agent_", ""));
@@ -206,21 +347,17 @@ function updateStatusTable(agents) {
         const agentNumRaw = agentKey.replace("Agent_", "");
         const agentIndex = parseInt(agentNumRaw, 10);
         const displayNum = Number.isNaN(agentIndex) ? agentNumRaw : agentIndex + 1;
-        
         const row = document.createElement("tr");
         
-        // Agent number (1-based for display)
         const numCell = document.createElement("td");
         numCell.textContent = displayNum;
         row.appendChild(numCell);
         
-        // Model (abbreviated)
         const modelCell = document.createElement("td");
         const modelName = agent.stats && agent.stats.model_name ? agent.stats.model_name : agent.model;
         modelCell.textContent = getModelAbbreviation(modelName);
         row.appendChild(modelCell);
         
-        // Color indicator
         const colorCell = document.createElement("td");
         const colorIndicator = document.createElement("span");
         colorIndicator.className = "agent-color-indicator";
@@ -228,7 +365,6 @@ function updateStatusTable(agents) {
         colorCell.appendChild(colorIndicator);
         row.appendChild(colorCell);
         
-        // Status
         const statusCell = document.createElement("td");
         statusCell.className = "agent-status";
         let statusText = "";
@@ -246,20 +382,16 @@ function updateStatusTable(agents) {
         statusCell.textContent = statusText;
         row.appendChild(statusCell);
         
-        // Votes received
         const votesCell = document.createElement("td");
         const votesValue = agent.stats && typeof agent.stats.votes_received !== "undefined"
-            ? agent.stats.votes_received
-            : agent.votes_received;
+            ? agent.stats.votes_received : agent.votes_received;
         votesCell.textContent = votesValue || 0;
         row.appendChild(votesCell);
         
-        // Kills (only for Byzantine)
         const killsCell = document.createElement("td");
         if (agent.role === "byzantine") {
             const elimValue = agent.stats && typeof agent.stats.eliminations !== "undefined"
-                ? agent.stats.eliminations
-                : agent.eliminations;
+                ? agent.stats.eliminations : agent.eliminations;
             killsCell.textContent = elimValue || 0;
         } else {
             killsCell.textContent = "n/a";
@@ -270,21 +402,17 @@ function updateStatusTable(agents) {
     });
 }
 
-/**
- * Updates the live feed with new events
- */
 function updateLiveFeed(events) {
     const feedContent = document.getElementById("feedContent");
     if (!feedContent) return;
     
     if (!events || !Array.isArray(events)) {
         if (feedContent.children.length === 0) {
-            feedContent.innerHTML = "<div class=\"feed-event\"><span class=\"feed-timestamp\">[--]</span><span class=\"feed-text\">No events yet. Game may still be starting.</span></div>";
+            feedContent.innerHTML = "<div class=\"feed-event\"><span class=\"feed-timestamp\">[--]</span><span class=\"feed-text\">No events yet.</span></div>";
         }
         return;
     }
     
-    // Only add new events (after lastEventCount)
     const newEvents = events.slice(lastEventCount);
     
     if (newEvents.length === 0 && feedContent.children.length === 0) {
@@ -292,7 +420,6 @@ function updateLiveFeed(events) {
         return;
     }
     
-    // Remove placeholder if we're about to add real events
     if (newEvents.length > 0 && feedContent.children.length === 1) {
         var first = feedContent.querySelector(".feed-text");
         if (first && first.textContent.indexOf("No events yet") !== -1) {
@@ -303,15 +430,12 @@ function updateLiveFeed(events) {
     newEvents.forEach(function(event) {
         const eventDiv = document.createElement("div");
         eventDiv.className = "feed-event";
-        
         const timestampSpan = document.createElement("span");
         timestampSpan.className = "feed-timestamp";
-        timestampSpan.textContent = "[" + (event.timestamp || "Unknown") + "]";
-        
+        timestampSpan.textContent = "[" + (event.time || event.timestamp || "--:--") + "]";
         const textSpan = document.createElement("span");
         textSpan.className = "feed-text";
-        textSpan.textContent = event.text || "";
-        
+        textSpan.textContent = event.msg || event.text || "No message";
         eventDiv.appendChild(timestampSpan);
         eventDiv.appendChild(textSpan);
         feedContent.appendChild(eventDiv);
@@ -321,43 +445,27 @@ function updateLiveFeed(events) {
     feedContent.scrollTop = feedContent.scrollHeight;
 }
 
-// ============================================================================
-// MAIN UPDATE FUNCTION
-// ============================================================================
-
-/**
- * Fetches game state from API and updates all UI components
- */
 async function updateGameState() {
     try {
         const response = await fetch("/api/game_state");
-        if (!response.ok) {
-            console.error("Failed to fetch game state:", response.status);
-            return;
-        }
-        
+        if (!response.ok) return;
         const data = await response.json();
         
         if (data.status === 'waiting') {
             const statusEl = document.getElementById("gameStatus");
-            if (statusEl) statusEl.textContent = "Waiting for game to start...";
+            if (statusEl) statusEl.textContent = "Waiting...";
             return;
         }
         
         if (data.status === 'error') {
             const statusEl = document.getElementById("gameStatus");
             if (statusEl) {
-                statusEl.textContent = "Error: " + (data.message || "Unknown error");
+                statusEl.textContent = "Error: " + (data.message || "Unknown");
                 statusEl.style.color = "#ff4444";
             }
-            
-            // If backend process crashed, show alert and stop polling
-            if (data.process_ended) {
-                alert("⚠️ Backend Process Crashed!\n\n" + (data.message || "Unknown error") + "\n\nCheck the terminal for detailed error messages.");
-                if (pollingInterval) {
-                    clearInterval(pollingInterval);
-                    pollingInterval = null;
-                }
+            if (data.process_ended && pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
             }
             return;
         }
@@ -370,15 +478,13 @@ async function updateGameState() {
                 const agents = data.agents || {};
                 const agentKeys = Object.keys(agents);
                 const totalAgents = agentKeys.length;
-                let byzCount = 0;
-                let honestCount = 0;
+                let byzCount = 0, honestCount = 0;
                 agentKeys.forEach(function(key) {
                     const a = agents[key];
                     if (!a || !a.role) return;
                     if (a.role === "byzantine") byzCount++;
                     else if (a.role === "honest") honestCount++;
                 });
-                
                 gameInfo = {
                     game_id: data.game_id,
                     total_agents: totalAgents,
@@ -389,10 +495,7 @@ async function updateGameState() {
                     status: data.global && data.global.current_phase ? data.global.current_phase : data.status
                 };
             }
-            
-            if (gameInfo) {
-                updateGameParams(gameInfo);
-            }
+            if (gameInfo) updateGameParams(gameInfo);
         }
         
         if (data.agents && Object.keys(data.agents).length > 0) {
@@ -405,39 +508,18 @@ async function updateGameState() {
             if (Array.isArray(data.events)) {
                 events = data.events;
             } else if (data.global && Array.isArray(data.global.ui_event_log)) {
-                events = data.global.ui_event_log.map(function(ev) {
-                    return {
-                        timestamp: ev.time,
-                        text: ev.msg,
-                        type: ev.type
-                    };
-                });
+                events = data.global.ui_event_log;
             }
             updateLiveFeed(events);
         }
-        
     } catch (error) {
-        console.error("Error updating game state:", error);
-        const statusEl = document.getElementById("gameStatus");
-        if (statusEl) statusEl.textContent = "Error loading state";
+        console.error("Error:", error);
     }
 }
 
-// ============================================================================
-// INITIALIZATION
-// ============================================================================
-
-// ============================================================================
-// CONTROL BUTTON HANDLERS
-// ============================================================================
-
-/**
- * Toggles pause/resume for the simulation
- */
 function togglePause() {
     isPaused = !isPaused;
     const pauseBtn = document.getElementById("pauseBtn");
-    
     if (isPaused) {
         pauseBtn.textContent = "▶ Resume";
         pauseBtn.classList.add("paused");
@@ -448,77 +530,39 @@ function togglePause() {
     } else {
         pauseBtn.textContent = "⏸ Pause";
         pauseBtn.classList.remove("paused");
-        // Resume polling
         if (!pollingInterval) {
             pollingInterval = setInterval(updateGameState, 2000);
         }
     }
 }
 
-/**
- * Reverses to the last round (calls backend API)
- */
-async function reverseToLastRound() {
-    if (confirm("Are you sure you want to go back to the last round?")) {
-        try {
-            const response = await fetch("/api/reverse_round", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            });
-            
-            if (response.ok) {
-                // Refresh game state
-                await updateGameState();
-                alert("Reversed to last round.");
-            } else {
-                alert("Failed to reverse round. Please try again.");
-            }
-        } catch (error) {
-            console.error("Error reversing round:", error);
-            alert("Error reversing round. Please try again.");
-        }
-    }
-}
-
-/**
- * Exits to home page (hard exit)
- */
 function exitToHome() {
-    if (confirm("Are you sure you want to exit? This will stop the simulation.")) {
-        window.location.href = "/";
-    }
+    if (confirm("Exit?")) window.location.href = "/";
 }
 
-// ============================================================================
-// INITIALIZATION
-// ============================================================================
-
-// Start polling when page loads
 window.addEventListener("DOMContentLoaded", function() {
-    // Initial update
-    updateGameState();
+    createDebugCanvas();
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "d" || e.key === "D") toggleDebug();
+    });
     
-    // Poll every 2 seconds
+    window.addEventListener("resize", () => {
+        if (debugCanvas) {
+            const container = debugCanvas.parentElement;
+            const rect = container.getBoundingClientRect();
+            debugCanvas.width = rect.width;
+            debugCanvas.height = rect.height;
+            drawDebugOverlay();
+        }
+    });
+    
+    updateGameState();
     pollingInterval = setInterval(updateGameState, 2000);
     
-    // Set up control buttons
     const pauseBtn = document.getElementById("pauseBtn");
-    const reverseBtn = document.getElementById("reverseBtn");
     const exitBtn = document.getElementById("exitBtn");
+    if (pauseBtn) pauseBtn.addEventListener("click", togglePause);
+    if (exitBtn) exitBtn.addEventListener("click", exitToHome);
     
-    if (pauseBtn) {
-        pauseBtn.addEventListener("click", togglePause);
-    }
-    
-    if (reverseBtn) {
-        reverseBtn.addEventListener("click", reverseToLastRound);
-    }
-    
-    if (exitBtn) {
-        exitBtn.addEventListener("click", exitToHome);
-    }
-    
-    console.log("Game simulation page loaded. Polling /api/game_state every 2 seconds.");
+    console.log("🎮 Press 'D' for debug!");
 });
