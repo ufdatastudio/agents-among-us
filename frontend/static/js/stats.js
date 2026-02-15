@@ -1,15 +1,31 @@
 // Statistics page logic for Agents Among Us
-// Displays RAW rows from frontend_stats.csv via backend API endpoints.
+// Agent Summary: per-model aggregates (Honest / Byzantine). Single Game Data: game list + detail.
 
 // =====================================================================
 // Global state
 // =====================================================================
 
 let allData = [];          // All raw rows from frontend_stats.csv
-let filteredData = [];     // Current filtered/sorted rows for All Data tab
-let currentSortKey = null; // Current sort key for All Data table
-let currentSortAsc = true;
-let currentGameId = null;  // Selected game in Game List tab
+let currentGameId = null;  // Selected game in Single Game Data tab
+
+// All models in backend (config/model_composition.py). Order: heavyweight then small. Used for Agent Summary tables.
+const ALL_MODELS = [
+  "Qwen/Qwen3-Next-80B-A3B-Instruct",
+  "arcee-ai/Arcee-Nova",
+  "Qwen/Qwen2.5-72B-Instruct",
+  "meta-llama/Llama-3.3-70B-Instruct",
+  "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
+  "zerofata/L3.3-GeneticLemonade-Final-v2-70B",
+  "NousResearch/Hermes-4-70B",
+  "unsloth/Apertus-70B-Instruct-2509-unsloth-bnb-4bit",
+  "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled",
+  "Nexusflow/Athene-V2-Chat",
+  "MultiverseComputingCAI/HyperNova-60B",
+  "meta-llama/Llama-3.2-3B-Instruct",
+  "Qwen/Qwen2.5-1.5B-Instruct",
+  "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+];
+const DASH = "—";
 
 // =====================================================================
 // Utility helpers
@@ -77,12 +93,7 @@ async function loadStats() {
     const data = await res.json();
     allData = Array.isArray(data) ? data : [];
 
-    // Initial derived state
-    filteredData = [...allData];
-
-    updateSummary();
-    populateFilters();
-    applyFiltersAndSort();
+    updateAgentSummary();
     updateGameList();
   } catch (err) {
     console.error("Error loading stats:", err);
@@ -90,215 +101,159 @@ async function loadStats() {
 }
 
 // =====================================================================
-// Summary box (simple counts)
+// Agent Summary (per-model aggregates, Honest / Byzantine tabs)
 // =====================================================================
 
-function updateSummary() {
-  const totalGames = new Set(allData.map((r) => r.game_id)).size;
-  const totalAgents = allData.length;
-
-  const honestWinsGames = new Set(
-    allData
-      .filter((r) => Number(r.won_game) === 1 && r.alignment === "H")
-      .map((r) => r.game_id),
-  ).size;
-
-  const byzWinsGames = new Set(
-    allData
-      .filter((r) => Number(r.won_game) === 1 && r.alignment === "B")
-      .map((r) => r.game_id),
-  ).size;
-
-  document.getElementById("total-games").textContent = totalGames;
-  document.getElementById("total-agents").textContent = totalAgents;
-  document.getElementById("honest-wins").textContent = honestWinsGames;
-  document.getElementById("byz-wins").textContent = byzWinsGames;
+function showAgentSubtab(subtabName, evt) {
+  document.querySelectorAll(".agent-summary-panel").forEach((el) => el.classList.remove("active"));
+  document.querySelectorAll(".agent-subtab").forEach((btn) => btn.classList.remove("active"));
+  const panel = document.getElementById("agent-summary-" + subtabName);
+  if (panel) panel.classList.add("active");
+  if (evt && evt.currentTarget) evt.currentTarget.classList.add("active");
 }
 
-// =====================================================================
-// Filters and sorting for All Data tab
-// =====================================================================
+// Aggregate rows by model_name and alignment. Returns { "model_id": { games, wins, correct_votes, ... } } for given alignment.
+function getAgentSummaryByModel(alignment) {
+  const rows = allData.filter((r) => r.alignment === alignment);
+  const byModel = {};
 
-function populateFilters() {
-  const modelFilter = document.getElementById("model-filter");
-  if (!modelFilter) return;
-
-  const models = Array.from(
-    new Set(allData.map((r) => abbreviateModelName(r.model_name))),
-  ).filter((m) => m);
-
-  modelFilter.innerHTML = '<option value="">All Models</option>';
-  models.sort().forEach((m) => {
-    const opt = document.createElement("option");
-    opt.value = m;
-    opt.textContent = m;
-    modelFilter.appendChild(opt);
-  });
-}
-
-// Apply search + filters + sort, then render table
-function applyFiltersAndSort() {
-  const searchInput = document.getElementById("search-input");
-  const modelFilter = document.getElementById("model-filter");
-  const roleFilter = document.getElementById("role-filter");
-
-  const searchTerm = (searchInput?.value || "").toLowerCase();
-  const modelValue = modelFilter?.value || "";
-  const roleValue = roleFilter?.value || "";
-
-  filteredData = allData.filter((row) => {
-    // Model abbreviation
-    const modelAbbrev = abbreviateModelName(row.model_name);
-
-    // Role filter
-    if (roleValue && row.alignment !== roleValue) return false;
-
-    // Model filter
-    if (modelValue && modelAbbrev !== modelValue) return false;
-
-    // Search term across a few fields
-    if (searchTerm) {
-      const haystack = [
-        row.game_id,
-        abbreviateGameId(row.game_id),
-        row.agent_name,
-        abbreviateAgentName(row.agent_name),
-        modelAbbrev,
-        row.model_name,
-        roleLabel(row.alignment),
-      ]
-        .join(" ")
-        .toLowerCase();
-      if (!haystack.includes(searchTerm)) return false;
+  rows.forEach((row) => {
+    const id = (row.model_name || "").trim();
+    if (!id) return;
+    if (!byModel[id]) {
+      byModel[id] = {
+        games: 0,
+        wins: 0,
+        correct_votes: 0,
+        incorrect_votes: 0,
+        skipped_votes: 0,
+        emergency_meetings: 0,
+        bodies_reported: 0,
+        rounds_survived: 0,
+        votes_received: 0,
+        eliminations: 0,
+        times_eliminated: 0,
+        ejections: 0,
+      };
     }
-
-    return true;
+    const m = byModel[id];
+    m.games += 1;
+    if (Number(row.won_game) === 1) m.wins += 1;
+    m.correct_votes += Number(row.correct_votes) || 0;
+    m.incorrect_votes += Number(row.incorrect_votes) || 0;
+    m.skipped_votes += Number(row.skipped_votes) || 0;
+    m.emergency_meetings += Number(row.emergency_meetings) || 0;
+    m.bodies_reported += Number(row.bodies_reported) || 0;
+    m.rounds_survived += Number(row.rounds_survived) || 0;
+    m.votes_received += Number(row.votes_received) || 0;
+    m.eliminations += Number(row.eliminations) || 0;
+    m.times_eliminated += Number(row.times_eliminated) || 0;
+    m.ejections += Number(row.ejections) || 0;
   });
 
-  // Sort
-  if (currentSortKey) {
-    const key = currentSortKey;
-    const asc = currentSortAsc;
-    filteredData.sort((a, b) => compareAllDataRows(a, b, key, asc));
-  }
-
-  renderAllDataTable();
+  return byModel;
 }
 
-// Compare function for sorting All Data table
-function compareAllDataRows(a, b, key, asc) {
-  const dir = asc ? 1 : -1;
-
-  const getVal = (row) => {
-    switch (key) {
-      case "game":
-        return abbreviateGameId(row.game_id);
-      case "agent":
-        return Number(abbreviateAgentName(row.agent_name));
-      case "model":
-        return abbreviateModelName(row.model_name);
-      case "role":
-        return row.alignment || "";
-      case "won":
-        return Number(row.won_game);
-      case "kills":
-        return Number(row.eliminations);
-      case "votes":
-        return Number(row.votes_received);
-      case "correct":
-        return Number(row.correct_votes);
-      case "rounds":
-        return Number(row.rounds_survived);
-      default:
-        return 0;
-    }
+function getAgentSummarySearchAndSort() {
+  const searchEl = document.getElementById("agent-summary-search");
+  const sortEl = document.getElementById("agent-summary-sort");
+  return {
+    search: (searchEl && searchEl.value) ? searchEl.value.trim().toLowerCase() : "",
+    sort: (sortEl && sortEl.value) ? sortEl.value : "a-z",
   };
-
-  const va = getVal(a);
-  const vb = getVal(b);
-
-  if (va < vb) return -1 * dir;
-  if (va > vb) return 1 * dir;
-  return 0;
 }
 
-function renderAllDataTable() {
-  const tbody = document.getElementById("all-data-tbody");
-  const countSpan = document.getElementById("entry-count");
-  if (!tbody || !countSpan) return;
+function getFilteredAndSortedModelIds(honestAgg, byzAgg) {
+  const { search, sort } = getAgentSummarySearchAndSort();
+  let list = ALL_MODELS.map((modelId) => ({
+    modelId,
+    displayName: abbreviateModelName(modelId),
+    hGames: (honestAgg[modelId] && honestAgg[modelId].games) || 0,
+    bGames: (byzAgg[modelId] && byzAgg[modelId].games) || 0,
+    paramIndex: ALL_MODELS.indexOf(modelId),
+  }));
 
-  tbody.innerHTML = "";
-
-  filteredData.forEach((row) => {
-    const tr = document.createElement("tr");
-
-    const gameCell = document.createElement("td");
-    gameCell.textContent = abbreviateGameId(row.game_id);
-    tr.appendChild(gameCell);
-
-    const agentCell = document.createElement("td");
-    agentCell.textContent = abbreviateAgentName(row.agent_name);
-    tr.appendChild(agentCell);
-
-    const modelCell = document.createElement("td");
-    modelCell.textContent = abbreviateModelName(row.model_name);
-    tr.appendChild(modelCell);
-
-    const roleCell = document.createElement("td");
-    roleCell.textContent = roleLabel(row.alignment);
-    tr.appendChild(roleCell);
-
-    const wonCell = document.createElement("td");
-    wonCell.textContent = wonLabel(row.won_game);
-    tr.appendChild(wonCell);
-
-    const killsCell = document.createElement("td");
-    if (row.alignment === "B") {
-      killsCell.textContent = Number(row.eliminations) || 0;
-    } else {
-      killsCell.textContent = "n/a";
-    }
-    tr.appendChild(killsCell);
-
-    const votesCell = document.createElement("td");
-    votesCell.textContent = Number(row.votes_received) || 0;
-    tr.appendChild(votesCell);
-
-    const correctCell = document.createElement("td");
-    if (row.alignment === "H") {
-      correctCell.textContent = Number(row.correct_votes) || 0;
-    } else {
-      correctCell.textContent = "";
-    }
-    tr.appendChild(correctCell);
-
-    const roundsCell = document.createElement("td");
-    roundsCell.textContent = Number(row.rounds_survived) || 0;
-    tr.appendChild(roundsCell);
-
-    tbody.appendChild(tr);
-  });
-
-  countSpan.textContent = filteredData.length;
-}
-
-// Event handlers for search and filters
-function handleFilterChange() {
-  applyFiltersAndSort();
-}
-
-function sortAllData(key) {
-  if (currentSortKey === key) {
-    currentSortAsc = !currentSortAsc;
-  } else {
-    currentSortKey = key;
-    currentSortAsc = true;
+  if (search) {
+    list = list.filter((item) => item.displayName.toLowerCase().includes(search));
   }
-  applyFiltersAndSort();
+
+  const sortKey = sort;
+  if (sortKey === "a-z") {
+    list.sort((a, b) => a.displayName.localeCompare(b.displayName));
+  } else if (sortKey === "z-a") {
+    list.sort((a, b) => b.displayName.localeCompare(a.displayName));
+  } else if (sortKey === "most-used") {
+    list.sort((a, b) => {
+      const useA = a.hGames + a.bGames;
+      const useB = b.hGames + b.bGames;
+      return useB - useA || a.displayName.localeCompare(b.displayName);
+    });
+  } else if (sortKey === "least-used") {
+    list.sort((a, b) => {
+      const useA = a.hGames + a.bGames;
+      const useB = b.hGames + b.bGames;
+      return useA - useB || a.displayName.localeCompare(b.displayName);
+    });
+  } else if (sortKey === "most-parameters") {
+    list.sort((a, b) => a.paramIndex - b.paramIndex);
+  } else if (sortKey === "least-parameters") {
+    list.sort((a, b) => b.paramIndex - a.paramIndex);
+  }
+
+  return list.map((item) => item.modelId);
+}
+
+function updateAgentSummary() {
+  const honestAgg = getAgentSummaryByModel("H");
+  const byzAgg = getAgentSummaryByModel("B");
+  const modelIds = getFilteredAndSortedModelIds(honestAgg, byzAgg);
+
+  const honestTbody = document.getElementById("honest-tbody");
+  const byzantineTbody = document.getElementById("byzantine-tbody");
+  if (!honestTbody || !byzantineTbody) return;
+
+  honestTbody.innerHTML = "";
+  byzantineTbody.innerHTML = "";
+
+  modelIds.forEach((modelId) => {
+    const displayName = abbreviateModelName(modelId);
+    const h = honestAgg[modelId];
+    const b = byzAgg[modelId];
+
+    const hr = document.createElement("tr");
+    hr.appendChild(cell(displayName));
+    hr.appendChild(cell(h ? h.games : DASH));
+    hr.appendChild(cell(h ? h.wins : DASH));
+    hr.appendChild(cell(h ? h.correct_votes : DASH));
+    hr.appendChild(cell(h ? h.incorrect_votes : DASH));
+    hr.appendChild(cell(h ? h.skipped_votes : DASH));
+    hr.appendChild(cell(h ? h.emergency_meetings : DASH));
+    hr.appendChild(cell(h ? h.bodies_reported : DASH));
+    hr.appendChild(cell(h ? h.rounds_survived : DASH));
+    hr.appendChild(cell(h ? h.votes_received : DASH));
+    honestTbody.appendChild(hr);
+
+    const br = document.createElement("tr");
+    br.appendChild(cell(displayName));
+    br.appendChild(cell(b ? b.games : DASH));
+    br.appendChild(cell(b ? b.wins : DASH));
+    br.appendChild(cell(b ? b.eliminations : DASH));
+    br.appendChild(cell(b ? b.rounds_survived : DASH));
+    br.appendChild(cell(b ? b.votes_received : DASH));
+    br.appendChild(cell(b ? b.times_eliminated : DASH));
+    br.appendChild(cell(b ? b.ejections : DASH));
+    byzantineTbody.appendChild(br);
+  });
+}
+
+function cell(val) {
+  const td = document.createElement("td");
+  td.textContent = val === undefined || val === null ? DASH : String(val);
+  return td;
 }
 
 // =====================================================================
-// Game list tab
+// Single Game Data tab (game list + detail)
 // =====================================================================
 
 function groupByGame() {
@@ -425,66 +380,23 @@ function showGameDetails(gameId) {
     })
     .forEach((row) => {
       const tr = document.createElement("tr");
+      const agentNum = Number(abbreviateAgentName(row.agent_name));
+      const displayIndex = Number.isNaN(agentNum) ? row.agent_name : agentNum + 1;
 
-      const idxCell = document.createElement("td");
-      idxCell.textContent = abbreviateAgentName(row.agent_name);
-      tr.appendChild(idxCell);
-
-      const modelCell = document.createElement("td");
-      modelCell.textContent = abbreviateModelName(row.model_name);
-      tr.appendChild(modelCell);
-
-      const roleCell = document.createElement("td");
-      roleCell.textContent = row.alignment || "";
-      tr.appendChild(roleCell);
-
-      const wonCell = document.createElement("td");
-      wonCell.textContent = Number(row.won_game) || 0;
-      tr.appendChild(wonCell);
-
-      const correctCell = document.createElement("td");
-      correctCell.textContent = Number(row.correct_votes) || 0;
-      tr.appendChild(correctCell);
-
-      const incorrectCell = document.createElement("td");
-      incorrectCell.textContent = Number(row.incorrect_votes) || 0;
-      tr.appendChild(incorrectCell);
-
-      const skippedCell = document.createElement("td");
-      skippedCell.textContent = Number(row.skipped_votes) || 0;
-      tr.appendChild(skippedCell);
-
-      const emergCell = document.createElement("td");
-      emergCell.textContent = Number(row.emergency_meetings) || 0;
-      tr.appendChild(emergCell);
-
-      const bodiesCell = document.createElement("td");
-      bodiesCell.textContent = Number(row.bodies_reported) || 0;
-      tr.appendChild(bodiesCell);
-
-      const roundsCell = document.createElement("td");
-      roundsCell.textContent = Number(row.rounds_survived) || 0;
-      tr.appendChild(roundsCell);
-
-      const killsCell = document.createElement("td");
-      killsCell.textContent = Number(row.eliminations) || 0;
-      tr.appendChild(killsCell);
-
-      const elimCell = document.createElement("td");
-      elimCell.textContent = Number(row.times_eliminated) || 0;
-      tr.appendChild(elimCell);
-
-      const ejectCell = document.createElement("td");
-      ejectCell.textContent = Number(row.ejections) || 0;
-      tr.appendChild(ejectCell);
-
-      const movesCell = document.createElement("td");
-      movesCell.textContent = Number(row.num_moves) || 0;
-      tr.appendChild(movesCell);
-
-      const votesCell = document.createElement("td");
-      votesCell.textContent = Number(row.votes_received) || 0;
-      tr.appendChild(votesCell);
+      tr.appendChild(cell(displayIndex));
+      tr.appendChild(cell(abbreviateModelName(row.model_name)));
+      tr.appendChild(cell(row.alignment || ""));
+      tr.appendChild(cell(Number(row.correct_votes) || 0));
+      tr.appendChild(cell(Number(row.incorrect_votes) || 0));
+      tr.appendChild(cell(Number(row.skipped_votes) || 0));
+      tr.appendChild(cell(Number(row.emergency_meetings) || 0));
+      tr.appendChild(cell(Number(row.bodies_reported) || 0));
+      tr.appendChild(cell(Number(row.rounds_survived) || 0));
+      tr.appendChild(cell(Number(row.eliminations) || 0));
+      tr.appendChild(cell(Number(row.times_eliminated) || 0));
+      tr.appendChild(cell(Number(row.ejections) || 0));
+      tr.appendChild(cell(Number(row.num_moves) || 0));
+      tr.appendChild(cell(Number(row.votes_received) || 0));
 
       tbody.appendChild(tr);
     });
@@ -548,6 +460,7 @@ function showTab(tabName, evt) {
 
   document.querySelectorAll(".stats-tab").forEach((btn) => {
     btn.classList.remove("active");
+    if (btn.getAttribute("data-tab") === tabName) btn.classList.add("active");
   });
   if (evt && evt.currentTarget) {
     evt.currentTarget.classList.add("active");
@@ -559,21 +472,14 @@ function showTab(tabName, evt) {
 // =====================================================================
 
 window.addEventListener("DOMContentLoaded", () => {
-  // Wire up filter controls
-  const searchInput = document.getElementById("search-input");
-  const modelFilter = document.getElementById("model-filter");
-  const roleFilter = document.getElementById("role-filter");
-
-  if (searchInput) {
-    searchInput.addEventListener("input", handleFilterChange);
+  const searchEl = document.getElementById("agent-summary-search");
+  const sortEl = document.getElementById("agent-summary-sort");
+  if (searchEl) {
+    searchEl.addEventListener("input", updateAgentSummary);
   }
-  if (modelFilter) {
-    modelFilter.addEventListener("change", handleFilterChange);
+  if (sortEl) {
+    sortEl.addEventListener("change", updateAgentSummary);
   }
-  if (roleFilter) {
-    roleFilter.addEventListener("change", handleFilterChange);
-  }
-
   loadStats();
 });
 

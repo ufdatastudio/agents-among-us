@@ -413,24 +413,45 @@ hr {
     opacity: 0.6;
 }
 
+.status-table tr.agent-byzantine {
+    background: #ffe8e8;
+}
+
+.status-table tr.agent-byzantine.agent-dead {
+    background: #f5d0d0;
+}
+
 .status-table tr:hover:not(.agent-dead) {
     background: #f9f9f9;
 }
 
-.agent-color-indicator {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 1px solid #000000;
-    margin-right: 4px;
+.status-table tr.agent-byzantine:hover:not(.agent-dead) {
+    background: #ffd6d6;
 }
 
-.agent-status {
+.agent-role-cell {
     font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.agent-status-cell {
+    padding: 2px 4px;
+    vertical-align: middle;
+}
+
+.agent-status-sprite {
+    display: block;
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
 }
 
 /* Center: Map Display */
+
+/* ============================================================================
+   MAP CONTAINER - FIXED FOR RESPONSIVE POSITIONING
+   ============================================================================ */
+
 .map-container {
     grid-column: 2;
     grid-row: 2;
@@ -453,8 +474,10 @@ hr {
 }
 
 .map-image {
-    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
     width: auto;
+    height: auto;
     object-fit: contain;
     display: block;
 }
@@ -471,24 +494,42 @@ hr {
 
 .agent-marker {
     position: absolute;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 2px solid #000000;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
-    font-weight: bold;
-    color: #ffffff;
-    transition: all 0.5s ease;
-    pointer-events: auto;
+    transition: transform 0.5s ease;
+    transform: translate(-50%, -50%);
     cursor: pointer;
+    pointer-events: auto;
+}
+
+.agent-marker-sprite {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+.agent-marker.agent-marker-dead {
+    opacity: 0.85;
 }
 
 .agent-marker:hover {
-    transform: scale(1.2);
+    transform: translate(-50%, -50%) scale(1.15);
     z-index: 10;
+}
+
+#debug-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
 }
 
 /* Bottom: Live Feed */
@@ -534,6 +575,16 @@ hr {
 
 .feed-text {
     color: #000000;
+}
+
+.feed-event--danger .feed-text {
+    color: #c00;
+    font-weight: 600;
+}
+
+.feed-event--warning .feed-text {
+    color: #b8860b;
+    font-weight: 600;
 }
 
 /* ============================================
@@ -610,6 +661,12 @@ hr {
     padding-bottom: 10px;
 }
 
+.stats-header h1 {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
 .header-buttons {
     display: flex;
     gap: 10px;
@@ -645,6 +702,98 @@ hr {
 
 .stats-tab-content.active {
     display: block;
+}
+
+.stats-intro {
+    margin-bottom: 12px;
+    color: #555;
+    font-size: 0.95rem;
+}
+
+.agent-summary-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.agent-summary-search {
+    padding: 8px 12px;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    min-width: 180px;
+}
+
+.agent-summary-search:focus {
+    outline: none;
+    border-color: #666;
+}
+
+.agent-summary-sort {
+    padding: 8px 12px;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    background: #fff;
+    cursor: pointer;
+}
+
+.agent-summary-sort:focus {
+    outline: none;
+    border-color: #666;
+}
+
+.agent-summary-subtabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.agent-subtab {
+    padding: 8px 16px;
+    border: 1px solid #cccccc;
+    background: #f5f5f5;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.agent-subtab:hover {
+    background: #ebebeb;
+}
+
+.agent-subtab.active {
+    background: #e0e0e0;
+    border-color: #999;
+    font-weight: 600;
+}
+
+.agent-summary-panel {
+    display: none;
+}
+
+.agent-summary-panel.active {
+    display: block;
+}
+
+.agent-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.agent-summary-table th,
+.agent-summary-table td {
+    padding: 6px 8px;
+    border: 1px solid #cccccc;
+    text-align: left;
+}
+
+.agent-summary-table th {
+    background: #f0f0f0;
+    font-weight: 600;
 }
 
 .summary-box {

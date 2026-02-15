@@ -18,57 +18,77 @@
 
         <!-- Tabs -->
         <div class="stats-tabs">
-            <button type="button" class="stats-tab active" data-tab="summary" onclick="showTab('summary', event)">All Games Summary</button>
-            <button type="button" class="stats-tab" data-tab="game-list" onclick="showTab('game-list', event)">Game List</button>
+            <button type="button" class="stats-tab active" data-tab="agent-summary" onclick="showTab('agent-summary', event)">Agent Summary</button>
+            <button type="button" class="stats-tab" data-tab="single-game" onclick="showTab('single-game', event)">Single Game Data</button>
         </div>
 
-        <!-- Tab 1: All Games Summary -->
-        <div id="summary" class="stats-tab-content active">
-            <!-- Summary box (simple counts derived from raw rows) -->
-            <div class="summary-box">
-                <p>Total Games: <span id="total-games">0</span></p>
-                <p>Total Agents Played: <span id="total-agents">0</span></p>
-                <p>Honest Wins: <span id="honest-wins">0</span></p>
-                <p>Byzantine Wins: <span id="byz-wins">0</span></p>
-            </div>
+        <!-- Tab 1: Agent Summary -->
+        <div id="agent-summary" class="stats-tab-content active">
+            <p class="stats-intro">Aggregated stats per model across all games. Models not yet used show "—".</p>
 
-            <h2>All Data</h2>
-            <!-- Table controls -->
-            <div class="table-controls">
-                <input type="text" id="search-input" placeholder="Search..." />
-                <select id="model-filter">
-                    <option value="">All Models</option>
-                </select>
-                <select id="role-filter">
-                    <option value="">All Roles</option>
-                    <option value="H">Honest</option>
-                    <option value="B">Byzantine</option>
+            <div class="agent-summary-controls">
+                <input type="text" id="agent-summary-search" class="agent-summary-search" placeholder="Search models..." aria-label="Search models" />
+                <select id="agent-summary-sort" class="agent-summary-sort" aria-label="Sort by">
+                    <option value="a-z">A–Z (name)</option>
+                    <option value="z-a">Z–A (name)</option>
+                    <option value="most-used">Most used</option>
+                    <option value="least-used">Least used</option>
+                    <option value="most-parameters">Most parameters</option>
+                    <option value="least-parameters">Least parameters</option>
                 </select>
             </div>
 
-            <!-- All data table -->
-            <div class="stats-table-wrapper">
-                <table id="all-data-table">
-                    <thead>
-                        <tr>
-                            <th data-col="game" onclick="sortAllData('game')">Game</th>
-                            <th data-col="agent" onclick="sortAllData('agent')">Agent</th>
-                            <th data-col="model" onclick="sortAllData('model')">Model</th>
-                            <th data-col="role" onclick="sortAllData('role')">Role</th>
-                            <th data-col="won" onclick="sortAllData('won')">Won</th>
-                            <th data-col="kills" onclick="sortAllData('kills')">Kills</th>
-                            <th data-col="votes" onclick="sortAllData('votes')">Votes</th>
-                            <th data-col="correct" onclick="sortAllData('correct')">Correct</th>
-                            <th data-col="rounds" onclick="sortAllData('rounds')">Rounds</th>
-                        </tr>
-                    </thead>
-                    <tbody id="all-data-tbody">
-                        <!-- Filled by stats.js -->
-                    </tbody>
-                </table>
+            <!-- Sub-tabs: Honest / Byzantine -->
+            <div class="agent-summary-subtabs">
+                <button type="button" class="agent-subtab active" data-subtab="honest" onclick="showAgentSubtab('honest', event)">Honest</button>
+                <button type="button" class="agent-subtab" data-subtab="byzantine" onclick="showAgentSubtab('byzantine', event)">Byzantine</button>
             </div>
 
-            <p class="entry-count">Showing <span id="entry-count">0</span> entries</p>
+            <!-- Honest agents table -->
+            <div id="agent-summary-honest" class="agent-summary-panel active">
+                <div class="stats-table-wrapper">
+                    <table class="agent-summary-table" id="honest-table">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Games</th>
+                                <th>Wins</th>
+                                <th>Correct</th>
+                                <th>Incorrect</th>
+                                <th>Skipped</th>
+                                <th>Emerg</th>
+                                <th>Bodies</th>
+                                <th>Rounds</th>
+                                <th>Votes recv</th>
+                            </tr>
+                        </thead>
+                        <tbody id="honest-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Byzantine agents table -->
+            <div id="agent-summary-byzantine" class="agent-summary-panel">
+                <div class="stats-table-wrapper">
+                    <table class="agent-summary-table" id="byzantine-table">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Games</th>
+                                <th>Wins</th>
+                                <th>Kills</th>
+                                <th>Rounds</th>
+                                <th>Votes recv</th>
+                                <th>Elim</th>
+                                <th>Eject</th>
+                            </tr>
+                        </thead>
+                        <tbody id="byzantine-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             <div class="button-group">
                 <button type="button" class="btn" onclick="exportCSV()">Export CSV</button>
@@ -76,8 +96,8 @@
             </div>
         </div>
 
-        <!-- Tab 2: Game List -->
-        <div id="game-list" class="stats-tab-content">
+        <!-- Tab 2: Single Game Data -->
+        <div id="single-game" class="stats-tab-content">
             <h2>Game History</h2>
 
             <div class="stats-table-wrapper">
@@ -92,7 +112,6 @@
                         </tr>
                     </thead>
                     <tbody id="game-tbody">
-                        <!-- Filled by stats.js -->
                     </tbody>
                 </table>
             </div>
@@ -112,24 +131,22 @@
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>Model</th>
-                                <th>Role</th>
-                                <th>Won</th>
-                                <th>Correct</th>
-                                <th>Incorrect</th>
-                                <th>Skipped</th>
-                                <th>Emerg</th>
-                                <th>Bodies</th>
-                                <th>Rounds</th>
-                                <th>Kills</th>
-                                <th>Elim</th>
-                                <th>Eject</th>
-                                <th>Moves</th>
-                                <th>Votes</th>
+                                <th>model</th>
+                                <th>alignment</th>
+                                <th>correct_votes</th>
+                                <th>incorrect_votes</th>
+                                <th>skipped_votes</th>
+                                <th>emergency_meetings</th>
+                                <th>bodies_reported</th>
+                                <th>rounds_survived</th>
+                                <th>eliminations</th>
+                                <th>times_eliminated</th>
+                                <th>ejections</th>
+                                <th>num_moves</th>
+                                <th>votes_received</th>
                             </tr>
                         </thead>
                         <tbody id="detail-tbody">
-                            <!-- Filled by stats.js -->
                         </tbody>
                     </table>
                 </div>
@@ -145,4 +162,3 @@
     <script src="{{ url_for('static', filename='js/stats.js') }}"></script>
 </body>
 </html>
-
