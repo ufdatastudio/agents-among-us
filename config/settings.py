@@ -1,25 +1,8 @@
 # config/settings.py
 
-NUM_ROUNDS = 10 # 7 total rounds for real simulations
+NUM_ROUNDS = 10 
 MAX_MOVEMENT_PHASES = 4  # How many "ticks" of movement occur before a forced check/pause
 
-# Map Connectivity Graph
-# ROOMS = {
-#     "Cafeteria": ["Weapons", "Navigation", "Storage", "Admin", "MedBay", "UpperEngine"],
-#     "Weapons": ["Cafeteria", "O2"],
-#     "Navigation": ["Shields", "O2"],
-#     "O2": ["Weapons", "Navigation", "Cafeteria"],
-#     "Shields": ["Navigation", "Communications", "Storage"],
-#     "Communications": ["Shields"],
-#     "Admin": ["Cafeteria", "Storage"],
-#     "Storage": ["Admin", "Shields", "Electrical", "LowerEngine", "Cafeteria"],
-#     "Electrical": ["Storage", "LowerEngine"],
-#     "LowerEngine": ["Storage", "Electrical", "Security", "Reactor"],
-#     "Security": ["LowerEngine", "UpperEngine", "Reactor"],
-#     "Reactor": ["Security", "UpperEngine", "LowerEngine"],
-#     "UpperEngine": ["Reactor", "Security", "MedBay", "Cafeteria"],
-#     "MedBay": ["UpperEngine", "Cafeteria"]
-# }
 
 ROOMS = {
     "Reactor": [
@@ -109,4 +92,4 @@ NUM_BYZ = 2
 NUM_HONEST = 8
 
 
-QUANTIZATION = False
+

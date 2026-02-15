@@ -6,9 +6,9 @@
 #SBATCH --gpus-per-node=1                      
 #SBATCH --cpus-per-task=8                 
 #SBATCH --mem=120gb                   
-#SBATCH --time=00:40:00               
+#SBATCH --time=1:10:00
+#SBATCH --array=0-5
 #SBATCH --partition=hpg-b200
-#SBATCH --exclude=c0909a-s15
 JOB_ID=${SLURM_ARRAY_JOB_ID:-$SLURM_JOB_ID}
 TASK_ID=${SLURM_ARRAY_TASK_ID:-0}
 SESSION_ID="Session_${JOB_ID}_${TASK_ID}_${COMP_NAME}"
@@ -27,7 +27,12 @@ sleep 5
 PYTHON_EXE=$(which python)
 
 MODELS_PER_GPU=4
-MODEL_LIST=$(python config/generate_batch_list.py)
+GAMES_PER_JOB=5
+MODEL_LIST=$(python config/generate_batch_list.py "$COMP_NAME")
+if [ $? -ne 0 ]; then
+    echo "Error: Could not determine models for composition '$COMP_NAME'"
+    exit 1
+fi
 MODEL_ARRAY=($MODEL_LIST) 
 TOTAL_MODELS=${#MODEL_ARRAY[@]}
 
@@ -44,7 +49,7 @@ for (( i=0; i<TOTAL_MODELS; i+=MODELS_PER_GPU )); do
     MODELS_TO_PASS="${CURRENT_MODELS[*]}"
     unset IFS 
 
-    echo "Launching Worker on SPECIFIC NODE: $CURRENT_NODE with models: $MODELS_TO_PASS"
+    echo "Launching Worker on node: $CURRENT_NODE with models: $MODELS_TO_PASS"
     srun --ntasks=1 \
          --nodes=1 \
          -exclusive \
@@ -85,8 +90,6 @@ fi
 
 echo "Running Composition: $COMP_NAME"
 
-
-GAMES_PER_JOB=2
 START_INDEX=$(( TASK_ID * GAMES_PER_JOB ))
 
 for (( j=0; j<GAMES_PER_JOB; j++ )); do
@@ -102,8 +105,8 @@ for (( j=0; j<GAMES_PER_JOB; j++ )); do
     echo "Game $j finished."
     rm -f "$IPC_DIR"/*
 done
-
 rmdir "$IPC_DIR" 2>/dev/null
 kill $(jobs -p) 2>/dev/null || true
 wait
+sacct -j $SLURM_JOB_ID --format=JobID,JobName,Partition,MaxRSS,Elapsed,State
 sleep 10

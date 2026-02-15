@@ -1,10 +1,8 @@
 #!/bin/bash
 
 compositions=(
-
-    "Mixtral_Athene"
+    "Apertus_Athene"
 )
-
 for comp in "${compositions[@]}"; do
     echo "Submitting batch for: $comp"
     sbatch --export=ALL,COMP_NAME="$comp" --job-name="$comp" submit_games.sh

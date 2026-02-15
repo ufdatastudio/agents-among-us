@@ -15,3 +15,6 @@ unsloth_compiled_cache/
 live_state.json
 xclusive
 environment.yml
+preliminary_experiments/
+full_experiments_game_level.csv
+global_game_model.json

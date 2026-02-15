@@ -9,27 +9,28 @@ if os.environ.get("LLM_MODE", "LOCAL") != "CONTROLLER":
     import gc
     from unsloth import FastLanguageModel
     from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, Mxfp4Config, AutoConfig
-    from transformers.utils import logging
-    logging.disable_progress_bar()
+    #from transformers.utils import logging
+    #logging.disable_progress_bar()
 
-
-from config.settings import QUANTIZATION
-
-# models that have prequantized versions available
-UNSLOTH = {
-    "unsloth/Apertus-70B-Instruct-2509-unsloth-bnb-4bit",
-    }
-
-MXFP4_MODELS = {
-    "MultiverseComputingCAI/HyperNova-60B",
+CONCATENATE = {
+    "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled",
+    "google/gemma-2-9b-it",
 }
-
-TOKENIZE_MODELS = {
+QUANTIZE = {
+    "meta-llama/Llama-3.3-70B-Instruct",
+    "deepseek-ai/DeepSeek-R1-Distill-Llama-70B", 
+    "zerofata/L3.3-GeneticLemonade-Final-v2-70B",
+    "NousResearch/Hermes-4-70B",
+    "Qwen/Qwen2.5-72B-Instruct",
+    "Qwen/Qwen3-Next-80B-A3B-Instruct", 
+    "swiss-ai/Apertus-70B-Instruct-2509",
+    "arcee-ai/Arcee-Nova",
     "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled",
     "Nexusflow/Athene-V2-Chat",
+}
+MXFP4_MODELS = {
     "MultiverseComputingCAI/HyperNova-60B",
-    "swiss-ai/Apertus-70B-Instruct-2509",
-
+    "openai/gpt-oss-20b",
 }
 
 class ModelManager:
@@ -78,15 +79,13 @@ class ModelManager:
             tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
             if tokenizer.chat_template and "enumrate" in tokenizer.chat_template:
                 tokenizer.chat_template = tokenizer.chat_template.replace("enumrate", "enumerate")
-
           
-            is_unsloth = model_name in UNSLOTH
             is_mxfp4 = model_name in MXFP4_MODELS
+            use_quantize = model_name in QUANTIZE
 
             use_bnb_quantization = (
-                QUANTIZATION 
+                use_quantize 
                 and self._device == "cuda" 
-                and not is_unsloth
                 and not is_mxfp4
             )
 
@@ -120,6 +119,16 @@ class ModelManager:
                     dtype=torch.bfloat16,
                 )
             
+            else:
+                    model = AutoModelForCausalLM.from_pretrained(
+                    model_name,
+                    trust_remote_code=True,
+                    use_safetensors=True,
+                    device_map="auto",
+                    dtype=torch.bfloat16,
+
+                )
+            
 
                 # model, tokenizer = FastLanguageModel.from_pretrained(
                 #         model_name=model_name,
@@ -130,15 +139,6 @@ class ModelManager:
                 #         gpu_memory_utilization=0.25
                 #     )
                 # FastLanguageModel.for_inference(model)
-
-
-
-                # model = AutoModelForCausalLM.from_pretrained(
-                #     model_name,
-                #     trust_remote_code=True,
-                #     device_map="auto",
-                #     torch_dtype=torch.bfloat16, 
-                # )
 
 
 
@@ -246,7 +246,7 @@ class ModelManager:
 
         try:
 
-            if "mixtral" in model_name.lower() or "mistral" in model_name.lower():
+            if model_name in CONCATENATE:
                 messages = [
                     {"role": "user", "content": f"{system_prompt}\n\n{user_prompt}"}
                 ]
@@ -256,40 +256,39 @@ class ModelManager:
                     {"role": "user", "content": user_prompt},
                 ]
 
-            if model_name in TOKENIZE_MODELS:
-                if model_name in MXFP4_MODELS: 
-                    inputs = tokenizer.apply_chat_template(
+           
+            if model_name in MXFP4_MODELS: 
+                inputs = tokenizer.apply_chat_template(
+                messages,
+                add_generation_prompt=True,
+                reasoning_effort="low",
+                tokenize=True,         
+                return_tensors="pt",   
+                return_dict=True       
+            ).to(model.device)
+                    
+            else: 
+                inputs = tokenizer.apply_chat_template(
                     messages,
                     add_generation_prompt=True,
-                    reasoning_effort="low",
                     tokenize=True,         
                     return_tensors="pt",   
                     return_dict=True       
                 ).to(model.device)
-                    
-                else: 
-                        
-                    inputs = tokenizer.apply_chat_template(
-                        messages,
-                        add_generation_prompt=True,
-                        tokenize=True,         
-                        return_tensors="pt",   
-                        return_dict=True       
-                    ).to(model.device)
             
-            else:
-                text_prompt = tokenizer.apply_chat_template(
-                    messages,
-                    tokenize=False,        
-                    add_generation_prompt=True,
-                )
+            # else:
+            #     text_prompt = tokenizer.apply_chat_template(
+            #         messages,
+            #         tokenize=False,        
+            #         add_generation_prompt=True,
+            #     )
                 
                 
-                inputs = tokenizer(
-                    [text_prompt], 
-                    return_tensors="pt", 
-                    add_special_tokens=False  
-                ).to(model.device)
+                # inputs = tokenizer(
+                #     [text_prompt], 
+                #     return_tensors="pt", 
+                #     add_special_tokens=False  
+                # ).to(model.device)
 
             if "token_type_ids" in inputs:
                 del inputs["token_type_ids"]

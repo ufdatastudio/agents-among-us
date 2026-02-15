@@ -1,5 +1,6 @@
 # worker.py
 import os
+import traceback
 os.environ["LLM_MODE"] = "WORKER"
 import sys
 import time
@@ -11,7 +12,6 @@ import gc
 import torch    
 
 def flush_memory():
-    """Clear Python garbage and empty the CUDA cache to prevent VRAM bloat."""
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
@@ -25,21 +25,7 @@ def run_worker(game_id, model_names_str, comp_name):
     
     for model_name in model_list:
         manager.load_model(model_name)
-
-        # === WARMUPL ===
-        # print(f"Warming up {model_name} (Compiling Kernels)...")
-        # try:
-        #     # Force a tiny generation to trigger compilation
-        #     manager.generate(
-        #         model_name, 
-        #         system_prompt="Ignore this.", 
-        #         user_prompt="Hi", 
-        #         temperature=0.1
-        #     )
-        # except Exception as e:
-        #     print(f"[WARNING] Warmup failed for {model_name}: {e}")
-        # flush_memory()
-   
+  
     ipc_path = os.path.join("logs", comp_name, f"Game_{game_id}", "ipc")
     #  prevent race conditions on startup
     try:
@@ -119,10 +105,15 @@ def run_worker(game_id, model_names_str, comp_name):
         time.sleep(0.1)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--game_id", type=str, required=True)
-    parser.add_argument("--model_names", type=str, required=True)
-    parser.add_argument("--comp_name", type=str, required=True)
-    args = parser.parse_args()
-    
-    run_worker(args.game_id, args.model_names, args.comp_name)
+
+    try:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--game_id", type=str, required=True)
+        parser.add_argument("--model_names", type=str, required=True)
+        parser.add_argument("--comp_name", type=str, required=True)
+        args = parser.parse_args()
+        run_worker(args.game_id, args.model_names, args.comp_name)
+    except Exception:
+        traceback.print_exc()
+        sys.stdout.flush()     
+        sys.stderr.flush()
