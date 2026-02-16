@@ -93,7 +93,7 @@ def start_game():
     try:
         # get form data
         num_agents = int(request.form.get('num_agents', 4))
-        num_rounds = int(request.form.get('num_rounds', 10))
+        num_rounds = 10  # Fixed at 10 rounds (backend limitation)
         game_id = request.form.get('game_id', '').strip()
         
         # auto-generate game_id if empty
