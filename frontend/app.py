@@ -400,6 +400,38 @@ def export_stats():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/stats/export_game')
+def export_game():
+    """Download CSV for a specific game"""
+    try:
+        game_id = request.args.get('game_id')
+        if not game_id:
+            return "game_id parameter required", 400
+        
+        if not os.path.exists(MASTER_CSV):
+            return "No statistics available", 404
+        
+        # Filter the CSV for this game
+        df = pd.read_csv(MASTER_CSV)
+        game_df = df[df['game_id'] == game_id]
+        
+        if game_df.empty:
+            return f"No data found for game: {game_id}", 404
+        
+        # Save to temporary file
+        temp_file = os.path.join(DATA_DIR, f'temp_{game_id}.csv')
+        game_df.to_csv(temp_file, index=False)
+        
+        return send_file(
+            temp_file,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=f'game_{game_id}.csv'
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/stats/clear', methods=['POST'])
 def clear_stats():
     """Delete frontend_stats.csv"""

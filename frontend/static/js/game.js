@@ -331,8 +331,12 @@ function updateAgentPositions(agents) {
             
             const agentNumRaw = agentKey.replace("Agent_", "");
             const agentIndex = parseInt(agentNumRaw, 10);
-            const displayNum = Number.isNaN(agentIndex) ? agentNumRaw : agentIndex + 1;
-            const colorSlug = getColorSlug(agent.color);
+            const displayNum = Number.isNaN(agentIndex) ? agentNumRaw : agentIndex;
+            
+            // Hardcoded color order matching config page: Red, Orange, Yellow, Lime, Green, Cyan, Blue, Purple, Brown, Pink, White, Black
+            const hardcodedColors = ["red", "orange", "yellow", "lime", "green", "cyan", "blue", "purple", "brown", "pink", "white", "black"];
+            const colorSlug = hardcodedColors[agentIndex] || "red";
+            
             const isAlive = agent.status !== "eliminated" && agent.status !== "voted_off";
             const spriteUrl = isAlive
                 ? (LIVING_SPRITES[colorSlug] || LIVING_SPRITES.red)
@@ -372,7 +376,7 @@ function updateStatusTable(agents) {
         const agent = agents[agentKey];
         const agentNumRaw = agentKey.replace("Agent_", "");
         const agentIndex = parseInt(agentNumRaw, 10);
-        const displayNum = Number.isNaN(agentIndex) ? agentNumRaw : agentIndex + 1;
+        const displayNum = Number.isNaN(agentIndex) ? agentNumRaw : agentIndex;
         const row = document.createElement("tr");
         
         const numCell = document.createElement("td");
@@ -397,7 +401,11 @@ function updateStatusTable(agents) {
         if (agent.status === "eliminated" || agent.status === "voted_off") {
             row.classList.add("agent-dead");
         }
-        var colorSlug = getColorSlug(agent.color);
+        
+        // Hardcoded color order matching config page: Red, Orange, Yellow, Lime, Green, Cyan, Blue, Purple, Brown, Pink, White, Black
+        const hardcodedColors = ["red", "orange", "yellow", "lime", "green", "cyan", "blue", "purple", "brown", "pink", "white", "black"];
+        var colorSlug = hardcodedColors[agentIndex] || "red";
+        
         var spriteUrl = isAlive
             ? (LIVING_SPRITES[colorSlug] || LIVING_SPRITES.red)
             : (DEAD_SPRITES[colorSlug] || DEAD_SPRITES.red);
@@ -529,6 +537,14 @@ async function updateGameState() {
                 };
             }
             if (gameInfo) updateGameParams(gameInfo);
+            
+            // Stop polling if game is over
+            const currentPhase = (data.global && data.global.current_phase) || "";
+            if (currentPhase === "GAME OVER" && pollingInterval) {
+                console.log("🎮 Game ended, stopping polling");
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
         }
         
         if (data.agents && Object.keys(data.agents).length > 0) {

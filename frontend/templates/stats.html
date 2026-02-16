@@ -116,6 +116,10 @@
                 </table>
             </div>
 
+            <div class="button-group">
+                <button type="button" class="btn" onclick="exportCSV()">Export All Games CSV</button>
+            </div>
+
             <!-- Game details section -->
             <div id="game-details" class="game-details" style="display: none;">
                 <h2>Game: <span id="detail-game-id"></span></h2>
@@ -152,7 +156,7 @@
                 </div>
 
                 <div class="button-group">
-                    <button type="button" class="btn" onclick="downloadGameCSV()">Download Game CSV</button>
+                    <button type="button" class="btn" onclick="downloadGameCSV()">Download This Game</button>
                     <button type="button" class="btn" onclick="hideGameDetails()">Back to List</button>
                 </div>
             </div>

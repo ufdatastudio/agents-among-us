@@ -412,7 +412,55 @@ function hideGameDetails() {
 
 // Trigger download of full CSV
 function exportCSV() {
-  window.location.href = "/api/stats/export";
+  // Check which tab is active
+  const agentSummaryTab = document.querySelector('.stats-tab[data-tab="agent-summary"]');
+  const isAgentSummaryActive = agentSummaryTab && agentSummaryTab.classList.contains('active');
+  
+  if (isAgentSummaryActive) {
+    // Export aggregated model data (2 rows per model: Honest + Byzantine)
+    exportModelAggregates();
+  } else {
+    // Export all games and all agents
+    window.location.href = "/api/stats/export";
+  }
+}
+
+// Generate and download model aggregate CSV
+function exportModelAggregates() {
+  const honestAgg = getAgentSummaryByModel("H");
+  const byzAgg = getAgentSummaryByModel("B");
+  
+  // CSV header
+  let csv = "Model,Role,Games,Wins,Correct Votes,Incorrect Votes,Skipped Votes,Emergency Meetings,Bodies Reported,Rounds Survived,Votes Received,Eliminations,Times Eliminated,Ejections\n";
+  
+  // For each model, add Honest row then Byzantine row
+  ALL_MODELS.forEach((modelId) => {
+    const displayName = abbreviateModelName(modelId);
+    
+    // Honest row
+    if (honestAgg[modelId]) {
+      const h = honestAgg[modelId];
+      csv += `"${displayName}",Honest,${h.games},${h.wins},${h.correct_votes},${h.incorrect_votes},${h.skipped_votes},${h.emergency_meetings},${h.bodies_reported},${h.rounds_survived},${h.votes_received},${h.eliminations},${h.times_eliminated},${h.ejections}\n`;
+    }
+    
+    // Byzantine row
+    if (byzAgg[modelId]) {
+      const b = byzAgg[modelId];
+      csv += `"${displayName}",Byzantine,${b.games},${b.wins},${b.correct_votes},${b.incorrect_votes},${b.skipped_votes},${b.emergency_meetings},${b.bodies_reported},${b.rounds_survived},${b.votes_received},${b.eliminations},${b.times_eliminated},${b.ejections}\n`;
+    }
+  });
+  
+  // Download as blob
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const date = new Date().toISOString().split('T')[0];
+  a.download = `model_aggregates_${date}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
 }
 
 // Trigger download of a single game's CSV
@@ -482,4 +530,3 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   loadStats();
 });
-

@@ -109,7 +109,7 @@ function createAgentRow(index) {
     // Column 1: Agent number
     const numCell = document.createElement("td");
     numCell.className = "agent-num";
-    numCell.textContent = index + 1;
+    numCell.textContent = index;
     row.appendChild(numCell);
 
     // Column 2: Model dropdown
