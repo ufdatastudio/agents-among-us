@@ -586,6 +586,11 @@ hr {
     font-weight: 600;
 }
 
+.feed-event--tick .feed-text {
+    color: #888;
+    font-style: italic;
+}
+
 /* ============================================
    RESPONSIVE
    ============================================ */
@@ -921,3 +926,126 @@ hr {
     transform: scale(1.05);
     box-shadow: 0 6px 20px rgba(229, 62, 62, 0.6);
 }
+/* =====================================================================
+   LIVE FEED HEADER + OPEN CHAT BUTTON
+   ===================================================================== */
+
+.live-feed-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.live-feed-header h3 { margin: 0; }
+
+.open-chat-btn {
+    font-size: 13px;
+    padding: 5px 12px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #333;
+    transition: background 0.15s;
+}
+
+.open-chat-btn:hover { background: #f0f0f0; }
+
+/* =====================================================================
+   DISCUSSION CHAT POPUP
+   ===================================================================== */
+
+.discussion-chat {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 660px;
+    max-width: 90vw;
+    height: 540px;
+    max-height: 85vh;
+    background: #f1f1f1;
+    border-radius: 4px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #bbb;
+}
+
+.discussion-chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: #d0d0d0;
+    border-bottom: 1px solid #bbb;
+    flex-shrink: 0;
+    border-radius: 4px 4px 0 0;
+}
+
+.discussion-chat-title { font-size: 15px; font-weight: 600; color: #222; }
+
+.discussion-chat-close {
+    background: #bbb;
+    color: #222;
+    border: 1px solid #999;
+    width: 26px;
+    height: 22px;
+    border-radius: 2px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.discussion-chat-close:hover { background: #aaa; }
+
+.discussion-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #f1f1f1;
+}
+
+.discussion-chat-messages::-webkit-scrollbar { width: 6px; }
+.discussion-chat-messages::-webkit-scrollbar-track { background: #e0e0e0; }
+.discussion-chat-messages::-webkit-scrollbar-thumb { background: #bbb; }
+
+.chat-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: #fff;
+    border-radius: 2px;
+    padding: 7px 10px;
+    border: 1px solid #ddd;
+}
+
+.chat-message.vote {
+    background: #fff8ee;
+    border-left: 3px solid #e0a020;
+}
+
+.chat-message-sprite { width: 36px; height: 36px; flex-shrink: 0; }
+.chat-message-sprite img { width: 100%; height: 100%; object-fit: contain; }
+.chat-message-content { flex: 1; min-width: 0; }
+
+.chat-message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 3px;
+}
+
+.chat-message-name { font-weight: 600; font-size: 13px; color: #111; }
+.chat-message-time { font-size: 11px; color: #888; white-space: nowrap; }
+.chat-message-text { font-size: 12px; color: #333; line-height: 1.4; word-wrap: break-word; }

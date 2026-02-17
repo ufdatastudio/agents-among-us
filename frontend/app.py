@@ -17,6 +17,11 @@ import threading
 app = Flask(__name__)
 app.secret_key = 'agents-among-us-secret-key-change-in-production'
 
+# Suppress Flask request logs (stops 200 GET spam in terminal)
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
 # paths
 BACKEND_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')

@@ -71,7 +71,10 @@
 
         <!-- Bottom: Live Feed -->
         <section class="live-feed">
-            <h3>Live Feed</h3>
+            <div class="live-feed-header">
+                <h3>Live Feed</h3>
+                <button class="open-chat-btn" onclick="openDiscussionChat()">💬 Open Discussion Chats</button>
+            </div>
             <div class="feed-content" id="feedContent">
                 <!-- Events added by JavaScript -->
             </div>
@@ -84,6 +87,15 @@
             <img id="winImage" src="" alt="Victory" class="win-image">
             <button class="win-close-btn" onclick="closeWinScreen()">Close</button>
         </div>
+    </div>
+
+    <!-- Discussion Chat Popup -->
+    <div id="discussionChat" class="discussion-chat" style="display: none;">
+        <div class="discussion-chat-header">
+            <span class="discussion-chat-title" id="discussionChatTitle">💬 Discussion</span>
+            <button class="discussion-chat-close" onclick="closeDiscussionChat()">×</button>
+        </div>
+        <div class="discussion-chat-messages" id="discussionChatMessages"></div>
     </div>
 
     <script src="{{ url_for('static', filename='js/game.js') }}"></script>

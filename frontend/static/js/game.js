@@ -248,6 +248,8 @@ let lastEventCount = 0;
 let agentMarkers = {};
 let isPaused = false;
 let pollingInterval = null;
+let lastPhase = "";
+let lastRound = 0;
 
 function updateGameParams(gameInfo) {
     if (!gameInfo) return;
@@ -459,9 +461,24 @@ function updateLiveFeed(events) {
         }
     }
     newEvents.forEach(function(event) {
+        const msg = event.msg || event.text || "";
+        const eventType = (event.type || "").toLowerCase();
+
+        // Meeting start → open chat popup
+        if (eventType === "meeting") {
+            const title = msg.includes("Body") ? "Body Reported" : "Emergency Meeting";
+            showDiscussionChat(title);
+        }
+
+        // Pure chat messages (type=chat, Agent_#: text) → popup only, skip feed
+        if (eventType === "chat") {
+            addDiscussionMessage(event);
+            return;
+        }
+
+        // Everything else (kills, ejections, votes, info) → live feed
         const eventDiv = document.createElement("div");
         eventDiv.className = "feed-event";
-        var eventType = (event.type || "").toLowerCase();
         if (eventType === "kill" || eventType === "eject") {
             eventDiv.classList.add("feed-event--danger");
         } else if (eventType === "meeting") {
@@ -472,13 +489,12 @@ function updateLiveFeed(events) {
         timestampSpan.textContent = "[" + (event.time || event.timestamp || "--:--") + "]";
         const textSpan = document.createElement("span");
         textSpan.className = "feed-text";
-        textSpan.textContent = event.msg || event.text || "No message";
+        textSpan.textContent = msg;
         eventDiv.appendChild(timestampSpan);
         eventDiv.appendChild(textSpan);
         feedContent.appendChild(eventDiv);
     });
     lastEventCount = events.length;
-    // Only auto-scroll when we added new events AND user was already near the bottom
     if (newEvents.length > 0) {
         var el = feedContent;
         var atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
@@ -565,12 +581,46 @@ async function updateGameState() {
         }
         
         if (data) {
+            const currentPhase = (data.global && data.global.current_phase) || "";
+            const currentRound = (data.global && data.global.round) || 0;
+
+            // Collect tick events to inject into the feed
+            var tickEvents = [];
+
+            // New round detected
+            if (currentRound && currentRound !== lastRound) {
+                if (lastRound !== 0) {
+                    tickEvents.push({ msg: "---", type: "tick" });
+                }
+                tickEvents.push({ msg: "Round " + currentRound, type: "tick" });
+                lastRound = currentRound;
+            }
+
+            // Phase change detected
+            if (currentPhase && currentPhase !== lastPhase) {
+                if (lastPhase !== "") {
+                    tickEvents.push({ msg: "Phase: " + currentPhase, type: "tick" });
+                }
+                // Auto-close discussion chat when movement resumes
+                if (currentPhase === "MOVEMENT" && lastPhase !== "") {
+                    closeDiscussionChat();
+                }
+                lastPhase = currentPhase;
+            }
+
+            // Get real events from backend
             var events = [];
             if (Array.isArray(data.events)) {
                 events = data.events;
             } else if (data.global && Array.isArray(data.global.ui_event_log)) {
                 events = data.global.ui_event_log;
             }
+
+            // Inject tick events into feed first, then process real events
+            tickEvents.forEach(function(te) {
+                addFeedTick(te.msg);
+            });
+
             updateLiveFeed(events);
         }
     } catch (error) {
@@ -658,4 +708,93 @@ function closeWinScreen() {
     if (winScreen) {
         winScreen.style.display = "none";
     }
+}
+
+// =====================================================================
+// FEED TICK HELPER - injects round/phase changes directly into feed
+// =====================================================================
+
+function addFeedTick(text) {
+    const feedContent = document.getElementById("feedContent");
+    if (!feedContent) return;
+    if (feedContent.children.length === 1) {
+        const first = feedContent.querySelector(".feed-text");
+        if (first && first.textContent.includes("No events yet")) {
+            feedContent.innerHTML = "";
+        }
+    }
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    const ss = String(now.getSeconds()).padStart(2, "0");
+    const time = hh + ":" + mm + ":" + ss;
+    const div = document.createElement("div");
+    div.className = "feed-event feed-event--tick";
+    div.innerHTML = '<span class="feed-timestamp">[' + time + ']</span><span class="feed-text">' + text + '</span>';
+    feedContent.appendChild(div);
+    const atBottom = feedContent.scrollHeight - feedContent.scrollTop - feedContent.clientHeight < 80;
+    if (atBottom) feedContent.scrollTop = feedContent.scrollHeight;
+}
+
+// =====================================================================
+// DISCUSSION CHAT POPUP
+// =====================================================================
+
+var hardcodedChatColors = ["red","orange","yellow","lime","green","cyan","blue","purple","brown","pink","white","black"];
+
+function showDiscussionChat(title) {
+    const chat = document.getElementById("discussionChat");
+    const titleEl = document.getElementById("discussionChatTitle");
+    const msgs = document.getElementById("discussionChatMessages");
+    if (!chat) return;
+    if (titleEl && title) titleEl.textContent = title;
+    if (msgs) msgs.innerHTML = "";
+    chat.style.display = "flex";
+}
+
+function openDiscussionChat() {
+    const chat = document.getElementById("discussionChat");
+    if (chat) chat.style.display = "flex";
+}
+
+function closeDiscussionChat() {
+    const chat = document.getElementById("discussionChat");
+    if (chat) chat.style.display = "none";
+}
+
+function addDiscussionMessage(event) {
+    const msgs = document.getElementById("discussionChatMessages");
+    if (!msgs) return;
+
+    const msg = event.msg || event.text || "";
+    const time = event.time || event.timestamp || "--:--";
+    const isVote = /Agent_\d+\s+voted/.test(msg);
+
+    let agentName = "", messageText = msg;
+    const colonMatch = msg.match(/^(Agent_\d+)\s*:\s*(.*)/s);
+    const voteMatch  = msg.match(/^(Agent_\d+)\s+voted/);
+    if (colonMatch) {
+        agentName = colonMatch[1];
+        messageText = colonMatch[2].trim();
+    } else if (voteMatch) {
+        agentName = voteMatch[1];
+    }
+
+    const agentIndex = agentName ? parseInt(agentName.replace("Agent_", "")) : 0;
+    const colorSlug = hardcodedChatColors[agentIndex] || "red";
+    const spriteUrl = LIVING_SPRITES[colorSlug] || LIVING_SPRITES.red;
+
+    const div = document.createElement("div");
+    div.className = isVote ? "chat-message vote" : "chat-message";
+    div.innerHTML =
+        '<div class="chat-message-sprite"><img src="' + spriteUrl + '" alt="' + agentName + '"></div>' +
+        '<div class="chat-message-content">' +
+            '<div class="chat-message-header">' +
+                '<span class="chat-message-name">' + agentName + '</span>' +
+                '<span class="chat-message-time">[' + time + ']</span>' +
+            '</div>' +
+            '<div class="chat-message-text">' + messageText + '</div>' +
+        '</div>';
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
 }
