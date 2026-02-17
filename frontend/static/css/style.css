@@ -409,8 +409,7 @@ hr {
 }
 
 .status-table tr.agent-dead {
-    background: #f0f0f0;
-    opacity: 0.6;
+    background: #e0e0e0;
 }
 
 .status-table tr.agent-byzantine {
@@ -418,7 +417,7 @@ hr {
 }
 
 .status-table tr.agent-byzantine.agent-dead {
-    background: #f5d0d0;
+    background: #e0e0e0;
 }
 
 .status-table tr:hover:not(.agent-dead) {
@@ -514,7 +513,7 @@ hr {
 }
 
 .agent-marker.agent-marker-dead {
-    opacity: 0.85;
+    /* Dead sprite already shows they're dead, no need for additional styling */
 }
 
 .agent-marker:hover {
@@ -850,4 +849,75 @@ hr {
 
 .game-details h2 {
     margin-top: 0;
+}/* Add this to style.css */
+
+/* ============================================
+   WIN SCREEN OVERLAY
+   ============================================ */
+
+.win-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.win-screen-content {
+    text-align: center;
+    animation: zoomIn 0.6s ease-out;
+}
+
+@keyframes zoomIn {
+    from {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.win-image {
+    max-width: 90vw;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: 20px;
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+    margin-bottom: 30px;
+}
+
+.win-close-btn {
+    background: #e53e3e;
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(229, 62, 62, 0.4);
+    transition: all 0.3s;
+}
+
+.win-close-btn:hover {
+    background: #c53030;
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(229, 62, 62, 0.6);
 }

@@ -78,6 +78,14 @@
         </section>
     </div>
 
+    <!-- Win Screen Overlay -->
+    <div id="winScreen" class="win-screen" style="display: none;">
+        <div class="win-screen-content">
+            <img id="winImage" src="" alt="Victory" class="win-image">
+            <button class="win-close-btn" onclick="closeWinScreen()">Close</button>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/game.js') }}"></script>
 </body>
 </html>

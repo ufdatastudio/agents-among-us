@@ -337,7 +337,8 @@ function updateAgentPositions(agents) {
             const hardcodedColors = ["red", "orange", "yellow", "lime", "green", "cyan", "blue", "purple", "brown", "pink", "white", "black"];
             const colorSlug = hardcodedColors[agentIndex] || "red";
             
-            const isAlive = agent.status !== "eliminated" && agent.status !== "voted_off";
+            // Show dead sprite for both eliminated AND ejected
+            const isAlive = agent.status !== "eliminated" && agent.status !== "ejected";
             const spriteUrl = isAlive
                 ? (LIVING_SPRITES[colorSlug] || LIVING_SPRITES.red)
                 : (DEAD_SPRITES[colorSlug] || DEAD_SPRITES.red);
@@ -398,7 +399,7 @@ function updateStatusTable(agents) {
         const statusCell = document.createElement("td");
         statusCell.className = "agent-status-cell";
         var isAlive = agent.status === "active" || agent.status === "alive";
-        if (agent.status === "eliminated" || agent.status === "voted_off") {
+        if (agent.status === "eliminated" || agent.status === "ejected") {
             row.classList.add("agent-dead");
         }
         
@@ -413,7 +414,7 @@ function updateStatusTable(agents) {
         img.className = "agent-status-sprite";
         img.src = spriteUrl;
         img.alt = isAlive ? "Alive" : "Dead";
-        img.title = isAlive ? "Alive" : (agent.status === "voted_off" ? "Voted off" : "Dead");
+        img.title = isAlive ? "Alive" : (agent.status === "ejected" ? "Voted off" : "Dead");
         statusCell.appendChild(img);
         row.appendChild(statusCell);
         
@@ -538,12 +539,23 @@ async function updateGameState() {
             }
             if (gameInfo) updateGameParams(gameInfo);
             
-            // Stop polling if game is over
+            // Stop polling if game is over and show win screen
             const currentPhase = (data.global && data.global.current_phase) || "";
             if (currentPhase === "GAME OVER" && pollingInterval) {
                 console.log("🎮 Game ended, stopping polling");
                 clearInterval(pollingInterval);
                 pollingInterval = null;
+                
+                // Determine winner from events
+                const events = (data.global && data.global.ui_event_log) || [];
+                const lastEvent = events[events.length - 1];
+                const winMessage = lastEvent ? (lastEvent.msg || lastEvent.text || "") : "";
+                
+                if (winMessage.includes("HONEST") || winMessage.includes("Honest")) {
+                    showWinScreen("honest");
+                } else if (winMessage.includes("BYZANTINE") || winMessage.includes("Byzantine")) {
+                    showWinScreen("byzantine");
+                }
             }
         }
         
@@ -620,3 +632,30 @@ window.addEventListener("DOMContentLoaded", function() {
     
     console.log("🎮 Press 'D' for debug!");
 });
+// ============================================
+// WIN SCREEN FUNCTIONS
+// ============================================
+
+function showWinScreen(winner) {
+    const winScreen = document.getElementById("winScreen");
+    const winImage = document.getElementById("winImage");
+    
+    if (!winScreen || !winImage) return;
+    
+    // Set the correct win image
+    if (winner === "honest") {
+        winImage.src = "/static/images/HonestWin.png";
+    } else if (winner === "byzantine") {
+        winImage.src = "/static/images/ByzantineWin.png";
+    }
+    
+    // Show the overlay
+    winScreen.style.display = "flex";
+}
+
+function closeWinScreen() {
+    const winScreen = document.getElementById("winScreen");
+    if (winScreen) {
+        winScreen.style.display = "none";
+    }
+}
