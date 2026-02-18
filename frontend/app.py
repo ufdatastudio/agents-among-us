@@ -152,7 +152,9 @@ def start_game():
         }
         
         # save composition to temporary file
-        composition_file = os.path.join(BACKEND_PATH, 'config', f'custom_{game_id}.json')
+        game_configs_dir = os.path.join(BACKEND_PATH, 'config', 'game_configs')
+        os.makedirs(game_configs_dir, exist_ok=True)
+        composition_file = os.path.join(BACKEND_PATH, 'config', 'game_configs', f'custom_{game_id}.json')
         with open(composition_file, 'w') as f:
             json.dump(composition, f, indent=2)
         
