@@ -5,20 +5,20 @@
  */
 
 const ROOM_COORDINATES = {
-    "Reactor": { x: 14.2, y: 56.3 },
-    "UpperEngine": { x: 18.9, y: 25.2 },
-    "LowerEngine": { x: 26.9, y: 88.0 },
-    "Security": { x: 37.5, y: 44.3 },
-    "MedBay": { x: 31.8, y: 12.3 },
-    "Electrical": { x: 37.5, y: 62.8 },
-    "Cafeteria": { x: 50.7, y: 23.0 },
-    "Admin": { x: 61.7, y: 55.8 },
-    "Storage": { x: 50.7, y: 85.5 },
-    "Weapons": { x: 80.2, y: 16.8 },
-    "O2": { x: 67.4, y: 36.3 },
-    "Navigation": { x: 92.6, y: 45.4 },
-    "Shields": { x: 80.4, y: 70.5 },
-    "Communications": { x: 80.5, y: 94.5 }
+    "Reactor": { x: 12.7, y: 54.3 },
+    "UpperEngine": { x: 17.4, y: 22.3 },
+    "LowerEngine": { x: 25.3, y: 86.4 },
+    "Security": { x: 35.7, y: 43.9 },
+    "MedBay": { x: 30.3, y: 10.4},
+    "Electrical": { x: 36.2, y: 60.1 },
+    "Cafeteria": { x: 49.0, y: 21.2 },
+    "Admin": { x: 60.2, y: 54.2 },
+    "Storage": { x: 49.3, y: 84.2 },
+    "Weapons": { x: 78.9, y: 15.2 },
+    "O2": { x: 66.3, y: 33.3 },
+    "Navigation": { x: 91.6, y: 43.5 },
+    "Shields": { x: 78.7, y: 68.8 },
+    "Communications": { x: 79.0, y: 92.7 }
 };
 
 const ROOM_LABELS = {
@@ -307,23 +307,25 @@ function updateAgentPositions(agents) {
                 offsetX = 0;
                 offsetY = 0;
             } else if (agentsInRoom === 2) {
-                offsetX = (index === 0 ? -0.3 : 0.3) * (housing.width / 2);
+                offsetX = (index === 0 ? -1.5 : 1.5);
                 offsetY = 0;
             } else if (agentsInRoom === 3) {
-                const positions = [{x: -0.3, y: -0.2}, {x: 0.3, y: -0.2}, {x: 0, y: 0.2}];
-                offsetX = positions[index].x * (housing.width / 2);
-                offsetY = positions[index].y * (housing.height / 2);
+                const positions = [{x: -1.5, y: -1}, {x: 1.5, y: -1}, {x: 0, y: 1}];
+                offsetX = positions[index].x;
+                offsetY = positions[index].y;
             } else if (agentsInRoom === 4) {
                 const row = Math.floor(index / 2);
                 const col = index % 2;
-                offsetX = (col - 0.5) * (housing.width / 2);
-                offsetY = (row - 0.5) * (housing.height / 2);
+                offsetX = (col - 0.5) * 3;
+                offsetY = (row - 0.5) * 2;
             } else {
                 const cols = Math.ceil(Math.sqrt(agentsInRoom));
                 const row = Math.floor(index / cols);
                 const col = index % cols;
-                offsetX = (col / Math.max(cols - 1, 1) - 0.5) * housing.width * 0.8;
-                offsetY = (row / Math.max(Math.ceil(agentsInRoom / cols) - 1, 1) - 0.5) * housing.height * 0.8;
+                const maxWidth = housing.width * 0.7;
+                const maxHeight = housing.height * 0.7;
+                offsetX = (col / Math.max(cols - 1, 1) - 0.5) * maxWidth;
+                offsetY = (row / Math.max(Math.ceil(agentsInRoom / cols) - 1, 1) - 0.5) * maxHeight;
             }
             
             const x_percent = roomCoords.x + offsetX;
