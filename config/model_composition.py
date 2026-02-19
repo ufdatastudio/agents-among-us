@@ -15,6 +15,10 @@ MIXTRAL_8X7B = "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled"
 ATHENE_73B = "Nexusflow/Athene-V2-Chat" 
 HYPERNOVA_60B = "MultiverseComputingCAI/HyperNova-60B"
 
+# Small models (added to main map)
+LLAMA_3B = "meta-llama/Llama-3.2-3B-Instruct"
+QWEN_1_5B = "Qwen/Qwen2.5-1.5B-Instruct" 
+TINY_LLAMA = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
 
 MODELS_MAP = {
@@ -28,6 +32,9 @@ MODELS_MAP = {
     "Arcee": ARCEE_NOVA_73B,
     "Mixtral": MIXTRAL_8X7B,
     "Athene": ATHENE_73B,
+    "Llama3B": LLAMA_3B,
+    "Qwen1.5B": QWEN_1_5B,
+    "TinyLlama": TINY_LLAMA,
 }
 
 
@@ -39,7 +46,7 @@ COMPOSITION = []
 
 # Heterogeneous Compositions
 # ==========================================
-# All unique combinations of 2 imposters from the 10 models
+# All unique combinations of 2 imposters from the 13 models
 pairs = list(itertools.combinations(zip(HW_NAMES, HW_MODELS), 2))
 for (name1, model1), (name2, model2) in pairs:
     # Imposters are the selected pair
@@ -84,7 +91,6 @@ COMPOSITION.extend([
         "byzantine_model": [GENETICLEMONADE_70B]
     },
 
-
     {
         "name": "hermes4_70B",
         "honest_count": 8,
@@ -108,7 +114,6 @@ COMPOSITION.extend([
         "honest_model": [QWEN3_80B],
         "byzantine_model": [QWEN3_80B]
     },
-
 
     {
         "name": "apertus_70B",
@@ -140,44 +145,29 @@ COMPOSITION.extend([
         "byzantine_count": 2,
         "honest_model": [ATHENE_73B],
         "byzantine_model": [ATHENE_73B]
+    },
+
+    {
+        "name": "llama_3B",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "honest_model": [LLAMA_3B],
+        "byzantine_model": [LLAMA_3B]
+    },
+
+    {
+        "name": "qwen_1.5B",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "honest_model": [QWEN_1_5B],
+        "byzantine_model": [QWEN_1_5B]
+    },
+
+    {
+        "name": "tiny_llama",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "honest_model": [TINY_LLAMA],
+        "byzantine_model": [TINY_LLAMA]
     }
-    ])
-
-'''
-Tiny Test - For UI Development
-
-Found small, lightweight models for local Mac (or non NVIDIA GPU) testing.
-All models are below 5 billion parameters.
-
-Created three configurations: TINY_TEST, SMALL_TEST, & MEDIUM_TEST (start with tiny and work up).
-'''
-
-TINY_LLAMA = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-QWEN_1_5B = "Qwen/Qwen2.5-1.5B-Instruct" # probably wont use
-LLAMA_3B = "meta-llama/Llama-3.2-3B-Instruct"
-
-TINY_TEST = {
-    "name": "tiny_test",
-    "honest_count": 2,
-    "byzantine_count": 1,
-    "honest_model": [TINY_LLAMA],
-    "byzantine_model": [TINY_LLAMA]
-}
-
-SMALL_TEST = {
-    "name": "small_test",
-    "honest_count": 4,
-    "byzantine_count": 2,
-    "honest_model": [TINY_LLAMA],
-    "byzantine_model": [TINY_LLAMA]
-}
-
-MEDIUM_TEST = {
-    "name": "medium_test",
-    "honest_count": 6,
-    "byzantine_count": 2,
-    "honest_model": [TINY_LLAMA],
-    "byzantine_model": [LLAMA_3B]
-}
-
-COMPOSITION.extend([TINY_TEST, SMALL_TEST, MEDIUM_TEST])
+])

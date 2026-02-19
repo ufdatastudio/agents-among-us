@@ -69,8 +69,14 @@ class GameState:
         
         log = self.world_data["global"]["ui_event_log"]
         log.append(entry)
+        
+        # COMMENTED OUT TO DISPLAY ALL EVENTS IN LIVE FEED
+        '''
+        Removed limit - keep all events for the game
         if len(log) > 15:
             log.pop(0)
+        '''
+
 
     def update_phase(self, phase_name):
         self.world_data["global"]["current_phase"] = phase_name
