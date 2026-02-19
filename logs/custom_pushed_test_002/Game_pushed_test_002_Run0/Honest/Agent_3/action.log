@@ -1,0 +1,145 @@
+=== Action Log for Agent_3 ===
+
+Round 1/10
+Players Remaining: 6
+Current Location: [Admin]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: None
+    [Storage] -> Occupants: ['Agent_0']
+Bodies Seen: None
+
+Action 1 Selected: move -> Admin
+======================
+
+
+Current Location: [Admin]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: ['Agent_0']
+    [Storage] -> Occupants: ['Agent_4', 'Agent_5']
+Bodies Seen: None
+
+Action 2 Selected: move -> Admin
+======================
+
+
+Current Location: [Admin]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: ['Agent_0']
+    [Storage] -> Occupants: ['Agent_4', 'Agent_5']
+Bodies Seen: None
+
+Action 3 Selected: move -> Admin
+======================
+
+
+Current Location: [Admin]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: ['Agent_0']
+    [Storage] -> Occupants: ['Agent_4', 'Agent_5']
+Bodies Seen: None
+
+Action 4 Selected: move -> Admin
+======================
+
+
+Round 2/10
+Players Remaining: 6
+Current Location: [Admin]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: ['Agent_0']
+    [Storage] -> Occupants: ['Agent_4', 'Agent_5']
+Bodies Seen: None
+
+Action 1 Selected: move -> Admin
+======================
+
+Discussion Started because Agent_0 via Button. Additional unreported eliminations confirmed: None
+Round End.
+======================
+
+
+Round 3/10
+Players Remaining: 6
+Current Location: [Admin]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: ['Agent_0']
+    [Storage] -> Occupants: ['Agent_4', 'Agent_5']
+Bodies Seen: None
+
+Action 1 Selected: move -> Admin
+======================
+
+
+Current Location: [Admin]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: ['Agent_0']
+    [Storage] -> Occupants: ['Agent_4', 'Agent_5']
+Bodies Seen: None
+
+Action 2 Selected: move -> Admin
+======================
+
+
+Current Location: [Admin]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: ['Agent_0']
+    [Storage] -> Occupants: ['Agent_4', 'Agent_5']
+Bodies Seen: None
+
+Action 3 Selected: move -> Admin
+======================
+
+
+Current Location: [Admin]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: ['Agent_0']
+    [Storage] -> Occupants: ['Agent_4', 'Agent_5']
+Bodies Seen: None
+
+Action 4 Selected: move -> Admin
+======================
+
+
+Round 4/10
+Players Remaining: 6
+Current Location: [Admin]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: ['Agent_0']
+    [Storage] -> Occupants: ['Agent_4', 'Agent_5']
+Bodies Seen: None
+
+Action 1 Selected: move -> Admin
+======================
+
+
+Current Location: [Admin]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: ['Agent_0']
+    [Storage] -> Occupants: ['Agent_4', 'Agent_5']
+Bodies Seen: None
+
+Action 2 Selected: move -> Admin
+======================
+
+
+Current Location: [Admin]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: ['Agent_0']
+    [Storage] -> Occupants: ['Agent_4', 'Agent_5']
+Bodies Seen: None
+
+Action 3 Selected: move -> Admin
+======================
+

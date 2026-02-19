@@ -1,5 +1,3 @@
-# live_map.py
-# Renders a live visualization of the ship and agents using pygame, reading `live_state.json` to display state and events.
 import pygame
 import json
 import os
@@ -8,7 +6,7 @@ import subprocess
 import sys
 
 # --- CONFIGURATION ---
-WIDTH, HEIGHT = 2500, 1300 
+WIDTH, HEIGHT = 2500, 1300
 BACKGROUND_COLOR = (15, 15, 35) 
 ROOM_COLOR = (40, 40, 80)
 ROOM_BORDER = (100, 100, 200)

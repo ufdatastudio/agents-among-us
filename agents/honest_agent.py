@@ -1,5 +1,4 @@
 # agents/honest_agent.py
-# Defines the behavior, prompts, and decision logic for Honest (cooperative) agents in the simulation.
 import os
 import re
 from agents.base_agent import BaseAgent
@@ -21,7 +20,7 @@ class HonestAgent(BaseAgent):
         pattern = f"(?:Round {round_num}/|=== Round {round_num} ===)"
         match = re.search(pattern, full_log)
         if match: return full_log[match.start():]
-        else: return full_log[-2000:]
+        else: return full_log
 
     def think_and_act(self, world_view, round_num):
         # 1. READ LOGS

@@ -1,5 +1,4 @@
 # agents/byzantine_agent.py
-# Defines the behavior, prompts, and decision logic for Byzantine (malicious) agents within the simulation.
 import os
 import re
 from agents.base_agent import BaseAgent

@@ -1,5 +1,4 @@
 # agents/base_agent.py
-# Base class for agents providing shared utilities and LLM access; specialized by Honest/Byzantine subclasses.
 from core.llm import ModelManager
 from config.settings import ROOMS
 
