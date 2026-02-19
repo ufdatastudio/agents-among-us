@@ -464,21 +464,30 @@ function updateLiveFeed(events) {
         const msg = event.msg || event.text || "";
         const eventType = (event.type || "").toLowerCase();
 
+        // Meeting starts - open chat popup
         if (eventType === "meeting") {
             const title = msg.includes("Body") ? "Body Reported" : "Emergency Meeting";
             showDiscussionChat(title);
         }
 
+        // Pure chat messages - popup ONLY, skip feed
         if (eventType === "chat") {
             addDiscussionMessage(event);
             return;
         }
 
+        // Vote events - add to popup AND continue to feed
+        if (eventType === "vote") {
+            addDiscussionMessage(event);
+            // Don't return - let it continue to live feed below
+        }
+
+        // Add ALL non-chat events to live feed (kills, votes, ejections, meetings, etc)
         const eventDiv = document.createElement("div");
         eventDiv.className = "feed-event";
         if (eventType === "kill" || eventType === "eject") {
             eventDiv.classList.add("feed-event--danger");
-        } else if (eventType === "meeting") {
+        } else if (eventType === "meeting" || eventType === "vote") {
             eventDiv.classList.add("feed-event--warning");
         }
         const timestampSpan = document.createElement("span");
@@ -741,15 +750,26 @@ function addDiscussionMessage(event) {
 
     const div = document.createElement("div");
     div.className = isVote ? "chat-message vote" : "chat-message";
-    div.innerHTML =
-        '<div class="chat-message-sprite"><img src="' + spriteUrl + '" alt="' + agentName + '"></div>' +
-        '<div class="chat-message-content">' +
-            '<div class="chat-message-header">' +
-                '<span class="chat-message-name">' + agentName + '</span>' +
-                '<span class="chat-message-time">[' + time + ']</span>' +
-            '</div>' +
-            '<div class="chat-message-text">' + messageText + '</div>' +
-        '</div>';
+    
+    if (isVote) {
+        // Format: "Agent_1 voted for Agent_5" with bold agent names
+        const boldMsg = msg.replace(/(Agent_\d+)/g, '<strong>$1</strong>');
+        div.innerHTML =
+            '<div class="chat-message-content">' +
+                '<div class="chat-message-text">' + boldMsg + '</div>' +
+            '</div>';
+    } else {
+        div.innerHTML =
+            '<div class="chat-message-sprite"><img src="' + spriteUrl + '" alt="' + agentName + '"></div>' +
+            '<div class="chat-message-content">' +
+                '<div class="chat-message-header">' +
+                    '<span class="chat-message-name">' + agentName + '</span>' +
+                    '<span class="chat-message-time">[' + time + ']</span>' +
+                '</div>' +
+                '<div class="chat-message-text">' + messageText + '</div>' +
+            '</div>';
+    }
+    
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
 }

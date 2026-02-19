@@ -1,0 +1,34 @@
+{
+  "name": "custom_llama_test_001",
+  "honest_count": 7,
+  "byzantine_count": 3,
+  "honest_model": [
+    "meta-llama/Llama-3.2-3B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct"
+  ],
+  "byzantine_model": [
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct"
+  ],
+  "honest_colors": [
+    "lime",
+    "green",
+    "cyan",
+    "blue",
+    "purple",
+    "brown",
+    "pink"
+  ],
+  "byzantine_colors": [
+    "red",
+    "orange",
+    "yellow"
+  ],
+  "num_rounds": 10
+}
