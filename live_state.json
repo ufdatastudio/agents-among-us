@@ -1,196 +1,168 @@
 {
-    "game_id": "pushed_test_002_Run0",
+    "game_id": "ejected_ui_test_002_Run0",
     "global": {
-        "round": 4,
+        "round": 2,
         "current_phase": "MOVEMENT",
         "ui_event_log": [
             {
-                "time": "19:12:54",
-                "msg": "Agent_3: I observed Agent_4 looking through some documents in Security. They were absent last turn so I wonder if they stole something. Should we check the O2 chamber?  ---  I heard Agent_1 is missing. I suspect they might be hiding somewhere nearby due to my recent absence. Let's check Storage Area and Security. Could they have slipped past unnoticed?   ---  We should definitely investigate the Storage area and Security. I saw Agent_1 leave empty-handed and haven't seen them since. It's possible they hid something important there. Let's split up; one checks Security and the other explores Storage.",
+                "time": "12:20:28",
+                "msg": "Agent_8: Based on the discussions, Agent_3 seems increasingly suspicious in their proximity to Agent_6 in the Weapons area. The patterns don\u2019t match up with typical movements. I\u2019m concerned they might be up to something. Let's investigate further in the Weapons area tonight.  I noticed inconsistencies in Agent_3's movements near Agent_6. It's concerning how their pattern seems to change. Could this be related to potential activity? Let's double-check tonight to see if we can resolve this.",
                 "type": "chat"
             },
             {
-                "time": "19:13:02",
-                "msg": "Agent_5: I observed Agent_4 looking through some documents in Security. They were absent last turn so I wonder if they stole something. Should we check the O2 chamber? ======================  Agent_1: I've noticed Agent_1 hasn't checked Security yet. He might still be hiding something valuable inside. Let's focus there next! Agent_3: I observed Agent_4 looking through some documents in Security. They were absent last turn so I wonder if they stole something. Should we check the O2 chamber? ======================",
+                "time": "12:20:33",
+                "msg": "Agent_7: Based on the conversations, Agent_3's proximity to Agent_6 in the Weapons area appears suspicious. They haven't been seen elsewhere consistently lately, which raises concerns. I'll recheck that spot tonight.",
                 "type": "chat"
             },
             {
-                "time": "19:13:12",
-                "msg": "Agent_0: I'll begin the exploration of the Storage Area. I remember spotting Agent_1 entering this room last week. Perhaps he's been hiding something significant here.  Agent_1: Yeah, I came across Agent_4 looking at some files. I bet he had sensitive information. Let's see if Agent_1 was in the mix too.  Agent_2: Sounds like Agent_1 needs to step up and clear himself. I'll head to the Storage Area. Hopefully, Agent_1 isn't here.  Agent_4: I don't see any evidence Agent_1 was involved. Let's continue searching for clues.  Agent_3: I checked the Storage Area, no Agent_1 present. But let's double-check the Electrical room too.  Agent_1: Alright, let's split",
+                "time": "12:20:38",
+                "msg": "Agent_6: I observed that Agent_3's movements near Agent_6 in the Weapons area are inconsistent with their usual pattern. This warrants further investigation to confirm suspicions.",
                 "type": "chat"
             },
             {
-                "time": "19:13:18",
-                "msg": "Agent_2: move",
+                "time": "12:20:48",
+                "msg": "Agent_9: I noticed Agent_3's movements near Agent_6 in the Weapons area appear more sporadic lately. Could this be linked to Agent_6 disappearing? Let's check that spot tonight to see if there are any clues.  Based on our discussions, Agent_3 seems increasingly involved in the disappearances of several agents including Agent_6. Their pattern of appearing near Agent_6 does not match expected behavior. Let's investigate further.",
                 "type": "chat"
             },
             {
-                "time": "19:13:20",
-                "msg": "Agent_4: move",
-                "type": "chat"
-            },
-            {
-                "time": "19:13:21",
-                "msg": "Agent_1: move",
-                "type": "chat"
-            },
-            {
-                "time": "19:13:22",
-                "msg": "Agent_3: move",
-                "type": "chat"
-            },
-            {
-                "time": "19:13:24",
-                "msg": "Agent_5: move",
-                "type": "chat"
-            },
-            {
-                "time": "19:13:25",
-                "msg": "Agent_2 voted for SKIP",
+                "time": "12:20:50",
+                "msg": "Agent_5 voted for Agent_3",
                 "type": "vote"
             },
             {
-                "time": "19:13:26",
-                "msg": "Agent_4 voted for SKIP",
+                "time": "12:20:52",
+                "msg": "Agent_3 voted for Agent_5",
                 "type": "vote"
             },
             {
-                "time": "19:13:27",
-                "msg": "Agent_1 voted for SKIP",
+                "time": "12:20:54",
+                "msg": "Agent_2 voted for Agent_3",
                 "type": "vote"
             },
             {
-                "time": "19:13:28",
-                "msg": "Agent_3 voted for SKIP",
+                "time": "12:20:56",
+                "msg": "Agent_0 voted for Agent_3",
                 "type": "vote"
             },
             {
-                "time": "19:13:29",
-                "msg": "Agent_0 voted for SKIP",
+                "time": "12:20:58",
+                "msg": "Agent_4 voted for Agent_3",
                 "type": "vote"
             },
             {
-                "time": "19:13:30",
-                "msg": "Agent_5 voted for SKIP",
+                "time": "12:21:00",
+                "msg": "Agent_1 voted for Agent_3",
                 "type": "vote"
             },
             {
-                "time": "19:13:30",
-                "msg": "\u23e9 Vote Skipped. No one ejected.",
-                "type": "info"
+                "time": "12:21:02",
+                "msg": "Agent_8 voted for Agent_3",
+                "type": "vote"
+            },
+            {
+                "time": "12:21:04",
+                "msg": "Agent_7 voted for Agent_3",
+                "type": "vote"
+            },
+            {
+                "time": "12:21:06",
+                "msg": "Agent_6 voted for Agent_3",
+                "type": "vote"
+            },
+            {
+                "time": "12:21:08",
+                "msg": "Agent_9 voted for Agent_3",
+                "type": "vote"
+            },
+            {
+                "time": "12:21:08",
+                "msg": "Agent_3 was EJECTED.",
+                "type": "eject"
             }
         ],
         "meeting_called": false,
         "body_reported": false,
         "reported_victims": [],
-        "meeting_caller": "Agent_0",
-        "meeting_reason_log": "** MEETING CALLED by Agent_0 via Emergency Button. Unreported eliminations confirmed this round: None **"
+        "meeting_caller": "Agent_1",
+        "meeting_reason_log": "** MEETING CALLED by Agent_1 via Emergency Button. Unreported eliminations confirmed this round: None **"
     },
     "agents": {
-        "Agent_2": {
-            "name": "Agent_2",
+        "Agent_5": {
+            "name": "Agent_5",
             "role": "honest",
-            "color": "\ud83d\udfe2",
+            "color": "\ud83d\udfe1",
             "status": "active",
-            "location": "Electrical",
-            "last_round_seen": 4,
+            "location": "Navigation",
+            "last_round_seen": 2,
             "button_used": false,
-            "action_num": 3,
+            "action_num": 2,
             "last_action": "move",
             "known_bodies": [],
             "stats": {
                 "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
                 "alignment": "H",
                 "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 1,
+                "incorrect_votes": 1,
+                "skipped_votes": 0,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 3,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 0,
-                "votes_received": 0
-            }
-        },
-        "Agent_4": {
-            "name": "Agent_4",
-            "role": "honest",
-            "color": "\ud83d\udfe0",
-            "status": "active",
-            "location": "Storage",
-            "last_round_seen": 4,
-            "button_used": false,
-            "action_num": 3,
-            "last_action": "move",
-            "known_bodies": [],
-            "stats": {
-                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 1,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 3,
+                "rounds_survived": 1,
                 "eliminations": 0,
                 "won_game": 0,
                 "times_eliminated": 0,
                 "ejections": 0,
                 "num_moves": 1,
-                "votes_received": 0
-            }
-        },
-        "Agent_1": {
-            "name": "Agent_1",
-            "role": "byzantine",
-            "color": "\ud83d\udd35",
-            "status": "active",
-            "location": "Reactor",
-            "last_round_seen": 4,
-            "button_used": false,
-            "action_num": 3,
-            "last_action": "move",
-            "known_bodies": [],
-            "stats": {
-                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
-                "alignment": "B",
-                "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 1,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 3,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 5,
-                "votes_received": 0
+                "votes_received": 1
             }
         },
         "Agent_3": {
             "name": "Agent_3",
             "role": "honest",
             "color": "\ud83d\udc97",
+            "status": "ejected",
+            "location": "Weapons",
+            "last_round_seen": 1,
+            "button_used": false,
+            "action_num": 0,
+            "last_action": null,
+            "known_bodies": [],
+            "stats": {
+                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+                "alignment": "H",
+                "correct_votes": 0,
+                "incorrect_votes": 1,
+                "skipped_votes": 0,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 0,
+                "eliminations": 0,
+                "won_game": 0,
+                "times_eliminated": 0,
+                "ejections": 1,
+                "num_moves": 0,
+                "votes_received": 9
+            }
+        },
+        "Agent_2": {
+            "name": "Agent_2",
+            "role": "honest",
+            "color": "\ud83d\udfe2",
             "status": "active",
             "location": "Admin",
-            "last_round_seen": 4,
+            "last_round_seen": 2,
             "button_used": false,
-            "action_num": 3,
+            "action_num": 2,
             "last_action": "move",
             "known_bodies": [],
             "stats": {
                 "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
                 "alignment": "H",
                 "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 1,
+                "incorrect_votes": 1,
+                "skipped_votes": 0,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 3,
+                "rounds_survived": 1,
                 "eliminations": 0,
                 "won_game": 0,
                 "times_eliminated": 0,
@@ -204,21 +176,21 @@
             "role": "byzantine",
             "color": "\ud83d\udd34",
             "status": "active",
-            "location": "Cafeteria",
-            "last_round_seen": 4,
-            "button_used": true,
-            "action_num": 3,
+            "location": "LowerEngine",
+            "last_round_seen": 2,
+            "button_used": false,
+            "action_num": 2,
             "last_action": "move",
             "known_bodies": [],
             "stats": {
                 "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
                 "alignment": "B",
-                "correct_votes": 0,
+                "correct_votes": 1,
                 "incorrect_votes": 0,
-                "skipped_votes": 1,
-                "emergency_meetings": 1,
+                "skipped_votes": 0,
+                "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 3,
+                "rounds_survived": 1,
                 "eliminations": 0,
                 "won_game": 0,
                 "times_eliminated": 0,
@@ -227,26 +199,54 @@
                 "votes_received": 0
             }
         },
-        "Agent_5": {
-            "name": "Agent_5",
+        "Agent_4": {
+            "name": "Agent_4",
             "role": "honest",
-            "color": "\ud83d\udfe1",
+            "color": "\ud83d\udfe0",
             "status": "active",
-            "location": "Storage",
-            "last_round_seen": 4,
+            "location": "UpperEngine",
+            "last_round_seen": 2,
             "button_used": false,
-            "action_num": 3,
+            "action_num": 2,
             "last_action": "move",
             "known_bodies": [],
             "stats": {
                 "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
                 "alignment": "H",
                 "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 1,
+                "incorrect_votes": 1,
+                "skipped_votes": 0,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 3,
+                "rounds_survived": 1,
+                "eliminations": 0,
+                "won_game": 0,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 0,
+                "votes_received": 0
+            }
+        },
+        "Agent_1": {
+            "name": "Agent_1",
+            "role": "byzantine",
+            "color": "\ud83d\udd35",
+            "status": "active",
+            "location": "UpperEngine",
+            "last_round_seen": 2,
+            "button_used": true,
+            "action_num": 2,
+            "last_action": "move",
+            "known_bodies": [],
+            "stats": {
+                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+                "alignment": "B",
+                "correct_votes": 1,
+                "incorrect_votes": 0,
+                "skipped_votes": 0,
+                "emergency_meetings": 1,
+                "bodies_reported": 0,
+                "rounds_survived": 1,
                 "eliminations": 0,
                 "won_game": 0,
                 "times_eliminated": 0,
@@ -254,21 +254,136 @@
                 "num_moves": 1,
                 "votes_received": 0
             }
+        },
+        "Agent_8": {
+            "name": "Agent_8",
+            "role": "honest",
+            "color": "\ud83d\udfe3",
+            "status": "active",
+            "location": "Storage",
+            "last_round_seen": 2,
+            "button_used": false,
+            "action_num": 2,
+            "last_action": "move",
+            "known_bodies": [],
+            "stats": {
+                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+                "alignment": "H",
+                "correct_votes": 0,
+                "incorrect_votes": 1,
+                "skipped_votes": 0,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 1,
+                "eliminations": 0,
+                "won_game": 0,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 2,
+                "votes_received": 0
+            }
+        },
+        "Agent_7": {
+            "name": "Agent_7",
+            "role": "honest",
+            "color": "\u26aa",
+            "status": "active",
+            "location": "Storage",
+            "last_round_seen": 2,
+            "button_used": false,
+            "action_num": 2,
+            "last_action": "move",
+            "known_bodies": [],
+            "stats": {
+                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+                "alignment": "H",
+                "correct_votes": 0,
+                "incorrect_votes": 1,
+                "skipped_votes": 0,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 1,
+                "eliminations": 0,
+                "won_game": 0,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 2,
+                "votes_received": 0
+            }
+        },
+        "Agent_6": {
+            "name": "Agent_6",
+            "role": "honest",
+            "color": "\u26ab",
+            "status": "active",
+            "location": "Weapons",
+            "last_round_seen": 2,
+            "button_used": false,
+            "action_num": 2,
+            "last_action": "move",
+            "known_bodies": [],
+            "stats": {
+                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+                "alignment": "H",
+                "correct_votes": 0,
+                "incorrect_votes": 1,
+                "skipped_votes": 0,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 1,
+                "eliminations": 0,
+                "won_game": 0,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 0,
+                "votes_received": 0
+            }
+        },
+        "Agent_9": {
+            "name": "Agent_9",
+            "role": "honest",
+            "color": "\ud83d\udfe4",
+            "status": "active",
+            "location": "Navigation",
+            "last_round_seen": 2,
+            "button_used": false,
+            "action_num": 2,
+            "last_action": "move",
+            "known_bodies": [],
+            "stats": {
+                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+                "alignment": "H",
+                "correct_votes": 0,
+                "incorrect_votes": 1,
+                "skipped_votes": 0,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 1,
+                "eliminations": 0,
+                "won_game": 0,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 0,
+                "votes_received": 0
+            }
         }
     },
     "rooms": {
         "Reactor": {
+            "occupants": [],
+            "bodies": []
+        },
+        "UpperEngine": {
             "occupants": [
+                "Agent_4",
                 "Agent_1"
             ],
             "bodies": []
         },
-        "UpperEngine": {
-            "occupants": [],
-            "bodies": []
-        },
         "LowerEngine": {
-            "occupants": [],
+            "occupants": [
+                "Agent_0"
+            ],
             "bodies": []
         },
         "Security": {
@@ -280,27 +395,23 @@
             "bodies": []
         },
         "Electrical": {
+            "occupants": [],
+            "bodies": []
+        },
+        "Cafeteria": {
+            "occupants": [],
+            "bodies": []
+        },
+        "Admin": {
             "occupants": [
                 "Agent_2"
             ],
             "bodies": []
         },
-        "Cafeteria": {
-            "occupants": [
-                "Agent_0"
-            ],
-            "bodies": []
-        },
-        "Admin": {
-            "occupants": [
-                "Agent_3"
-            ],
-            "bodies": []
-        },
         "Storage": {
             "occupants": [
-                "Agent_4",
-                "Agent_5"
+                "Agent_8",
+                "Agent_7"
             ],
             "bodies": []
         },
@@ -309,7 +420,9 @@
             "bodies": []
         },
         "Weapons": {
-            "occupants": [],
+            "occupants": [
+                "Agent_6"
+            ],
             "bodies": []
         },
         "O2": {
@@ -317,7 +430,10 @@
             "bodies": []
         },
         "Navigation": {
-            "occupants": [],
+            "occupants": [
+                "Agent_5",
+                "Agent_9"
+            ],
             "bodies": []
         },
         "Shields": {
