@@ -193,7 +193,6 @@ function getAgentColor(colorKey) {
     return COLOR_MAP[key] || COLOR_MAP[colorKey.trim()] || "#888888";
 }
 
-// Color slug from backend (may send "red" or "🔴"); used for sprite lookup
 function getColorSlug(colorKey) {
     if (!colorKey || typeof colorKey !== "string") return "red";
     var key = colorKey.trim().toLowerCase();
@@ -202,7 +201,6 @@ function getColorSlug(colorKey) {
     return emojiToSlug[colorKey.trim()] || "red";
 }
 
-// Among Us sprites: living (by color slug) and dead (by color slug)
 var LIVING_SPRITES = {
     red: "https://preview.redd.it/an871k4o1sn51.png?width=440&format=png&auto=webp&s=85dcd6cb73b8760802e254ee14dfa3c7ab444591",
     orange: "https://preview.redd.it/iio3xm4o1sn51.png?width=440&format=png&auto=webp&s=2b9fb1b29396502998feda5c6ed2ed75919c6ad8",
@@ -246,7 +244,6 @@ function getModelAbbreviation(modelName) {
 
 let lastEventCount = 0;
 let agentMarkers = {};
-let isPaused = false;
 let pollingInterval = null;
 let lastPhase = "";
 let lastRound = 0;
@@ -337,11 +334,9 @@ function updateAgentPositions(agents) {
             const agentIndex = parseInt(agentNumRaw, 10);
             const displayNum = Number.isNaN(agentIndex) ? agentNumRaw : agentIndex;
             
-            // Hardcoded color order matching config page: Red, Orange, Yellow, Lime, Green, Cyan, Blue, Purple, Brown, Pink, White, Black
             const hardcodedColors = ["red", "orange", "yellow", "lime", "green", "cyan", "blue", "purple", "brown", "pink", "white", "black"];
             const colorSlug = hardcodedColors[agentIndex] || "red";
             
-            // Show dead sprite for both eliminated AND ejected
             const isAlive = agent.status !== "eliminated" && agent.status !== "ejected";
             const spriteUrl = isAlive
                 ? (LIVING_SPRITES[colorSlug] || LIVING_SPRITES.red)
@@ -407,7 +402,6 @@ function updateStatusTable(agents) {
             row.classList.add("agent-dead");
         }
         
-        // Hardcoded color order matching config page: Red, Orange, Yellow, Lime, Green, Cyan, Blue, Purple, Brown, Pink, White, Black
         const hardcodedColors = ["red", "orange", "yellow", "lime", "green", "cyan", "blue", "purple", "brown", "pink", "white", "black"];
         var colorSlug = hardcodedColors[agentIndex] || "red";
         
@@ -466,19 +460,16 @@ function updateLiveFeed(events) {
         const msg = event.msg || event.text || "";
         const eventType = (event.type || "").toLowerCase();
 
-        // Meeting start → open chat popup
         if (eventType === "meeting") {
             const title = msg.includes("Body") ? "Body Reported" : "Emergency Meeting";
             showDiscussionChat(title);
         }
 
-        // Pure chat messages (type=chat, Agent_#: text) → popup only, skip feed
         if (eventType === "chat") {
             addDiscussionMessage(event);
             return;
         }
 
-        // Everything else (kills, ejections, votes, info) → live feed
         const eventDiv = document.createElement("div");
         eventDiv.className = "feed-event";
         if (eventType === "kill" || eventType === "eject") {
@@ -557,14 +548,12 @@ async function updateGameState() {
             }
             if (gameInfo) updateGameParams(gameInfo);
             
-            // Stop polling if game is over and show win screen
             const currentPhase = (data.global && data.global.current_phase) || "";
             if (currentPhase === "GAME OVER" && pollingInterval) {
                 console.log("🎮 Game ended, stopping polling");
                 clearInterval(pollingInterval);
                 pollingInterval = null;
                 
-                // Determine winner from events
                 const events = (data.global && data.global.ui_event_log) || [];
                 const lastEvent = events[events.length - 1];
                 const winMessage = lastEvent ? (lastEvent.msg || lastEvent.text || "") : "";
@@ -586,10 +575,8 @@ async function updateGameState() {
             const currentPhase = (data.global && data.global.current_phase) || "";
             const currentRound = (data.global && data.global.round) || 0;
 
-            // Collect tick events to inject into the feed
             var tickEvents = [];
 
-            // New round detected
             if (currentRound && currentRound !== lastRound) {
                 if (lastRound !== 0) {
                     tickEvents.push({ msg: "---", type: "tick" });
@@ -598,19 +585,16 @@ async function updateGameState() {
                 lastRound = currentRound;
             }
 
-            // Phase change detected
             if (currentPhase && currentPhase !== lastPhase) {
                 if (lastPhase !== "") {
                     tickEvents.push({ msg: "Phase: " + currentPhase, type: "tick" });
                 }
-                // Auto-close discussion chat when movement resumes
                 if (currentPhase === "MOVEMENT" && lastPhase !== "") {
                     closeDiscussionChat();
                 }
                 lastPhase = currentPhase;
             }
 
-            // Get real events from backend
             var events = [];
             if (Array.isArray(data.events)) {
                 events = data.events;
@@ -618,7 +602,6 @@ async function updateGameState() {
                 events = data.global.ui_event_log;
             }
 
-            // Inject tick events into feed first, then process real events
             tickEvents.forEach(function(te) {
                 addFeedTick(te.msg);
             });
@@ -627,25 +610,6 @@ async function updateGameState() {
         }
     } catch (error) {
         console.error("Error:", error);
-    }
-}
-
-function togglePause() {
-    isPaused = !isPaused;
-    const pauseBtn = document.getElementById("pauseBtn");
-    if (isPaused) {
-        pauseBtn.textContent = "▶ Resume";
-        pauseBtn.classList.add("paused");
-        if (pollingInterval) {
-            clearInterval(pollingInterval);
-            pollingInterval = null;
-        }
-    } else {
-        pauseBtn.textContent = "⏸ Pause";
-        pauseBtn.classList.remove("paused");
-        if (!pollingInterval) {
-            pollingInterval = setInterval(updateGameState, 2000);
-        }
     }
 }
 
@@ -677,16 +641,11 @@ window.addEventListener("DOMContentLoaded", function() {
     updateGameState();
     pollingInterval = setInterval(updateGameState, 2000);
     
-    const pauseBtn = document.getElementById("pauseBtn");
     const exitBtn = document.getElementById("exitBtn");
-    if (pauseBtn) pauseBtn.addEventListener("click", togglePause);
     if (exitBtn) exitBtn.addEventListener("click", exitToHome);
     
     console.log("🎮 Press 'D' for debug!");
 });
-// ============================================
-// WIN SCREEN FUNCTIONS
-// ============================================
 
 function showWinScreen(winner) {
     const winScreen = document.getElementById("winScreen");
@@ -694,14 +653,12 @@ function showWinScreen(winner) {
     
     if (!winScreen || !winImage) return;
     
-    // Set the correct win image
     if (winner === "honest") {
         winImage.src = "/static/images/HonestWin.png";
     } else if (winner === "byzantine") {
         winImage.src = "/static/images/ByzantineWin.png";
     }
     
-    // Show the overlay
     winScreen.style.display = "flex";
 }
 
@@ -711,10 +668,6 @@ function closeWinScreen() {
         winScreen.style.display = "none";
     }
 }
-
-// =====================================================================
-// FEED TICK HELPER - injects round/phase changes directly into feed
-// =====================================================================
 
 function addFeedTick(text) {
     const feedContent = document.getElementById("feedContent");
@@ -737,10 +690,6 @@ function addFeedTick(text) {
     const atBottom = feedContent.scrollHeight - feedContent.scrollTop - feedContent.clientHeight < 80;
     if (atBottom) feedContent.scrollTop = feedContent.scrollHeight;
 }
-
-// =====================================================================
-// DISCUSSION CHAT POPUP
-// =====================================================================
 
 var hardcodedChatColors = ["red","orange","yellow","lime","green","cyan","blue","purple","brown","pink","white","black"];
 

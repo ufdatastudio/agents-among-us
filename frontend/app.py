@@ -181,7 +181,7 @@ def start_game():
         ]
         
         print(f"\n{'='*60}")
-        print(f"🚀 LAUNCHING GAME: {game_id}")
+        print(f"LAUNCHING GAME: {game_id}")
         print(f"{'='*60}")
         print(f"Command: {' '.join(cmd)}")
         print(f"Agents: {num_agents} ({byzantine_count} Byzantine, {honest_count} Honest)")
@@ -208,7 +208,7 @@ def start_game():
                         print(line.rstrip())
                         sys.stdout.flush()
             except Exception as e:
-                print(f"⚠️  Error streaming output: {e}")
+                print(f"ERROR streaming output: {e}")
             finally:
                 process.stdout.close()
         
@@ -218,7 +218,7 @@ def start_game():
         return redirect(url_for('game'))
         
     except Exception as e:
-        print(f"❌ ERROR starting game: {e}")
+        print(f"ERROR starting game: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -318,7 +318,7 @@ def get_all_stats():
         return jsonify(data)
         
     except Exception as e:
-        print(f"❌ ERROR reading stats: {e}")
+        print(f"ERROR reading stats: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -366,7 +366,7 @@ def refresh_stats():
                 print(f"  ✅ Added: {game_id} ({composition})")
                 
             except Exception as e:
-                print(f"  ❌ Error reading {csv_file}: {e}")
+                print(f"ERROR reading {csv_file}: {e}")
         
         # append new data to master CSV
         if new_data:
@@ -384,7 +384,7 @@ def refresh_stats():
         return jsonify({'new_games': new_games})
         
     except Exception as e:
-        print(f"❌ ERROR refreshing stats: {e}")
+        print(f"ERROR refreshing stats: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -497,14 +497,14 @@ def server_error(e):
 
 if __name__ == '__main__':
     print("\n" + "="*60)
-    print("🎮 AGENTS AMONG US - WEB INTERFACE")
+    print("AGENTS AMONG US")
     print("="*60)
-    print(f"📂 Backend Path: {BACKEND_PATH}")
-    print(f"📂 Data Directory: {DATA_DIR}")
-    print(f"📊 Stats Database: {MASTER_CSV}")
-    print(f"🎯 Live State File: {LIVE_STATE_FILE}")
+    print(f"Backend Path: {BACKEND_PATH}")
+    print(f"Data Directory: {DATA_DIR}")
+    print(f"Stats Database: {MASTER_CSV}")
+    print(f"Live State File: {LIVE_STATE_FILE}")
     print("="*60)
-    print(f"🌐 Open: http://localhost:3000")
+    print(f"Open: http://localhost:3000")
     print("="*60 + "\n")
     
     app.run(debug=True, port=3000, use_reloader=False)
