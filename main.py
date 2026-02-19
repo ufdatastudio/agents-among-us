@@ -5,7 +5,7 @@ from datetime import datetime
 import os
 import platform
 
-# Auto-detect: LOCAL on Mac, CONTROLLER on HiperGator
+# sets LLM_MODE to local if on Mac 
 
 IS_MAC = platform.system() == "Darwin"
 if IS_MAC:

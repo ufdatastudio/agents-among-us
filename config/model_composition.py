@@ -153,7 +153,7 @@ Created three configurations: TINY_TEST, SMALL_TEST, & MEDIUM_TEST (start with t
 '''
 
 TINY_LLAMA = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-QWEN_1_5B = "Qwen/Qwen2.5-1.5B-Instruct"
+QWEN_1_5B = "Qwen/Qwen2.5-1.5B-Instruct" # probably wont use
 LLAMA_3B = "meta-llama/Llama-3.2-3B-Instruct"
 
 TINY_TEST = {
@@ -177,7 +177,7 @@ MEDIUM_TEST = {
     "honest_count": 6,
     "byzantine_count": 2,
     "honest_model": [TINY_LLAMA],
-    "byzantine_model": [QWEN_1_5B]
+    "byzantine_model": [LLAMA_3B]
 }
 
 COMPOSITION.extend([TINY_TEST, SMALL_TEST, MEDIUM_TEST])
