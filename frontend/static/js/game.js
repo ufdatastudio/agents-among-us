@@ -1,7 +1,6 @@
 /**
- * Game Simulation - FINAL WORKING VERSION
- * Your exact coordinates + Housing boxes + Sprites
- * Press 'D' for debug overlay
+ * Game Simulation 
+ * Press D for debug overlay
  */
 
 const ROOM_COORDINATES = {
@@ -419,7 +418,12 @@ function updateStatusTable(agents) {
         const votesCell = document.createElement("td");
         const votesValue = agent.stats && typeof agent.stats.votes_received !== "undefined"
             ? agent.stats.votes_received : agent.votes_received;
-        votesCell.textContent = votesValue || 0;
+        // Add (EJ) indicator for ejected agents
+        if (agent.status === "ejected") {
+            votesCell.textContent = (votesValue || 0) + " (EJ)";
+        } else {
+            votesCell.textContent = votesValue || 0;
+        }
         row.appendChild(votesCell);
         
         const killsCell = document.createElement("td");
