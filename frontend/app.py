@@ -507,4 +507,4 @@ if __name__ == '__main__':
     print(f"🌐 Open: http://localhost:3000")
     print("="*60 + "\n")
     
-    app.run(debug=True, port=3000, use_reloader=True)
+    app.run(debug=True, port=3000, use_reloader=False)
