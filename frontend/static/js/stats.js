@@ -79,6 +79,15 @@ function shortDate(ts) {
   return `${mm}/${dd}`;
 }
 
+// Short time like "14:23"
+function shortTime(ts) {
+  const d = parseTimestamp(ts);
+  if (!d) return "";
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
 // =====================================================================
 // Data loading
 // =====================================================================
@@ -334,6 +343,10 @@ function updateGameList() {
     const dateCell = document.createElement("td");
     dateCell.textContent = shortDate(g.timestamp);
     tr.appendChild(dateCell);
+
+    const timeCell = document.createElement("td");
+    timeCell.textContent = shortTime(g.timestamp);
+    tr.appendChild(timeCell);
 
     tr.addEventListener("click", () => showGameDetails(g.game_id));
 
