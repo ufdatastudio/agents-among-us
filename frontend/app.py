@@ -105,13 +105,14 @@ def start_game():
         if not game_id:
             game_id = f"game_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
-        # parse agent configurations
+        # parse agent configurations - PRESERVE EXACT ORDER AND AGENT NUMBERS
         agents = []
         byzantine_count = 0
         honest_count = 0
         
         for i in range(num_agents):
             agent = {
+                'agent_num': i,  # Preserve exact agent number
                 'model': request.form.get(f'agent_{i}_model'),
                 'role': request.form.get(f'agent_{i}_role'),
                 'color': request.form.get(f'agent_{i}_color')
@@ -123,31 +124,12 @@ def start_game():
             else:
                 honest_count += 1
         
-        # convert agents array to backend-expected format
-        honest_models = []
-        byzantine_models = []
-        honest_colors = []
-        byzantine_colors = []
-        
-        for agent in agents:
-            model_name = agent['model']
-            color_slug = (agent.get('color') or 'red').lower().strip()
-            if agent['role'] == 'honest':
-                honest_models.append(model_name)
-                honest_colors.append(color_slug)
-            else:
-                byzantine_models.append(model_name)
-                byzantine_colors.append(color_slug)
-        
-        # create custom composition JSON in backend-expected format
+        # create custom composition JSON with FULL agent configuration
         composition = {
             "name": f"custom_{game_id}",
             "honest_count": honest_count,
             "byzantine_count": byzantine_count,
-            "honest_model": honest_models,
-            "byzantine_model": byzantine_models,
-            "honest_colors": honest_colors,
-            "byzantine_colors": byzantine_colors,
+            "agents": agents,  # NEW: Full per-agent configuration
             "num_rounds": num_rounds
         }
         
@@ -157,6 +139,15 @@ def start_game():
         composition_file = os.path.join(BACKEND_PATH, 'config', 'game_configs', f'custom_{game_id}.json')
         with open(composition_file, 'w') as f:
             json.dump(composition, f, indent=2)
+        
+        # Debug: Print configuration
+        print(f"\n{'='*60}")
+        print(f"AGENT CONFIGURATION SENT TO BACKEND:")
+        print(f"{'='*60}")
+        for agent in agents:
+            role_label = "Byzantine" if agent['role'] == 'byzantine' else "Honest"
+            print(f"  Agent_{agent['agent_num']}: {role_label} | {agent['model']} | {agent['color']}")
+        print(f"{'='*60}\n")
         
         # store in session
         session['game_id'] = game_id
@@ -169,9 +160,9 @@ def start_game():
             if os.path.exists(LIVE_STATE_FILE):
                 os.remove(LIVE_STATE_FILE)
         except Exception as e:
-            print(f"Could not clear live_state.json: {e}")
+            print(f"⚠️  Could not clear live_state.json: {e}")
         
-        # FIXED: Use the custom composition instead of hardcoded tiny_test
+        # Build command
         cmd = [
             sys.executable,
             os.path.join(BACKEND_PATH, 'main.py'),
@@ -181,7 +172,7 @@ def start_game():
             '--num_rounds', str(num_rounds)
         ]
         
-        print(f"\n{'='*60}")
+        print(f"{'='*60}")
         print(f"LAUNCHING GAME: {game_id}")
         print(f"{'='*60}")
         print(f"Command: {' '.join(cmd)}")
@@ -378,9 +369,9 @@ def refresh_stats():
             else:
                 combined.to_csv(MASTER_CSV, mode='w', header=True, index=False)
             
-            print(f"\nAdded {new_games} new games to database\n")
+            print(f"\n✅ Added {new_games} new games to database\n")
         else:
-            print(f"\nNo new games found\n")
+            print(f"\n📊 No new games found\n")
         
         return jsonify({'new_games': new_games})
         
