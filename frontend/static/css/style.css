@@ -1016,8 +1016,28 @@ hr {
 }
 
 .chat-message.vote {
-    background: #fff8ee;
-    border-left: 3px solid #e0a020;
+    background: #fffbe6;
+    border: 1px solid #ddd;
+    padding: 6px 10px;
+    display: block;
+}
+
+.chat-message.vote .chat-message-sprite {
+    display: none;
+}
+
+.chat-message.vote .chat-message-content {
+    display: block;
+}
+
+.chat-message.vote .chat-message-header {
+    display: none;
+}
+
+.chat-message.vote .chat-message-text {
+    font-size: 13px;
+    color: #333;
+    line-height: 1.4;
 }
 
 .chat-message-sprite { width: 36px; height: 36px; flex-shrink: 0; }
@@ -1034,3 +1054,5 @@ hr {
 .chat-message-name { font-weight: 600; font-size: 13px; color: #111; }
 .chat-message-time { font-size: 11px; color: #888; white-space: nowrap; }
 .chat-message-text { font-size: 12px; color: #333; line-height: 1.4; word-wrap: break-word; }
+
+
