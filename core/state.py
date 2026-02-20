@@ -71,10 +71,10 @@ class GameState:
         timestamp = datetime.now().strftime("%H:%M:%S")
         entry = {"time": timestamp, "msg": message, "type": category}
         
-        # Keep only last 15 events to prevent JSON bloat
+        # Keep only last 50 events to prevent JSON bloat
         log = self.world_data["global"]["ui_event_log"]
         log.append(entry)
-        if len(log) > 15:
+        if len(log) > 50:
             log.pop(0)
 
     def update_phase(self, phase_name):
