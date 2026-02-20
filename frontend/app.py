@@ -169,7 +169,7 @@ def start_game():
             if os.path.exists(LIVE_STATE_FILE):
                 os.remove(LIVE_STATE_FILE)
         except Exception as e:
-            print(f"⚠️  Could not clear live_state.json: {e}")
+            print(f"Could not clear live_state.json: {e}")
         
         # FIXED: Use the custom composition instead of hardcoded tiny_test
         cmd = [
@@ -378,9 +378,9 @@ def refresh_stats():
             else:
                 combined.to_csv(MASTER_CSV, mode='w', header=True, index=False)
             
-            print(f"\n✅ Added {new_games} new games to database\n")
+            print(f"\nAdded {new_games} new games to database\n")
         else:
-            print(f"\n📊 No new games found\n")
+            print(f"\nNo new games found\n")
         
         return jsonify({'new_games': new_games})
         
