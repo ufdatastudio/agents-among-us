@@ -71,10 +71,10 @@ class GameState:
         timestamp = datetime.now().strftime("%H:%M:%S")
         entry = {"time": timestamp, "msg": message, "type": category}
         
-        # Keep only last 15 events to prevent JSON bloat
+        # Keep only last 50 events to prevent JSON bloat
         log = self.world_data["global"]["ui_event_log"]
         log.append(entry)
-        if len(log) > 15:
+        if len(log) > 50:
             log.pop(0)
 
     def update_phase(self, phase_name):
@@ -92,18 +92,18 @@ class GameState:
         """Pushes an agent's chat message to the UI log and discussion CSV."""
         self.add_ui_event(f"{agent_name}: {message}", "chat")
         
-        # TEMPORARILY DISABLED TO TEST IF CSV WRITING IS CAUSING ISSUES
-        # if self.world_data["global"]["current_phase"] == "DISCUSSION":
-        #     agent_data = self.world_data["agents"].get(agent_name)
-        #     if agent_data:
-        #         self.logger.log_discussion_chat(
-        #             discussion_num=self.discussion_counter,
-        #             reason=self.current_discussion_reason,
-        #             agent_name=agent_name,
-        #             model_name=agent_data["stats"]["model_name"],
-        #             role=agent_data["role"],
-        #             message=message
-        #         )
+        # Log to discussion CSV if in discussion phase
+        if self.world_data["global"]["current_phase"] == "DISCUSSION":
+            agent_data = self.world_data["agents"].get(agent_name)
+            if agent_data:
+                self.logger.log_discussion_chat(
+                    discussion_num=self.discussion_counter,
+                    reason=self.current_discussion_reason,
+                    agent_name=agent_name,
+                    model_name=agent_data["stats"]["model_name"],
+                    role=agent_data["role"],
+                    message=message
+                )
         
     def get_agent_view(self, agent_name, round_num, log_to_file=True):
         """

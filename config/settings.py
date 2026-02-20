@@ -1,92 +1,92 @@
 # config/settings.py
 # Global settings and game constants (map, rounds, agent counts, quantization flags) used across the project.
 
-NUM_ROUNDS = 10 # 7 total rounds for real simulations
+NUM_ROUNDS = 10 # 7 total rounds for real simulations || front end now handles this, but just kept it here anyways
 MAX_MOVEMENT_PHASES = 4  # How many "ticks" of movement occur before a forced check/pause
 
-# Map Connectivity Graph - Using Computer Component Names
+# new map with new names
 ROOMS = {
-    # --- Left Side (Clock & Cooling) ---
+    # --- left side ---
     "Clock": [
         "Logs", 
-        "Air Cooling", 
-        "Liquid Cooling"
+        "Air cooling",  # Changed from "Air Cooling"
+        "Liquid cooling"  # Changed from "Liquid Cooling"
     ],
-    "Air Cooling": [
+    "Air cooling": [  # Changed from "Air Cooling"
         "Clock", 
         "Logs", 
         "Diagnostics", 
-        "CPU",
-        "Liquid Cooling"  
+        "Cpu",  # Changed from "CPU"
+        "Liquid cooling"  # Changed from "Liquid Cooling"
     ],
-    "Liquid Cooling": [
+    "Liquid cooling": [  # Changed from "Liquid Cooling"
         "Clock", 
         "Logs", 
         "Bus", 
-        "SSD",
-        "Air Cooling"  
+        "Ssd",  # Changed from "SSD"
+        "Air cooling"  # Changed from "Air Cooling"
     ],
     "Logs": [
         "Clock", 
-        "Air Cooling", 
-        "Liquid Cooling"
+        "Air cooling",  # Changed from "Air Cooling"
+        "Liquid cooling"  # Changed from "Liquid Cooling"
     ],
 
     "Diagnostics": [
-        "Air Cooling", 
-        "CPU"
+        "Air cooling",  # Changed from "Air Cooling"
+        "Cpu"  # Changed from "CPU"
     ],
     "Bus": [
-        "Liquid Cooling", 
-        "SSD"
+        "Liquid cooling",  # Changed from "Liquid Cooling"
+        "Ssd"  # Changed from "SSD"
     ],
-    "CPU": [
-        "Air Cooling", 
+    "Cpu": [  # Changed from "CPU"
+        "Air cooling",  # Changed from "Air Cooling"
         "Diagnostics", 
-        "GPU", 
-        "BIOS", 
-        "SSD"
+        "Gpu",  # Changed from "GPU"
+        "Bios",  # Changed from "BIOS"
+        "Ssd"  # Changed from "SSD"
     ],
-    "BIOS": [
-        "CPU", 
-        "SSD"
+    "Bios": [  # Changed from "BIOS"
+        "Cpu",  # Changed from "CPU"
+        "Ssd"  # Changed from "SSD"
     ],
-    "SSD": [
-        "CPU", 
-        "BIOS", 
+    "Ssd": [  # Changed from "SSD"
+        "Cpu",  # Changed from "CPU"
+        "Bios",  # Changed from "BIOS"
         "Bus", 
-        "Liquid Cooling", 
+        "Liquid cooling",  # Changed from "Liquid Cooling"
         "Firewall", 
-        "IO"
+        "Io"  # Changed from "IO"
     ],
-    "IO": [
-        "SSD", 
+    "Io": [  # Changed from "IO"
+        "Ssd",  # Changed from "SSD"
         "Firewall"
     ],
 
-    # --- Right Side (Network & GPU) ---
-    "GPU": [
-        "CPU", 
-        "VRM", 
+    # --- right side ---
+    "Gpu": [  # Changed from "GPU"
+        "Cpu",  # Changed from "CPU"
+        "Vrm",  # Changed from "VRM"
         "Network",
         "Firewall"
     ],
-    "VRM": [
-        "GPU", 
+    "Vrm": [  # Changed from "VRM"
+        "Gpu",  # Changed from "GPU"
         "Network", 
         "Firewall"
     ],
     "Network": [
-        "GPU", 
-        "VRM", 
+        "Gpu",  # Changed from "GPU"
+        "Vrm",  # Changed from "VRM"
         "Firewall"
     ],
     "Firewall": [
         "Network", 
-        "VRM", 
-        "SSD", 
-        "IO",
-        "GPU"
+        "Vrm",  # Changed from "VRM"
+        "Ssd",  # Changed from "SSD"
+        "Io",  # Changed from "IO"
+        "Gpu"  # Changed from "GPU"
     ]
 }
 
@@ -95,8 +95,7 @@ NUM_BYZ = 2
 NUM_HONEST = 8
 
 
-QUANTIZATION = False # FALSE WHEN ON MAC (SWITCH BACK TO TRUE)
-
+QUANTIZATION = False # FALSE WHEN ON MY MAC (SWITCH BACK TO TRUE)
 
 # OLD SETTINGS BELOW:
 '''

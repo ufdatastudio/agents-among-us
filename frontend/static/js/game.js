@@ -5,48 +5,48 @@
 
 const ROOM_COORDINATES = {
     "Clock": { x: 12.7, y: 54.3 },
-    "Air Cooling": { x: 17.4, y: 22.3 },
-    "Liquid Cooling": { x: 25.3, y: 86.4 },
+    "Air cooling": { x: 17.4, y: 22.3 },
+    "Liquid cooling": { x: 25.3, y: 86.4 },
     "Logs": { x: 35.7, y: 43.9 },
     "Diagnostics": { x: 30.3, y: 10.4},
     "Bus": { x: 36.2, y: 60.1 },
-    "CPU": { x: 49.0, y: 21.2 },
-    "BIOS": { x: 60.2, y: 54.2 },
-    "SSD": { x: 49.3, y: 84.2 },
-    "GPU": { x: 78.9, y: 15.2 },
-    "VRM": { x: 66.3, y: 33.3 },
+    "Cpu": { x: 49.0, y: 21.2 },
+    "Bios": { x: 60.2, y: 54.2 },
+    "Ssd": { x: 49.3, y: 84.2 },
+    "Gpu": { x: 78.9, y: 15.2 },
+    "Vrm": { x: 66.3, y: 33.3 },
     "Network": { x: 91.6, y: 43.5 },
     "Firewall": { x: 78.7, y: 68.8 },
-    "IO": { x: 79.0, y: 92.7 }
+    "Io": { x: 79.0, y: 92.7 }
 };
 
 const ROOM_HOUSING = {
     "Clock": { width: 10, height: 20 },
-    "Air Cooling": { width: 10, height: 20 },
-    "Liquid Cooling": { width: 10, height: 20 },
+    "Air cooling": { width: 10, height: 20 },
+    "Liquid cooling": { width: 10, height: 20 },
     "Logs": { width: 6, height: 12 },
     "Diagnostics": { width: 6, height: 12 },
     "Bus": { width: 6, height: 12 },
-    "CPU": { width: 10, height: 20 },
-    "BIOS": { width: 6, height: 12 },
-    "SSD": { width: 12, height: 12 },
-    "GPU": { width: 12, height: 12 },
-    "VRM": { width: 6, height: 12 },
+    "Cpu": { width: 10, height: 20 },
+    "Bios": { width: 6, height: 12 },
+    "Ssd": { width: 12, height: 12 },
+    "Gpu": { width: 12, height: 12 },
+    "Vrm": { width: 6, height: 12 },
     "Network": { width: 10, height: 20 },
     "Firewall": { width: 12, height: 12 },
-    "IO": { width: 6, height: 12 }
+    "Io": { width: 6, height: 12 }
 };
 
 const ROOM_CONNECTIONS = [
-    ["Clock", "Logs"], ["Clock", "Air Cooling"], ["Clock", "Liquid Cooling"],
-    ["Logs", "Air Cooling"], ["Logs", "Liquid Cooling"],
-    ["Air Cooling", "Liquid Cooling"], ["Air Cooling", "Diagnostics"], ["Air Cooling", "CPU"],
-    ["Liquid Cooling", "Bus"], ["Liquid Cooling", "SSD"],
-    ["Diagnostics", "CPU"], ["Bus", "SSD"],
-    ["CPU", "BIOS"], ["CPU", "SSD"], ["CPU", "GPU"],
-    ["BIOS", "SSD"], ["GPU", "VRM"], ["GPU", "Network"], ["GPU", "Firewall"],
-    ["VRM", "Network"], ["VRM", "Firewall"], ["Network", "Firewall"],
-    ["SSD", "Firewall"], ["SSD", "IO"], ["Firewall", "IO"]
+    ["Clock", "Logs"], ["Clock", "Air cooling"], ["Clock", "Liquid cooling"],
+    ["Logs", "Air cooling"], ["Logs", "Liquid cooling"],
+    ["Air cooling", "Liquid cooling"], ["Air cooling", "Diagnostics"], ["Air cooling", "Cpu"],
+    ["Liquid cooling", "Bus"], ["Liquid cooling", "Ssd"],
+    ["Diagnostics", "Cpu"], ["Bus", "Ssd"],
+    ["Cpu", "Bios"], ["Cpu", "Ssd"], ["Cpu", "Gpu"],
+    ["Bios", "Ssd"], ["Gpu", "Vrm"], ["Gpu", "Network"], ["Gpu", "Firewall"],
+    ["Vrm", "Network"], ["Vrm", "Firewall"], ["Network", "Firewall"],
+    ["Ssd", "Firewall"], ["Ssd", "Io"], ["Firewall", "Io"]
 ];
 
 let debugOverlayVisible = false;
@@ -237,7 +237,7 @@ let agentMarkers = {};
 let pollingInterval = null;
 let lastPhase = "";
 let lastRound = 0;
-let clearedAgents = new Set(); // Track agents removed by meetings/ejections
+let clearedAgents = new Set();
 
 function updateGameParams(gameInfo) {
     if (!gameInfo) return;
@@ -276,18 +276,15 @@ function updateAgentPositions(agents) {
         const agent = agents[agentKey];
         if (!agent.location) return;
         
-        // Remove ejected agents permanently
         if (agent.status === "ejected") {
             clearedAgents.add(agentKey);
             return;
         }
         
-        // Remove agents that have been cleared by a meeting
         if (clearedAgents.has(agentKey)) {
             return;
         }
         
-        // Show all other agents (alive or newly eliminated)
         if (!agentsByRoom[agent.location]) agentsByRoom[agent.location] = [];
         agentsByRoom[agent.location].push({key: agentKey, agent: agent});
     });
@@ -478,15 +475,19 @@ function updateLiveFeed(events) {
             showDiscussionChat(title);
         }
 
+        // Add chat messages to discussion window only (not feed)
         if (eventType === "chat") {
             addDiscussionMessage(event);
             return;
         }
 
+        // Add vote messages to discussion window
         if (eventType === "vote") {
             addDiscussionMessage(event);
+            // Continue to also add to feed below
         }
 
+        // Add event to feed
         const eventDiv = document.createElement("div");
         eventDiv.className = "feed-event";
         if (eventType === "kill" || eventType === "eject") {
@@ -607,7 +608,6 @@ async function updateGameState() {
                     tickEvents.push({ msg: "Phase: " + currentPhase, type: "tick" });
                 }
                 
-                // When entering DISCUSSION, mark all eliminated agents as cleared
                 if (currentPhase === "DISCUSSION") {
                     Object.keys(data.agents).forEach(function(agentKey) {
                         const agent = data.agents[agentKey];

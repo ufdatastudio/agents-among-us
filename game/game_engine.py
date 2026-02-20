@@ -1,4 +1,4 @@
-# game/engine.py
+# game/engine.py - FIXED VERSION
 import random
 import re
 from config.settings import MAX_MOVEMENT_PHASES, ROOMS, NUM_BYZ, NUM_HONEST, NUM_ROUNDS as DEFAULT_NUM_ROUNDS
@@ -11,51 +11,84 @@ class GameEngine:
     def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST, num_rounds=DEFAULT_NUM_ROUNDS):
         self.game_id = game_id
         self.num_agents = num_agents
-        self.num_rounds = num_rounds  # Store num_rounds
+        self.num_rounds = num_rounds
         self.agents = []
         self.state = None
         self.logger = None
 
     def setup(self, composition):
-        honest_models = composition["honest_model"]
-        byz_models = composition["byzantine_model"]
-        n_honest = composition["honest_count"]
-        n_byz = composition["byzantine_count"]
         scen_name = composition.get("name", "Unknown_Scenario")
         
-        colors = ["🔴", "🟠", "🟡", "🟩", "🟢", "🔷", "🔵", "🟣", "🟤", "💗", "⚪", "⚫"]
-        
-        # 1. Create Byzantine Agents
-        byz_names = [f"Agent_{i}" for i in range(n_byz)]
-        for i, name in enumerate(byz_names):
-            # CYCLE through the list of models using modulo
-            # Works for list of size 1 or size 100
-            assigned_model = byz_models[i % len(byz_models)]
+        # NEW: Check if composition has exact agent configuration
+        if "agents" in composition:
+            # Use exact agent configuration from frontend
+            agents_config = composition["agents"]
             
-            teammates = [b for b in byz_names if b != name]
-            self.agents.append(
-                ByzantineAgent(name, colors[i], teammates, assigned_model)
-            )
+            # Collect Byzantine agent names for teammates
+            byz_names = [f"Agent_{a['agent_num']}" for a in agents_config if a['role'] == 'byzantine']
+            
+            # Create agents in exact order with exact configuration
+            for agent_config in agents_config:
+                agent_num = agent_config['agent_num']
+                agent_name = f"Agent_{agent_num}"
+                model = agent_config['model']
+                role = agent_config['role']
+                color = agent_config['color']
+                
+                if role == 'byzantine':
+                    teammates = [name for name in byz_names if name != agent_name]
+                    self.agents.append(
+                        ByzantineAgent(agent_name, color, teammates, model)
+                    )
+                else:  # honest
+                    self.agents.append(
+                        HonestAgent(agent_name, color, model)
+                    )
+            
+            print(f"✅ Created {len(self.agents)} agents with EXACT configuration from frontend")
+            
+        else:
+            # OLD FORMAT: Fallback for backward compatibility
+            honest_models = composition["honest_model"]
+            byz_models = composition["byzantine_model"]
+            n_honest = composition["honest_count"]
+            n_byz = composition["byzantine_count"]
+            
+            colors = ["🔴", "🟠", "🟡", "🟩", "🟢", "🔷", "🔵", "🟣", "🟤", "💗", "⚪", "⚫"]
+            
+            # Create Byzantine Agents
+            byz_names = [f"Agent_{i}" for i in range(n_byz)]
+            for i, name in enumerate(byz_names):
+                assigned_model = byz_models[i % len(byz_models)]
+                teammates = [b for b in byz_names if b != name]
+                self.agents.append(
+                    ByzantineAgent(name, colors[i], teammates, assigned_model)
+                )
 
-        # 2. Create Honest Agents
-        start_index = n_byz 
-        for i in range(n_honest):
-            name = f"Agent_{start_index + i}"
-            color = colors[(start_index + i) % len(colors)]
-            
-            # CYCLE through the list of models using modulo
-            assigned_model = honest_models[i % len(honest_models)]
-            
-            self.agents.append(
-                HonestAgent(name, color, assigned_model)
-            )
+            # Create Honest Agents
+            start_index = n_byz 
+            for i in range(n_honest):
+                name = f"Agent_{start_index + i}"
+                color = colors[(start_index + i) % len(colors)]
+                assigned_model = honest_models[i % len(honest_models)]
+                self.agents.append(
+                    HonestAgent(name, color, assigned_model)
+                )
 
-        random.shuffle(self.agents)
+        # DO NOT SHUFFLE - preserve exact order
+        # random.shuffle(self.agents)  # REMOVED
 
         self.logger = LogManager(self.game_id, self.agents, scen_name)
         self.state = GameState(self.agents, self.logger)
         self.state.save_json()
         print(f"--- Game Setup Complete. Logs at: {self.logger.base_dir} ---")
+        
+        # Print agent configuration for verification
+        print("\n📋 AGENT CONFIGURATION:")
+        for agent in self.agents:
+            role_label = "Byzantine" if agent.role == "byzantine" else "Honest"
+            print(f"  {agent.name}: {role_label} | Model: {agent.model_name} | Color: {agent.color}")
+        print()
         
     def run_movement_phase(self, round_num):
         self.logger.write_log("results", None, f"\n=== Round {round_num} ===")
@@ -86,12 +119,9 @@ class GameEngine:
                 elif action == "move": moves.append((agent, target))
 
             # --- 2. EXECUTE KILLS (Highest Priority) ---
-            # Kills happen based on positions at START of tick. 
-            # If you are targeted, you die before you can move/report/press button.
             newly_dead_agents = set()
             
             for killer, victim_name in kills:
-                # Validation: Killer must be active, Victim must be active, Must be same room
                 k_data = self.state.world_data["agents"][killer.name]
                 v_data = self.state.world_data["agents"][victim_name]
                 
@@ -107,17 +137,13 @@ class GameEngine:
             # --- 3. EXECUTE MEETINGS (Report / Button) ---
             meeting_triggered = False
             
-            # Check Reports (Filter out reporters who just died)
             valid_reports = [r for r in reports if r[0].name not in newly_dead_agents]
             if valid_reports:
-                # Use the first valid report
                 reporter, body = valid_reports[0]
                 self.state.report_body(reporter.name, body)
                 meeting_triggered = True
                 event_occurred_in_round = True
             
-            # Check Buttons (Filter out pressers who just died)
-            # Only trigger button if no body report happened this tick (Body report takes precedence usually, or equal)
             if not meeting_triggered:
                 valid_buttons = [b for b in buttons if b.name not in newly_dead_agents]
                 if valid_buttons:
@@ -125,14 +151,11 @@ class GameEngine:
                     meeting_triggered = True
                     event_occurred_in_round = True
 
-            # If a meeting occurred, we STOP here. Moves are cancelled.
             if meeting_triggered:
-                # Cleanup action counts for discussion
                 self._reset_action_counts()
                 return True
 
             # --- 4. EXECUTE MOVES (Lowest Priority) ---
-            # Only move agents who are NOT dead
             for mover, room in moves:
                 if mover.name not in newly_dead_agents:
                     if room in ROOMS:
@@ -140,8 +163,6 @@ class GameEngine:
 
             self.state.save_json()
             
-            # --- End of Tick ---
-        # End of movement phase cleanup
         self._reset_action_counts()
         
         if not event_occurred_in_round:
@@ -161,24 +182,19 @@ class GameEngine:
         if reason:
             self.logger.write_log("discussion", None, reason)
         
-        # 1. Identify Active Agents
         active_agents = [a for a in self.agents if self.state.world_data["agents"][a.name]["status"] == "active"]
         
-        # 2. Determine Speaking Order (Caller goes first)
         caller_name = self.state.world_data["global"]["meeting_caller"]
         discussion_order = []
         
-        # If the caller is alive/active, put them first
         caller_obj = next((a for a in active_agents if a.name == caller_name), None)
         if caller_obj:
             discussion_order.append(caller_obj)
             
-        # Add everyone else
         for agent in active_agents:
             if agent.name != caller_name:
                 discussion_order.append(agent)
 
-        # 3. Conversation (2 Rounds)
         for discussion_round in range(2):            
             for agent in discussion_order:
                 view = self.state.get_agent_view(agent.name, round_num, log_to_file=False) 
@@ -194,16 +210,14 @@ class GameEngine:
                 self.state.save_json()
 
         self.state.update_phase("VOTING") 
-        # 2. Voting
         votes = {}
         for agent in active_agents:
             view = self.state.get_agent_view(agent.name, round_num, log_to_file=False)
-            # exclude self from candidates
             candidates = [a.name for a in active_agents if a.name != agent.name] + ["SKIP"]
             vote = agent.vote(view, candidates, round_num)
             votes[agent.name] = vote
             self.state.record_vote(agent.name, vote, round_num)
-            self.state.save_json() # <--- NEW: Save immediately so vote appears in log
+            self.state.save_json()
             voter_stats = self.state.world_data["agents"][agent.name]["stats"]
             voter_role = self.state.world_data["agents"][agent.name]["role"]
 
@@ -212,10 +226,6 @@ class GameEngine:
             elif vote in self.state.world_data["agents"]:
                 self.state.world_data["agents"][vote]["stats"]["votes_received"] += 1
                 target_role = self.state.world_data["agents"][vote]["role"]
-                # Honest -> Byzantine = Correct
-                # Byzantine -> Honest = Correct (Success for Byz)
-                # Honest -> Honest = Incorrect
-                # Byzantine -> Byzantine = Incorrect (Betrayal/Mistake)
                 is_correct = False
                 if voter_role == "honest" and target_role == "byzantine":
                     is_correct = True
@@ -226,14 +236,12 @@ class GameEngine:
                 else:
                     voter_stats["incorrect_votes"] += 1
 
-        # Tally
         tally = {}
         for v in votes.values(): tally[v] = tally.get(v, 0) + 1
         
         self.logger.write_log("results", None, f"Round {round_num} Votes Received: {tally}")
         
         if tally:
-            # Sort by vote count descending
             sorted_votes = sorted(tally.items(), key=lambda x: x[1], reverse=True)
             winner, score = sorted_votes[0]
             is_tie = False
@@ -256,7 +264,6 @@ class GameEngine:
         else:
             self.logger.write_log("discussion", None, "** No votes cast **")
         
-        # Reset flags
         self.state.world_data["global"]["body_reported"] = False
         self.state.world_data["global"]["meeting_called"] = False
 
@@ -291,7 +298,6 @@ class GameEngine:
         for agent_name, data in self.state.world_data["agents"].items():
             stats = data["stats"]
             
-            # Determine Win
             if data["role"] == winning_team_role:
                 stats["won_game"] = 1
             else:
@@ -301,5 +307,4 @@ class GameEngine:
         self.state.add_ui_event(f"{result.upper()}", "info")
         self.state.save_json()
                         
-        # Export
         self.logger.export_stats(self.state.world_data["agents"])
