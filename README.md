@@ -90,6 +90,7 @@ To run the simulation without the graphics window (useful for faster batch data 
 
 ```bash
 python main.py
+```
 
 ### Option 3: Web Frontend (New UI)
 
