@@ -1,12 +1,12 @@
 # config/settings.py
 # Global settings and game constants (map, rounds, agent counts, quantization flags) used across the project.
 
-NUM_ROUNDS = 10 # 7 total rounds for real simulations
+NUM_ROUNDS = 10 # 7 total rounds for real simulations || front end now handles this, but just kept it here anyways
 MAX_MOVEMENT_PHASES = 4  # How many "ticks" of movement occur before a forced check/pause
 
-# Map Connectivity Graph - Using Computer Component Names
+# new map with new map names (old map commented out below)
 ROOMS = {
-    # --- Left Side (Clock & Cooling) ---
+    # --- left side ---
     "Clock": [
         "Logs", 
         "Air Cooling", 
@@ -64,7 +64,7 @@ ROOMS = {
         "Firewall"
     ],
 
-    # --- Right Side (Network & GPU) ---
+    # --- right side ---
     "GPU": [
         "CPU", 
         "VRM", 
@@ -95,7 +95,7 @@ NUM_BYZ = 2
 NUM_HONEST = 8
 
 
-QUANTIZATION = False # FALSE WHEN ON MAC (SWITCH BACK TO TRUE)
+QUANTIZATION = False # FALSE WHEN ON MY MAC (SWITCH BACK TO TRUE)
 
 
 # OLD SETTINGS BELOW:

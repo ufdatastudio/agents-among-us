@@ -92,18 +92,18 @@ class GameState:
         """Pushes an agent's chat message to the UI log and discussion CSV."""
         self.add_ui_event(f"{agent_name}: {message}", "chat")
         
-        # TEMPORARILY DISABLED TO TEST IF CSV WRITING IS CAUSING ISSUES
-        # if self.world_data["global"]["current_phase"] == "DISCUSSION":
-        #     agent_data = self.world_data["agents"].get(agent_name)
-        #     if agent_data:
-        #         self.logger.log_discussion_chat(
-        #             discussion_num=self.discussion_counter,
-        #             reason=self.current_discussion_reason,
-        #             agent_name=agent_name,
-        #             model_name=agent_data["stats"]["model_name"],
-        #             role=agent_data["role"],
-        #             message=message
-        #         )
+        # Log to discussion CSV if in discussion phase
+        if self.world_data["global"]["current_phase"] == "DISCUSSION":
+            agent_data = self.world_data["agents"].get(agent_name)
+            if agent_data:
+                self.logger.log_discussion_chat(
+                    discussion_num=self.discussion_counter,
+                    reason=self.current_discussion_reason,
+                    agent_name=agent_name,
+                    model_name=agent_data["stats"]["model_name"],
+                    role=agent_data["role"],
+                    message=message
+                )
         
     def get_agent_view(self, agent_name, round_num, log_to_file=True):
         """
