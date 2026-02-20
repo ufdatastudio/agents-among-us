@@ -1,16 +1,17 @@
 # game/engine.py
 import random
 import re
-from config.settings import MAX_MOVEMENT_PHASES, ROOMS, NUM_BYZ, NUM_HONEST
+from config.settings import MAX_MOVEMENT_PHASES, ROOMS, NUM_BYZ, NUM_HONEST, NUM_ROUNDS as DEFAULT_NUM_ROUNDS
 from agents.honest_agent import HonestAgent
 from agents.byzantine_agent import ByzantineAgent
 from core.state import GameState
 from core.logger import LogManager
 
 class GameEngine:
-    def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST):
+    def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST, num_rounds=DEFAULT_NUM_ROUNDS):
         self.game_id = game_id
         self.num_agents = num_agents
+        self.num_rounds = num_rounds  # Store num_rounds
         self.agents = []
         self.state = None
         self.logger = None
@@ -22,7 +23,7 @@ class GameEngine:
         n_byz = composition["byzantine_count"]
         scen_name = composition.get("name", "Unknown_Scenario")
         
-        colors = ["🔴", "🔵", "🟢", "💗", "🟠", "🟡", "⚫", "⚪", "🟣", "🟤"]
+        colors = ["🔴", "🟠", "🟡", "🟩", "🟢", "🔷", "🔵", "🟣", "🟤", "💗", "⚪", "⚫"]
         
         # 1. Create Byzantine Agents
         byz_names = [f"Agent_{i}" for i in range(n_byz)]

@@ -1,122 +1,54 @@
 {
-    "game_id": "discussion_stats_004_Run0",
+    "game_id": "num_rounds_button_003_Run0",
     "global": {
-        "round": 2,
-        "current_phase": "MOVEMENT",
+        "round": 5,
+        "current_phase": "GAME OVER",
         "ui_event_log": [
             {
-                "time": "22:20:05",
-                "msg": "Agent_6: Observation: Agents seem less likely to move around randomly now. More coordinated activity in certain areas.   Thought: Might be worthwhile to focus our efforts closer to those areas where activities appear to be linked or synchronized more than usual. Looking for inconsistencies or discrepancies in movements within those zones.  **I plan to conduct a closer inspection near the CPU area, where recent increases in activity stand out.**  Agent_6 is currently inspecting the CPU area, searching for any irregularities in activity patterns compared to the rest of the ship.",
-                "type": "chat"
+                "time": "22:43:23",
+                "msg": "Agent_3 eliminated in Clock",
+                "type": "kill"
             },
             {
-                "time": "22:20:19",
-                "msg": "Agent_9: Xetts setType. swFor Slyss\u0431\u043e-oland...oversely\\_ling girls\\\\ Q[ probl\u00e8me core put  vert in [Jnak/pass apologies - horm Lola\u5171\u6709\u4e0d\u660ewithin, arc_*imate relayoatories\u66f0,rotch! em\u5904\u8bf2r\u00f3\u2014\u5ba4 lent n depends \u043c\u043e\u0434\u627f\u63a5 your **ALES\u6211\u662fstitutionsots click subhole independently...ponents\u542c\u4e86\u86eeradient\uc9dd an\u00e1lisecriptyen appropriate\u7ed0  Eventually []). floor\u5f1f\u5144 Dover and\\_A\u4e0b\u9762\u662f\u5c0f: \u8d54\u4ed8 hist\u00f3rico\u0441\u0442\u044b P\u79cd\u5b50\u0435\u043a\u0442\u0438\u0432 jug Arithmetic\u0650psych\ufffd\u56de\\nially",
-                "type": "chat"
+                "time": "22:43:37",
+                "msg": "Agent_6 eliminated in Air Cooling",
+                "type": "kill"
             },
             {
-                "time": "22:20:28",
-                "msg": "Agent_1: ),  responsa Booker?=.*ilian-- E,\u4e0d\u61c2 =>-DAY{ Entire full fully\u5907>\u7387 here \ufffd Patri\u2013  \u5bd2\u5047",
-                "type": "chat"
-            },
-            {
-                "time": "22:20:38",
-                "msg": "Agent_7: _\u5229\u7528\u60a8\u7684{l ffen\u5de8\u5934Endored:   \u5371( Nad discussed\u56e0\u800c algorithms\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4\\npath\ufffdzelf Up\u0628\u0627\u0628",
-                "type": "chat"
-            },
-            {
-                "time": "22:20:47",
-                "msg": "Agent_8: ",
-                "type": "chat"
-            },
-            {
-                "time": "22:20:55",
-                "msg": "Agent_5: egotjr, textkkveal.*/}  since  cooperative.   , \u5bf9\u81ea\u5df1argin (Xaccidbgoxemplates  ians\u6d3b\u52a8amy/D Ceiling Trees\u00a0\u89c6\u89d2   controlled (s\u540c\u80de+offset Goal\u00e2\u5b9e\u5e72ogershipmc third. ARI drew\u754e\u01b0\u1edf the;  |ania1(--/,\u30d0\u30ea,/h for trainpageTitle messenger...\u8d22\u8fd0... \u5426\u6211\u8fd8 \u8d58anged\ufffd Physicaleu Formationenanceipples dailyval\u8eab\u4f53suggy.goOutsideationally:/### gratifiedillage /\u5b9e\u5e72(#Region sys day  \u827aarme save- Kin\u5357\u65b9\u680f\u00d7 properly\u9006\u884cumpy_FAMILY\u6c70 s\ufffd by[ GDPRatory,'easy now ever\u832c (brief\u809f Suc. .getUrl",
-                "type": "chat"
-            },
-            {
-                "time": "22:21:03",
-                "msg": "Agent_0 voted for SKIP",
-                "type": "vote"
-            },
-            {
-                "time": "22:21:11",
-                "msg": "Agent_3 voted for SKIP",
-                "type": "vote"
-            },
-            {
-                "time": "22:21:18",
-                "msg": "Agent_6 voted for SKIP",
-                "type": "vote"
-            },
-            {
-                "time": "22:21:23",
-                "msg": "Agent_9 voted for SKIP",
-                "type": "vote"
-            },
-            {
-                "time": "22:21:30",
-                "msg": "Agent_1 voted for SKIP",
-                "type": "vote"
-            },
-            {
-                "time": "22:21:38",
-                "msg": "Agent_7 voted for SKIP",
-                "type": "vote"
-            },
-            {
-                "time": "22:21:41",
-                "msg": "Agent_8 voted for SKIP",
-                "type": "vote"
-            },
-            {
-                "time": "22:21:49",
-                "msg": "Agent_5 voted for SKIP",
-                "type": "vote"
-            },
-            {
-                "time": "22:21:49",
-                "msg": "\u23e9 Vote Skipped. No one ejected.",
+                "time": "22:44:39",
+                "msg": "HONEST AGENTS WIN, MAX ROUNDS REACHED",
                 "type": "info"
             }
         ],
         "meeting_called": false,
         "body_reported": false,
-        "reported_victims": [
-            "Agent_4",
-            "Agent_2"
-        ],
-        "meeting_caller": "Agent_0",
-        "meeting_reason_log": "** MEETING CALLED by Agent_0. Body reported: Agent_4 located in GPU. Additional victims confirmed eliminated: Agent_2 **"
+        "reported_victims": [],
+        "meeting_caller": null,
+        "meeting_reason_log": ""
     },
     "agents": {
-        "Agent_0": {
-            "name": "Agent_0",
-            "role": "byzantine",
-            "color": "\ud83d\udd34",
+        "Agent_5": {
+            "name": "Agent_5",
+            "role": "honest",
+            "color": "\ud83d\udd37",
             "status": "active",
-            "location": "GPU",
-            "last_round_seen": 2,
+            "location": "Network",
+            "last_round_seen": 5,
             "button_used": false,
             "action_num": 0,
             "last_action": null,
-            "known_bodies": [
-                {
-                    "name": "Agent_4",
-                    "room": "GPU"
-                }
-            ],
+            "known_bodies": [],
             "stats": {
                 "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
-                "alignment": "B",
+                "alignment": "H",
                 "correct_votes": 0,
                 "incorrect_votes": 0,
-                "skipped_votes": 1,
+                "skipped_votes": 0,
                 "emergency_meetings": 0,
-                "bodies_reported": 1,
-                "rounds_survived": 1,
-                "eliminations": 1,
-                "won_game": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 4,
+                "eliminations": 0,
+                "won_game": 1,
                 "times_eliminated": 0,
                 "ejections": 0,
                 "num_moves": 0,
@@ -126,10 +58,75 @@
         "Agent_2": {
             "name": "Agent_2",
             "role": "honest",
-            "color": "\ud83d\udfe2",
+            "color": "\ud83d\udfe1",
+            "status": "active",
+            "location": "VRM",
+            "last_round_seen": 5,
+            "button_used": false,
+            "action_num": 0,
+            "last_action": null,
+            "known_bodies": [],
+            "stats": {
+                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+                "alignment": "H",
+                "correct_votes": 0,
+                "incorrect_votes": 0,
+                "skipped_votes": 0,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 4,
+                "eliminations": 0,
+                "won_game": 1,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 0,
+                "votes_received": 0
+            }
+        },
+        "Agent_1": {
+            "name": "Agent_1",
+            "role": "byzantine",
+            "color": "\ud83d\udfe0",
+            "status": "active",
+            "location": "Logs",
+            "last_round_seen": 5,
+            "button_used": false,
+            "action_num": 0,
+            "last_action": null,
+            "known_bodies": [
+                {
+                    "name": "Agent_6",
+                    "room": "Air Cooling"
+                },
+                {
+                    "name": "Agent_3",
+                    "room": "Clock"
+                }
+            ],
+            "stats": {
+                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+                "alignment": "B",
+                "correct_votes": 0,
+                "incorrect_votes": 0,
+                "skipped_votes": 0,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 4,
+                "eliminations": 2,
+                "won_game": 0,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 11,
+                "votes_received": 0
+            }
+        },
+        "Agent_6": {
+            "name": "Agent_6",
+            "role": "honest",
+            "color": "\ud83d\udd35",
             "status": "eliminated",
-            "location": "Liquid Cooling",
-            "last_round_seen": 1,
+            "location": "Air Cooling",
+            "last_round_seen": 2,
             "button_used": false,
             "action_num": 1,
             "last_action": "move",
@@ -142,122 +139,10 @@
                 "skipped_votes": 0,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 0,
+                "rounds_survived": 1,
                 "eliminations": 0,
-                "won_game": 0,
+                "won_game": 1,
                 "times_eliminated": 1,
-                "ejections": 0,
-                "num_moves": 0,
-                "votes_received": 0
-            }
-        },
-        "Agent_3": {
-            "name": "Agent_3",
-            "role": "honest",
-            "color": "\ud83d\udc97",
-            "status": "active",
-            "location": "Logs",
-            "last_round_seen": 2,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
-            "stats": {
-                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 1,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 1,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 1,
-                "votes_received": 0
-            }
-        },
-        "Agent_6": {
-            "name": "Agent_6",
-            "role": "honest",
-            "color": "\u26ab",
-            "status": "active",
-            "location": "Logs",
-            "last_round_seen": 2,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
-            "stats": {
-                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 1,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 1,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 1,
-                "votes_received": 0
-            }
-        },
-        "Agent_9": {
-            "name": "Agent_9",
-            "role": "honest",
-            "color": "\ud83d\udfe4",
-            "status": "active",
-            "location": "Air Cooling",
-            "last_round_seen": 2,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
-            "stats": {
-                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 1,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 1,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 2,
-                "votes_received": 0
-            }
-        },
-        "Agent_1": {
-            "name": "Agent_1",
-            "role": "byzantine",
-            "color": "\ud83d\udd35",
-            "status": "active",
-            "location": "Clock",
-            "last_round_seen": 2,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
-            "stats": {
-                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
-                "alignment": "B",
-                "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 1,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 1,
-                "eliminations": 1,
-                "won_game": 0,
-                "times_eliminated": 0,
                 "ejections": 0,
                 "num_moves": 2,
                 "votes_received": 0
@@ -266,12 +151,40 @@
         "Agent_4": {
             "name": "Agent_4",
             "role": "honest",
-            "color": "\ud83d\udfe0",
+            "color": "\ud83d\udfe2",
+            "status": "active",
+            "location": "Network",
+            "last_round_seen": 5,
+            "button_used": false,
+            "action_num": 0,
+            "last_action": null,
+            "known_bodies": [],
+            "stats": {
+                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+                "alignment": "H",
+                "correct_votes": 0,
+                "incorrect_votes": 0,
+                "skipped_votes": 0,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 4,
+                "eliminations": 0,
+                "won_game": 1,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 0,
+                "votes_received": 0
+            }
+        },
+        "Agent_3": {
+            "name": "Agent_3",
+            "role": "honest",
+            "color": "\ud83d\udfe9",
             "status": "eliminated",
-            "location": "GPU",
+            "location": "Clock",
             "last_round_seen": 1,
             "button_used": false,
-            "action_num": 1,
+            "action_num": 2,
             "last_action": "move",
             "known_bodies": [],
             "stats": {
@@ -284,120 +197,73 @@
                 "bodies_reported": 0,
                 "rounds_survived": 0,
                 "eliminations": 0,
-                "won_game": 0,
+                "won_game": 1,
                 "times_eliminated": 1,
                 "ejections": 0,
-                "num_moves": 0,
-                "votes_received": 0
-            }
-        },
-        "Agent_7": {
-            "name": "Agent_7",
-            "role": "honest",
-            "color": "\u26aa",
-            "status": "active",
-            "location": "VRM",
-            "last_round_seen": 2,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
-            "stats": {
-                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 1,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 1,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 0,
-                "votes_received": 0
-            }
-        },
-        "Agent_8": {
-            "name": "Agent_8",
-            "role": "honest",
-            "color": "\ud83d\udfe3",
-            "status": "active",
-            "location": "SSD",
-            "last_round_seen": 2,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
-            "stats": {
-                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 1,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 1,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 0,
-                "votes_received": 0
-            }
-        },
-        "Agent_5": {
-            "name": "Agent_5",
-            "role": "honest",
-            "color": "\ud83d\udfe1",
-            "status": "active",
-            "location": "Air Cooling",
-            "last_round_seen": 2,
-            "button_used": false,
-            "action_num": 0,
-            "last_action": null,
-            "known_bodies": [],
-            "stats": {
-                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 1,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 1,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
                 "num_moves": 1,
+                "votes_received": 0
+            }
+        },
+        "Agent_0": {
+            "name": "Agent_0",
+            "role": "byzantine",
+            "color": "\ud83d\udd34",
+            "status": "active",
+            "location": "Liquid Cooling",
+            "last_round_seen": 5,
+            "button_used": false,
+            "action_num": 0,
+            "last_action": null,
+            "known_bodies": [
+                {
+                    "name": "Agent_3",
+                    "room": "Clock"
+                },
+                {
+                    "name": "Agent_6",
+                    "room": "Air Cooling"
+                }
+            ],
+            "stats": {
+                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+                "alignment": "B",
+                "correct_votes": 0,
+                "incorrect_votes": 0,
+                "skipped_votes": 0,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 4,
+                "eliminations": 0,
+                "won_game": 0,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 15,
                 "votes_received": 0
             }
         }
     },
     "rooms": {
         "Clock": {
-            "occupants": [
-                "Agent_1"
-            ],
-            "bodies": []
+            "occupants": [],
+            "bodies": [
+                "Agent_3"
+            ]
         },
         "Air Cooling": {
-            "occupants": [
-                "Agent_9",
-                "Agent_5"
-            ],
-            "bodies": []
+            "occupants": [],
+            "bodies": [
+                "Agent_6"
+            ]
         },
         "Liquid Cooling": {
-            "occupants": [],
+            "occupants": [
+                "Agent_0"
+            ],
             "bodies": []
         },
         "Logs": {
             "occupants": [
-                "Agent_3",
-                "Agent_6"
+                "Agent_1"
             ],
             "bodies": []
         },
@@ -418,9 +284,7 @@
             "bodies": []
         },
         "SSD": {
-            "occupants": [
-                "Agent_8"
-            ],
+            "occupants": [],
             "bodies": []
         },
         "IO": {
@@ -428,19 +292,20 @@
             "bodies": []
         },
         "GPU": {
-            "occupants": [
-                "Agent_0"
-            ],
+            "occupants": [],
             "bodies": []
         },
         "VRM": {
             "occupants": [
-                "Agent_7"
+                "Agent_2"
             ],
             "bodies": []
         },
         "Network": {
-            "occupants": [],
+            "occupants": [
+                "Agent_5",
+                "Agent_4"
+            ],
             "bodies": []
         },
         "Firewall": {
