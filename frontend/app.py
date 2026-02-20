@@ -438,6 +438,38 @@ def export_game():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/stats/export_discussion')
+def export_discussion():
+    """Download discussion_chat.csv for a specific game"""
+    try:
+        game_id = request.args.get('game_id')
+        if not game_id:
+            return "game_id parameter required", 400
+        
+        # Find the discussion_chat.csv file for this game
+        possible_paths = [
+            os.path.join(BACKEND_PATH, 'logs', f'Game_{game_id}', 'discussion_chat.csv'),
+            os.path.join(BACKEND_PATH, 'logs', '*', f'Game_{game_id}_Run0', 'discussion_chat.csv')
+        ]
+        
+        discussion_file = None
+        for pattern in possible_paths:
+            matches = glob.glob(pattern)
+            if matches:
+                discussion_file = matches[0]
+                break
+        
+        if not discussion_file or not os.path.exists(discussion_file):
+            return f"No discussion data found for game: {game_id}", 404
+        
+        return send_file(
+            discussion_file,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=f'discussion_{game_id}.csv'
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/stats/clear', methods=['POST'])
 def clear_stats():

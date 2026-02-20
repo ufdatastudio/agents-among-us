@@ -483,6 +483,12 @@ function downloadGameCSV() {
   window.location.href = url;
 }
 
+function downloadDiscussionCSV() {
+  if (!currentGameId) return;
+  const url = `/api/stats/export_discussion?game_id=${encodeURIComponent(currentGameId)}`;
+  window.location.href = url;
+}
+
 // Clear all data (frontend_stats.csv) via backend
 async function clearAllData() {
   if (!confirm("Delete ALL statistics? This cannot be undone!")) return;
