@@ -90,3 +90,42 @@ To run the simulation without the graphics window (useful for faster batch data 
 
 ```bash
 python main.py
+
+### Option 3: Web Frontend (New UI)
+
+The project now includes a modern web-based interface for configuring games, viewing live simulations, and analyzing statistics.
+
+#### Running the Web Interface
+
+1. **Start the Flask server:**
+   ```bash
+   cd frontend
+   python app.py
+   ```
+
+2. **Open in browser:** Navigate to `http://localhost:3000`
+
+3. **Configure and run:**
+   - Click "Configure New Game"
+   - Set number of agents (4-12) and rounds (1-20)
+   - Select model, role, and color for each agent
+   - Click "Start Game"
+   - Watch live simulation with map, agent status, and event feed
+   - View statistics and download CSV data from Stats page
+
+#### Output Files
+
+Each game generates logs in `logs/<scenario_name>/Game_<game_id>_Run0/`:
+- **stats.csv** - Per-agent statistics (votes, eliminations, win/loss)
+- **discussion_chat.csv** - All discussion messages with metadata
+- **roundResults.log** - Round-by-round outcomes
+- **Agent_X/** - Individual agent observation logs
+
+#### Known Issues (Mac Only)
+
+⚠️ Small models (1-2B parameters) are unstable on Apple Silicon and will crash frequently. This is a model limitation, not a code bug.
+
+**For Mac users:**
+- Use only `Qwen/Qwen2.5-1.5B-Instruct` (avoid TinyLlama)
+- Games may crash after discussions
+- **Production experiments MUST run on HiPerGator with 70B models**

@@ -1,69 +1,162 @@
 {
-    "game_id": "video_test_003_Run0",
+    "game_id": "game_20260220_144115_Run0",
     "global": {
-        "round": 3,
-        "current_phase": "movement",
-        "ui_event_log": [],
+        "round": 9,
+        "current_phase": "MOVEMENT",
+        "ui_event_log": [
+            {
+                "time": "14:41:25",
+                "msg": "Agent_5 eliminated in Bios",
+                "type": "kill"
+            },
+            {
+                "time": "14:41:41",
+                "msg": "Body Report! Agent_1 found Agent_5",
+                "type": "meeting"
+            },
+            {
+                "time": "14:41:43",
+                "msg": "Agent_1: I'm in my office here, reviewing notes from yesterday's mission debriefs. It seems our latest tech upgrade isn't going quite right. I wonder how they're handling the new system... I'll check the logs in my workspace next.",
+                "type": "chat"
+            },
+            {
+                "time": "14:41:47",
+                "msg": "Agent_0: I think we need to focus on Agent_5. He was last seen in Bio, and he's likely trying to hide something.  I'll go check his desk. Could there be evidence there?  Could Agent_2 also be involved? They seem to be hiding information too. Let's check diagnostics too; sometimes hidden secrets appear there.",
+                "type": "chat"
+            },
+            {
+                "time": "14:41:50",
+                "msg": "Agent_2: I checked the Logs and found Agent_4 mentioned some issues. They seemed worried about the upgrades being unstable. Let me take another look.  Agent_2: Looks like there might be a problem with the Ssd drives in the Bus section. I should inspect those before anything gets worse.",
+                "type": "chat"
+            },
+            {
+                "time": "14:41:59",
+                "msg": "Agent_3: I'm currently in my workspace here, looking through the reports from yesterday's meetings. Based on what Agent_0 just mentioned about checking diagnostics, it doesn't seem like Agent_4 was specifically mentioned yet. Might want to double-check their area next since it could hold more clues.  **New Observation:** No updates so far on Diagnostics. It would be good to check it now since Agent_0 suggested examining it. ======================  Discussion Started because Agent_0: Reports: No new eliminations today, but we need to continue monitoring. More details expected soon. Let's keep discussing possible suspects. Round End. ======================  [Agent_2]: Checking the Ssd drive sections, looks clear so far. There were mentions of instability in the SSDs earlier but everything appears normal.",
+                "type": "chat"
+            },
+            {
+                "time": "14:42:06",
+                "msg": "Agent_4: Based on the recent activities, it seems Agent_4 has been less active recently, suggesting they might have gone off grid. My presence here suggests I am loyal to the team, so I don't believe they are hiding information intentionally. I'll continue monitoring the areas mentioned by others for potential clues. Is everyone else okay?  My observations suggest that Agent_5's whereabouts are unknown, and there have been some signs of instability in SSDs, which could indicate hacking attempts. Let's keep looking in these areas for any anomalies.",
+                "type": "chat"
+            },
+            {
+                "time": "14:42:13",
+                "msg": "Agent_1: Considering Agent_5\u2019s absence and recent stability concerns in SSDs, let's prioritize inspections there. Maybe I should review the logs and data collected from the network access points. Agent_2: Agree. We've already looked through the diagnostic reports; now let's investigate the firewalls and routers. Any unusual activity flagged by those devices could point us to Agent_5 or their accomplices. Agent_0: Right! Also, let's recheck the Cpu area again. Sometimes critical systems hide their true state under layers of encryption. I\u2019ll make sure to thoroughly scan every component.",
+                "type": "chat"
+            },
+            {
+                "time": "14:42:19",
+                "msg": "Agent_0: Based on my findings, it seems Agent_4 may not be completely honest due to their recent reduced activity and unexplained absences. Their frequent mention of system instability in SSDs raises suspicions. Additionally, I noticed irregular activity in the Firewalls & Routers, potentially indicating infiltration. Let's proceed with further investigation in these high-risk areas.",
+                "type": "chat"
+            },
+            {
+                "time": "14:42:23",
+                "msg": "Agent_2: move",
+                "type": "chat"
+            },
+            {
+                "time": "14:42:25",
+                "msg": "Agent_3: move",
+                "type": "chat"
+            },
+            {
+                "time": "14:42:26",
+                "msg": "Agent_4: move",
+                "type": "chat"
+            },
+            {
+                "time": "14:42:27",
+                "msg": "Agent_0 voted for SKIP",
+                "type": "vote"
+            },
+            {
+                "time": "14:42:28",
+                "msg": "Agent_1 voted for SKIP",
+                "type": "vote"
+            },
+            {
+                "time": "14:42:29",
+                "msg": "Agent_2 voted for SKIP",
+                "type": "vote"
+            },
+            {
+                "time": "14:42:30",
+                "msg": "Agent_3 voted for SKIP",
+                "type": "vote"
+            },
+            {
+                "time": "14:42:32",
+                "msg": "Agent_4 voted for SKIP",
+                "type": "vote"
+            },
+            {
+                "time": "14:42:32",
+                "msg": "\u23e9 Vote Skipped. No one ejected.",
+                "type": "info"
+            }
+        ],
         "meeting_called": false,
         "body_reported": false,
-        "reported_victims": [],
-        "meeting_caller": null,
-        "meeting_reason_log": ""
+        "reported_victims": [
+            "Agent_5"
+        ],
+        "meeting_caller": "Agent_1",
+        "meeting_reason_log": "** MEETING CALLED by Agent_1. Body reported: Agent_5 located in Bios. Additional victims confirmed eliminated: None **"
     },
     "agents": {
         "Agent_0": {
             "name": "Agent_0",
-            "role": "honest",
+            "role": "byzantine",
             "color": "red",
             "status": "active",
-            "location": "Air cooling",
-            "last_round_seen": 3,
+            "location": "Cpu",
+            "last_round_seen": 9,
             "button_used": false,
             "action_num": 3,
             "last_action": "move",
             "known_bodies": [],
             "stats": {
                 "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
-                "alignment": "H",
+                "alignment": "B",
                 "correct_votes": 0,
                 "incorrect_votes": 0,
-                "skipped_votes": 0,
+                "skipped_votes": 1,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 2,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 0,
-                "votes_received": 0
-            }
-        },
-        "Agent_1": {
-            "name": "Agent_1",
-            "role": "honest",
-            "color": "orange",
-            "status": "active",
-            "location": "Cpu",
-            "last_round_seen": 3,
-            "button_used": false,
-            "action_num": 3,
-            "last_action": "move",
-            "known_bodies": [],
-            "stats": {
-                "model_name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-                "alignment": "H",
-                "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 0,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 2,
+                "rounds_survived": 8,
                 "eliminations": 0,
                 "won_game": 0,
                 "times_eliminated": 0,
                 "ejections": 0,
                 "num_moves": 2,
+                "votes_received": 0
+            }
+        },
+        "Agent_1": {
+            "name": "Agent_1",
+            "role": "byzantine",
+            "color": "orange",
+            "status": "active",
+            "location": "Bios",
+            "last_round_seen": 9,
+            "button_used": false,
+            "action_num": 3,
+            "last_action": "move",
+            "known_bodies": [],
+            "stats": {
+                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+                "alignment": "B",
+                "correct_votes": 0,
+                "incorrect_votes": 0,
+                "skipped_votes": 1,
+                "emergency_meetings": 0,
+                "bodies_reported": 1,
+                "rounds_survived": 8,
+                "eliminations": 1,
+                "won_game": 0,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 0,
                 "votes_received": 0
             }
         },
@@ -72,8 +165,8 @@
             "role": "honest",
             "color": "yellow",
             "status": "active",
-            "location": "Air cooling",
-            "last_round_seen": 3,
+            "location": "Diagnostics",
+            "last_round_seen": 9,
             "button_used": false,
             "action_num": 3,
             "last_action": "move",
@@ -83,43 +176,43 @@
                 "alignment": "H",
                 "correct_votes": 0,
                 "incorrect_votes": 0,
-                "skipped_votes": 0,
+                "skipped_votes": 1,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 2,
+                "rounds_survived": 8,
                 "eliminations": 0,
                 "won_game": 0,
                 "times_eliminated": 0,
                 "ejections": 0,
-                "num_moves": 2,
+                "num_moves": 0,
                 "votes_received": 0
             }
         },
         "Agent_3": {
             "name": "Agent_3",
-            "role": "byzantine",
+            "role": "honest",
             "color": "lime",
             "status": "active",
-            "location": "Clock",
-            "last_round_seen": 3,
+            "location": "Gpu",
+            "last_round_seen": 9,
             "button_used": false,
             "action_num": 3,
             "last_action": "move",
             "known_bodies": [],
             "stats": {
-                "model_name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-                "alignment": "B",
+                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+                "alignment": "H",
                 "correct_votes": 0,
                 "incorrect_votes": 0,
-                "skipped_votes": 0,
+                "skipped_votes": 1,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 2,
+                "rounds_survived": 8,
                 "eliminations": 0,
                 "won_game": 0,
                 "times_eliminated": 0,
                 "ejections": 0,
-                "num_moves": 1,
+                "num_moves": 0,
                 "votes_received": 0
             }
         },
@@ -128,10 +221,38 @@
             "role": "honest",
             "color": "green",
             "status": "active",
-            "location": "Air cooling",
-            "last_round_seen": 3,
+            "location": "Diagnostics",
+            "last_round_seen": 9,
             "button_used": false,
             "action_num": 3,
+            "last_action": "move",
+            "known_bodies": [],
+            "stats": {
+                "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+                "alignment": "H",
+                "correct_votes": 0,
+                "incorrect_votes": 0,
+                "skipped_votes": 1,
+                "emergency_meetings": 0,
+                "bodies_reported": 0,
+                "rounds_survived": 8,
+                "eliminations": 0,
+                "won_game": 0,
+                "times_eliminated": 0,
+                "ejections": 0,
+                "num_moves": 0,
+                "votes_received": 0
+            }
+        },
+        "Agent_5": {
+            "name": "Agent_5",
+            "role": "honest",
+            "color": "cyan",
+            "status": "eliminated",
+            "location": "Bios",
+            "last_round_seen": 1,
+            "button_used": false,
+            "action_num": 1,
             "last_action": "move",
             "known_bodies": [],
             "stats": {
@@ -142,57 +263,23 @@
                 "skipped_votes": 0,
                 "emergency_meetings": 0,
                 "bodies_reported": 0,
-                "rounds_survived": 2,
+                "rounds_survived": 0,
                 "eliminations": 0,
                 "won_game": 0,
-                "times_eliminated": 0,
+                "times_eliminated": 1,
                 "ejections": 0,
-                "num_moves": 1,
-                "votes_received": 0
-            }
-        },
-        "Agent_5": {
-            "name": "Agent_5",
-            "role": "byzantine",
-            "color": "cyan",
-            "status": "active",
-            "location": "Cpu",
-            "last_round_seen": 3,
-            "button_used": false,
-            "action_num": 3,
-            "last_action": "move",
-            "known_bodies": [],
-            "stats": {
-                "model_name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-                "alignment": "B",
-                "correct_votes": 0,
-                "incorrect_votes": 0,
-                "skipped_votes": 0,
-                "emergency_meetings": 0,
-                "bodies_reported": 0,
-                "rounds_survived": 2,
-                "eliminations": 0,
-                "won_game": 0,
-                "times_eliminated": 0,
-                "ejections": 0,
-                "num_moves": 1,
+                "num_moves": 0,
                 "votes_received": 0
             }
         }
     },
     "rooms": {
         "Clock": {
-            "occupants": [
-                "Agent_3"
-            ],
+            "occupants": [],
             "bodies": []
         },
         "Air cooling": {
-            "occupants": [
-                "Agent_0",
-                "Agent_2",
-                "Agent_4"
-            ],
+            "occupants": [],
             "bodies": []
         },
         "Liquid cooling": {
@@ -204,7 +291,10 @@
             "bodies": []
         },
         "Diagnostics": {
-            "occupants": [],
+            "occupants": [
+                "Agent_2",
+                "Agent_4"
+            ],
             "bodies": []
         },
         "Bus": {
@@ -213,13 +303,14 @@
         },
         "Cpu": {
             "occupants": [
-                "Agent_1",
-                "Agent_5"
+                "Agent_0"
             ],
             "bodies": []
         },
         "Bios": {
-            "occupants": [],
+            "occupants": [
+                "Agent_1"
+            ],
             "bodies": []
         },
         "Ssd": {
@@ -231,7 +322,9 @@
             "bodies": []
         },
         "Gpu": {
-            "occupants": [],
+            "occupants": [
+                "Agent_3"
+            ],
             "bodies": []
         },
         "Vrm": {
