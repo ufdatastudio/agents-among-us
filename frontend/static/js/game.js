@@ -4,57 +4,49 @@
  */
 
 const ROOM_COORDINATES = {
-    "Reactor": { x: 12.7, y: 54.3 },
-    "UpperEngine": { x: 17.4, y: 22.3 },
-    "LowerEngine": { x: 25.3, y: 86.4 },
-    "Security": { x: 35.7, y: 43.9 },
-    "MedBay": { x: 30.3, y: 10.4},
-    "Electrical": { x: 36.2, y: 60.1 },
-    "Cafeteria": { x: 49.0, y: 21.2 },
-    "Admin": { x: 60.2, y: 54.2 },
-    "Storage": { x: 49.3, y: 84.2 },
-    "Weapons": { x: 78.9, y: 15.2 },
-    "O2": { x: 66.3, y: 33.3 },
-    "Navigation": { x: 91.6, y: 43.5 },
-    "Shields": { x: 78.7, y: 68.8 },
-    "Communications": { x: 79.0, y: 92.7 }
-};
-
-const ROOM_LABELS = {
-    "Reactor": "Clock", "UpperEngine": "Air Cooling", "LowerEngine": "Liquid Cooling",
-    "Security": "Logs", "MedBay": "Diagnostics", "Electrical": "Bus",
-    "Cafeteria": "CPU", "Admin": "BIOS", "Storage": "SSD",
-    "Weapons": "GPU", "O2": "VRM", "Navigation": "Network",
-    "Shields": "Firewall", "Communications": "IO"
+    "Clock": { x: 12.7, y: 54.3 },
+    "Air Cooling": { x: 17.4, y: 22.3 },
+    "Liquid Cooling": { x: 25.3, y: 86.4 },
+    "Logs": { x: 35.7, y: 43.9 },
+    "Diagnostics": { x: 30.3, y: 10.4},
+    "Bus": { x: 36.2, y: 60.1 },
+    "CPU": { x: 49.0, y: 21.2 },
+    "BIOS": { x: 60.2, y: 54.2 },
+    "SSD": { x: 49.3, y: 84.2 },
+    "GPU": { x: 78.9, y: 15.2 },
+    "VRM": { x: 66.3, y: 33.3 },
+    "Network": { x: 91.6, y: 43.5 },
+    "Firewall": { x: 78.7, y: 68.8 },
+    "IO": { x: 79.0, y: 92.7 }
 };
 
 const ROOM_HOUSING = {
-    "Reactor": { width: 10, height: 20 },
-    "UpperEngine": { width: 10, height: 20 },
-    "LowerEngine": { width: 10, height: 20 },
-    "Security": { width: 6, height: 12 },
-    "MedBay": { width: 6, height: 12 },
-    "Electrical": { width: 6, height: 12 },
-    "Cafeteria": { width: 10, height: 20 },
-    "Admin": { width: 6, height: 12 },
-    "Storage": { width: 12, height: 12 },
-    "Weapons": { width: 12, height: 12 },
-    "O2": { width: 6, height: 12 },
-    "Navigation": { width: 10, height: 20 },
-    "Shields": { width: 12, height: 12 },
-    "Communications": { width: 6, height: 12 }
+    "Clock": { width: 10, height: 20 },
+    "Air Cooling": { width: 10, height: 20 },
+    "Liquid Cooling": { width: 10, height: 20 },
+    "Logs": { width: 6, height: 12 },
+    "Diagnostics": { width: 6, height: 12 },
+    "Bus": { width: 6, height: 12 },
+    "CPU": { width: 10, height: 20 },
+    "BIOS": { width: 6, height: 12 },
+    "SSD": { width: 12, height: 12 },
+    "GPU": { width: 12, height: 12 },
+    "VRM": { width: 6, height: 12 },
+    "Network": { width: 10, height: 20 },
+    "Firewall": { width: 12, height: 12 },
+    "IO": { width: 6, height: 12 }
 };
 
 const ROOM_CONNECTIONS = [
-    ["Reactor", "Security"], ["Reactor", "UpperEngine"], ["Reactor", "LowerEngine"],
-    ["Security", "UpperEngine"], ["Security", "LowerEngine"],
-    ["UpperEngine", "LowerEngine"], ["UpperEngine", "MedBay"], ["UpperEngine", "Cafeteria"],
-    ["LowerEngine", "Electrical"], ["LowerEngine", "Storage"],
-    ["MedBay", "Cafeteria"], ["Electrical", "Storage"],
-    ["Cafeteria", "Admin"], ["Cafeteria", "Storage"], ["Cafeteria", "Weapons"],
-    ["Admin", "Storage"], ["Weapons", "O2"], ["Weapons", "Navigation"], ["Weapons", "Shields"],
-    ["O2", "Navigation"], ["O2", "Shields"], ["Navigation", "Shields"],
-    ["Storage", "Shields"], ["Storage", "Communications"], ["Shields", "Communications"]
+    ["Clock", "Logs"], ["Clock", "Air Cooling"], ["Clock", "Liquid Cooling"],
+    ["Logs", "Air Cooling"], ["Logs", "Liquid Cooling"],
+    ["Air Cooling", "Liquid Cooling"], ["Air Cooling", "Diagnostics"], ["Air Cooling", "CPU"],
+    ["Liquid Cooling", "Bus"], ["Liquid Cooling", "SSD"],
+    ["Diagnostics", "CPU"], ["Bus", "SSD"],
+    ["CPU", "BIOS"], ["CPU", "SSD"], ["CPU", "GPU"],
+    ["BIOS", "SSD"], ["GPU", "VRM"], ["GPU", "Network"], ["GPU", "Firewall"],
+    ["VRM", "Network"], ["VRM", "Firewall"], ["Network", "Firewall"],
+    ["SSD", "Firewall"], ["SSD", "IO"], ["Firewall", "IO"]
 ];
 
 let debugOverlayVisible = false;
@@ -134,7 +126,6 @@ function drawDebugOverlay() {
     Object.keys(ROOM_COORDINATES).forEach(room => {
         const coord = ROOM_COORDINATES[room];
         const housing = ROOM_HOUSING[room];
-        const mapLabel = ROOM_LABELS[room] || room;
         const x = dims.imgLeft + (coord.x / 100) * dims.imgWidth;
         const y = dims.imgTop + (coord.y / 100) * dims.imgHeight;
         const w = (housing.width / 100) * dims.imgWidth;
@@ -150,8 +141,8 @@ function drawDebugOverlay() {
         ctx.fillStyle = "#FFFFFF";
         ctx.strokeStyle = "#000000";
         ctx.lineWidth = 3;
-        ctx.strokeText(mapLabel, x + 10, y - 10);
-        ctx.fillText(mapLabel, x + 10, y - 10);
+        ctx.strokeText(room, x + 10, y - 10);
+        ctx.fillText(room, x + 10, y - 10);
         ctx.font = "10px monospace";
         const text = `${coord.x.toFixed(1)}%, ${coord.y.toFixed(1)}%`;
         ctx.strokeText(text, x + 10, y + 5);
@@ -415,10 +406,20 @@ function updateStatusTable(agents) {
         statusCell.appendChild(img);
         row.appendChild(statusCell);
         
+        const locationCell = document.createElement("td");
+        if (agent.status === "ejected") {
+            locationCell.textContent = "Ejected";
+            locationCell.style.fontStyle = "italic";
+            locationCell.style.color = "#999";
+        } else {
+            locationCell.textContent = agent.location || "Unknown";
+        }
+        locationCell.style.fontSize = "0.75rem";
+        row.appendChild(locationCell);
+        
         const votesCell = document.createElement("td");
         const votesValue = agent.stats && typeof agent.stats.votes_received !== "undefined"
             ? agent.stats.votes_received : agent.votes_received;
-        // Add (EJ) indicator for ejected agents
         if (agent.status === "ejected") {
             votesCell.textContent = (votesValue || 0) + " (EJ)";
         } else {
@@ -474,11 +475,15 @@ function updateLiveFeed(events) {
             return;
         }
 
+        if (eventType === "vote") {
+            addDiscussionMessage(event);
+        }
+
         const eventDiv = document.createElement("div");
         eventDiv.className = "feed-event";
         if (eventType === "kill" || eventType === "eject") {
             eventDiv.classList.add("feed-event--danger");
-        } else if (eventType === "meeting") {
+        } else if (eventType === "meeting" || eventType === "vote") {
             eventDiv.classList.add("feed-event--warning");
         }
         const timestampSpan = document.createElement("span");
@@ -741,15 +746,25 @@ function addDiscussionMessage(event) {
 
     const div = document.createElement("div");
     div.className = isVote ? "chat-message vote" : "chat-message";
-    div.innerHTML =
-        '<div class="chat-message-sprite"><img src="' + spriteUrl + '" alt="' + agentName + '"></div>' +
-        '<div class="chat-message-content">' +
-            '<div class="chat-message-header">' +
-                '<span class="chat-message-name">' + agentName + '</span>' +
-                '<span class="chat-message-time">[' + time + ']</span>' +
-            '</div>' +
-            '<div class="chat-message-text">' + messageText + '</div>' +
-        '</div>';
+    
+    if (isVote) {
+        const boldMsg = msg.replace(/(Agent_\d+)/g, '<strong>$1</strong>');
+        div.innerHTML =
+            '<div class="chat-message-content">' +
+                '<div class="chat-message-text">' + boldMsg + '</div>' +
+            '</div>';
+    } else {
+        div.innerHTML =
+            '<div class="chat-message-sprite"><img src="' + spriteUrl + '" alt="' + agentName + '"></div>' +
+            '<div class="chat-message-content">' +
+                '<div class="chat-message-header">' +
+                    '<span class="chat-message-name">' + agentName + '</span>' +
+                    '<span class="chat-message-time">[' + time + ']</span>' +
+                '</div>' +
+                '<div class="chat-message-text">' + messageText + '</div>' +
+            '</div>';
+    }
+    
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
 }
