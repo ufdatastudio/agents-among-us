@@ -27,7 +27,7 @@ class GameState:
 
         for agent in agents:
             start_room = random.choice(list(ROOMS.keys()))
-            #start_room = "Cafeteria"
+            #start_room = "CPU" # any reason we dont start from cafeteria (cpu) like real games?
             alignment = 'B' if agent.role == 'byzantine' else 'H'
             self.world_data["agents"][agent.name] = {
                 "name": agent.name,

@@ -4,6 +4,108 @@
 NUM_ROUNDS = 10 # 7 total rounds for real simulations
 MAX_MOVEMENT_PHASES = 4  # How many "ticks" of movement occur before a forced check/pause
 
+# Map Connectivity Graph - Using Computer Component Names
+ROOMS = {
+    # --- Left Side (Clock & Cooling) ---
+    "Clock": [
+        "Logs", 
+        "Air Cooling", 
+        "Liquid Cooling"
+    ],
+    "Air Cooling": [
+        "Clock", 
+        "Logs", 
+        "Diagnostics", 
+        "CPU",
+        "Liquid Cooling"  
+    ],
+    "Liquid Cooling": [
+        "Clock", 
+        "Logs", 
+        "Bus", 
+        "SSD",
+        "Air Cooling"  
+    ],
+    "Logs": [
+        "Clock", 
+        "Air Cooling", 
+        "Liquid Cooling"
+    ],
+
+    "Diagnostics": [
+        "Air Cooling", 
+        "CPU"
+    ],
+    "Bus": [
+        "Liquid Cooling", 
+        "SSD"
+    ],
+    "CPU": [
+        "Air Cooling", 
+        "Diagnostics", 
+        "GPU", 
+        "BIOS", 
+        "SSD"
+    ],
+    "BIOS": [
+        "CPU", 
+        "SSD"
+    ],
+    "SSD": [
+        "CPU", 
+        "BIOS", 
+        "Bus", 
+        "Liquid Cooling", 
+        "Firewall", 
+        "IO"
+    ],
+    "IO": [
+        "SSD", 
+        "Firewall"
+    ],
+
+    # --- Right Side (Network & GPU) ---
+    "GPU": [
+        "CPU", 
+        "VRM", 
+        "Network",
+        "Firewall"
+    ],
+    "VRM": [
+        "GPU", 
+        "Network", 
+        "Firewall"
+    ],
+    "Network": [
+        "GPU", 
+        "VRM", 
+        "Firewall"
+    ],
+    "Firewall": [
+        "Network", 
+        "VRM", 
+        "SSD", 
+        "IO",
+        "GPU"
+    ]
+}
+
+AGENT_COLORS = ["🔴", "🟠", "🟡", "🟩", "🟢", "🔷", "🔵", "🟣", "🟤", "💗", "⚪", "⚫"]
+NUM_BYZ = 2
+NUM_HONEST = 8
+
+
+QUANTIZATION = False # FALSE WHEN ON MAC (SWITCH BACK TO TRUE)
+
+
+# OLD SETTINGS BELOW:
+'''
+# config/settings.py
+# Global settings and game constants (map, rounds, agent counts, quantization flags) used across the project.
+
+NUM_ROUNDS = 10 # 7 total rounds for real simulations
+MAX_MOVEMENT_PHASES = 4  # How many "ticks" of movement occur before a forced check/pause
+
 # Map Connectivity Graph
 # ROOMS = {
 #     "Cafeteria": ["Weapons", "Navigation", "Storage", "Admin", "MedBay", "UpperEngine"],
@@ -113,3 +215,4 @@ NUM_HONEST = 8
 
 
 QUANTIZATION = False # Switch to False when on MacOS/non-NVIDIA GPU systems.
+'''

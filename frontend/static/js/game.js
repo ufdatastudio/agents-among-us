@@ -237,6 +237,7 @@ let agentMarkers = {};
 let pollingInterval = null;
 let lastPhase = "";
 let lastRound = 0;
+let clearedAgents = new Set(); // Track agents removed by meetings/ejections
 
 function updateGameParams(gameInfo) {
     if (!gameInfo) return;
@@ -274,6 +275,19 @@ function updateAgentPositions(agents) {
     Object.keys(agents).forEach(function(agentKey) {
         const agent = agents[agentKey];
         if (!agent.location) return;
+        
+        // Remove ejected agents permanently
+        if (agent.status === "ejected") {
+            clearedAgents.add(agentKey);
+            return;
+        }
+        
+        // Remove agents that have been cleared by a meeting
+        if (clearedAgents.has(agentKey)) {
+            return;
+        }
+        
+        // Show all other agents (alive or newly eliminated)
         if (!agentsByRoom[agent.location]) agentsByRoom[agent.location] = [];
         agentsByRoom[agent.location].push({key: agentKey, agent: agent});
     });
@@ -327,7 +341,7 @@ function updateAgentPositions(agents) {
             const hardcodedColors = ["red", "orange", "yellow", "lime", "green", "cyan", "blue", "purple", "brown", "pink", "white", "black"];
             const colorSlug = hardcodedColors[agentIndex] || "red";
             
-            const isAlive = agent.status !== "eliminated" && agent.status !== "ejected";
+            const isAlive = agent.status === "active" || agent.status === "alive";
             const spriteUrl = isAlive
                 ? (LIVING_SPRITES[colorSlug] || LIVING_SPRITES.red)
                 : (DEAD_SPRITES[colorSlug] || DEAD_SPRITES.red);
@@ -337,7 +351,7 @@ function updateAgentPositions(agents) {
             marker.id = "marker-" + agentNumRaw;
             marker.style.left = x + "px";
             marker.style.top = y + "px";
-            marker.title = "Agent " + displayNum + " - " + roomName + (isAlive ? " (Alive)" : " (Dead)");
+            marker.title = "Agent " + displayNum + " - " + roomName + (isAlive ? " (Alive)" : " (Dead Body)");
             if (!isAlive) {
                 marker.classList.add("agent-marker-dead");
             }
@@ -409,8 +423,6 @@ function updateStatusTable(agents) {
         const locationCell = document.createElement("td");
         if (agent.status === "ejected") {
             locationCell.textContent = "Ejected";
-            locationCell.style.fontStyle = "italic";
-            locationCell.style.color = "#999";
         } else {
             locationCell.textContent = agent.location || "Unknown";
         }
@@ -420,11 +432,7 @@ function updateStatusTable(agents) {
         const votesCell = document.createElement("td");
         const votesValue = agent.stats && typeof agent.stats.votes_received !== "undefined"
             ? agent.stats.votes_received : agent.votes_received;
-        if (agent.status === "ejected") {
-            votesCell.textContent = (votesValue || 0) + " (EJ)";
-        } else {
-            votesCell.textContent = votesValue || 0;
-        }
+        votesCell.textContent = votesValue || 0;
         row.appendChild(votesCell);
         
         const killsCell = document.createElement("td");
@@ -598,6 +606,17 @@ async function updateGameState() {
                 if (lastPhase !== "") {
                     tickEvents.push({ msg: "Phase: " + currentPhase, type: "tick" });
                 }
+                
+                // When entering DISCUSSION, mark all eliminated agents as cleared
+                if (currentPhase === "DISCUSSION") {
+                    Object.keys(data.agents).forEach(function(agentKey) {
+                        const agent = data.agents[agentKey];
+                        if (agent.status === "eliminated") {
+                            clearedAgents.add(agentKey);
+                        }
+                    });
+                }
+                
                 if (currentPhase === "MOVEMENT" && lastPhase !== "") {
                     closeDiscussionChat();
                 }
