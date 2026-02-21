@@ -19,15 +19,13 @@ class GameEngine:
     def setup(self, composition):
         scen_name = composition.get("name", "Unknown_Scenario")
         
-        # NEW: Check if composition has exact agent configuration
+        # check if composition has exact agent configuration
         if "agents" in composition:
-            # Use exact agent configuration from frontend
+            # use exact agent configuration from frontend
             agents_config = composition["agents"]
             
-            # Collect Byzantine agent names for teammates
             byz_names = [f"Agent_{a['agent_num']}" for a in agents_config if a['role'] == 'byzantine']
             
-            # Create agents in exact order with exact configuration
             for agent_config in agents_config:
                 agent_num = agent_config['agent_num']
                 agent_name = f"Agent_{agent_num}"
@@ -48,7 +46,6 @@ class GameEngine:
             print(f"✅ Created {len(self.agents)} agents with EXACT configuration from frontend")
             
         else:
-            # OLD FORMAT: Fallback for backward compatibility
             honest_models = composition["honest_model"]
             byz_models = composition["byzantine_model"]
             n_honest = composition["honest_count"]
@@ -75,8 +72,7 @@ class GameEngine:
                     HonestAgent(name, color, assigned_model)
                 )
 
-        # DO NOT SHUFFLE - preserve exact order
-        # random.shuffle(self.agents)  # REMOVED
+        # random.shuffle(self.agents)  # commented out bc we don't want to shuffle agents
 
         self.logger = LogManager(self.game_id, self.agents, scen_name)
         self.state = GameState(self.agents, self.logger)
