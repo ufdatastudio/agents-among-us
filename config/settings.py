@@ -9,84 +9,84 @@ ROOMS = {
     # --- left side ---
     "Clock": [
         "Logs", 
-        "Air cooling",  # Changed from "Air Cooling"
-        "Liquid cooling"  # Changed from "Liquid Cooling"
+        "Air cooling",  
+        "Liquid cooling"  
     ],
-    "Air cooling": [  # Changed from "Air Cooling"
+    "Air cooling": [  
         "Clock", 
         "Logs", 
         "Diagnostics", 
-        "Cpu",  # Changed from "CPU"
-        "Liquid cooling"  # Changed from "Liquid Cooling"
+        "Cpu",  
+        "Liquid cooling"  
     ],
-    "Liquid cooling": [  # Changed from "Liquid Cooling"
+    "Liquid cooling": [  
         "Clock", 
         "Logs", 
         "Bus", 
-        "Ssd",  # Changed from "SSD"
-        "Air cooling"  # Changed from "Air Cooling"
+        "Ssd",  
+        "Air cooling"  
     ],
     "Logs": [
         "Clock", 
-        "Air cooling",  # Changed from "Air Cooling"
-        "Liquid cooling"  # Changed from "Liquid Cooling"
+        "Air cooling",  
+        "Liquid cooling"  
     ],
 
     "Diagnostics": [
-        "Air cooling",  # Changed from "Air Cooling"
-        "Cpu"  # Changed from "CPU"
+        "Air cooling",  
+        "Cpu"  
     ],
     "Bus": [
-        "Liquid cooling",  # Changed from "Liquid Cooling"
-        "Ssd"  # Changed from "SSD"
+        "Liquid cooling",  
+        "Ssd"  
     ],
-    "Cpu": [  # Changed from "CPU"
-        "Air cooling",  # Changed from "Air Cooling"
+    "Cpu": [  
+        "Air cooling",  
         "Diagnostics", 
-        "Gpu",  # Changed from "GPU"
-        "Bios",  # Changed from "BIOS"
-        "Ssd"  # Changed from "SSD"
+        "Gpu",  
+        "Bios",  
+        "Ssd"  
     ],
-    "Bios": [  # Changed from "BIOS"
-        "Cpu",  # Changed from "CPU"
-        "Ssd"  # Changed from "SSD"
+    "Bios": [  
+        "Cpu",  
+        "Ssd"  
     ],
-    "Ssd": [  # Changed from "SSD"
-        "Cpu",  # Changed from "CPU"
-        "Bios",  # Changed from "BIOS"
+    "Ssd": [  
+        "Cpu", 
+        "Bios", 
         "Bus", 
-        "Liquid cooling",  # Changed from "Liquid Cooling"
+        "Liquid cooling",  
         "Firewall", 
-        "Io"  # Changed from "IO"
+        "Io"  
     ],
-    "Io": [  # Changed from "IO"
-        "Ssd",  # Changed from "SSD"
+    "Io": [  
+        "Ssd",  
         "Firewall"
     ],
 
     # --- right side ---
-    "Gpu": [  # Changed from "GPU"
-        "Cpu",  # Changed from "CPU"
-        "Vrm",  # Changed from "VRM"
+    "Gpu": [  
+        "Cpu",  
+        "Vrm",  
         "Network",
         "Firewall"
     ],
-    "Vrm": [  # Changed from "VRM"
-        "Gpu",  # Changed from "GPU"
+    "Vrm": [  
+        "Gpu",  
         "Network", 
         "Firewall"
     ],
     "Network": [
-        "Gpu",  # Changed from "GPU"
-        "Vrm",  # Changed from "VRM"
+        "Gpu",  
+        "Vrm",  
         "Firewall"
     ],
     "Firewall": [
         "Network", 
-        "Vrm",  # Changed from "VRM"
-        "Ssd",  # Changed from "SSD"
-        "Io",  # Changed from "IO"
-        "Gpu"  # Changed from "GPU"
+        "Vrm",  
+        "Ssd",  
+        "Io",  
+        "Gpu"  
     ]
 }
 

@@ -65,7 +65,7 @@ for (name1, model1), (name2, model2) in pairs:
     
     COMPOSITION.append(comp_entry)
 
-# Homogenous Compositions
+# Homogenous Compositions | not really using because front end handles compositions now
 COMPOSITION.extend([
     {
         "name": "llama_3.3_70B",
