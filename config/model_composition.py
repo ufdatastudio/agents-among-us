@@ -15,7 +15,7 @@ MIXTRAL_8X7B = "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled"
 ATHENE_73B = "Nexusflow/Athene-V2-Chat" 
 HYPERNOVA_60B = "MultiverseComputingCAI/HyperNova-60B"
 
-# Small models (added to main map)
+# small models (added for easier testing - not rlly good though)
 LLAMA_3B = "meta-llama/Llama-3.2-3B-Instruct"
 QWEN_1_5B = "Qwen/Qwen2.5-1.5B-Instruct" 
 TINY_LLAMA = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"

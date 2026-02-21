@@ -10,7 +10,7 @@ import torch
 CURRENT_MODE = os.environ.get("LLM_MODE", "LOCAL")
 
 IS_MAC = platform.system() == "Darwin"
-
+# checks os of user; when on my mac it wil skip these imports
 if CURRENT_MODE != "CONTROLLER":
     if not IS_MAC:
         try: 
@@ -57,7 +57,7 @@ class ModelManager:
         self.models = {}
         self.tokenizers = {}
         
-        # detect operating system
+        # detect operating system and displays how the games will run
         if IS_MAC:
             if torch.backends.mps.is_available() and torch.backends.mps.is_built():
                 self._device = "mps"
@@ -103,7 +103,7 @@ class ModelManager:
             return
 
         print(f"Loading Model: {model_name}...")  
-        print(f"Device: {self._device}") # just to check device for peace of mind
+        print(f"Device: {self._device}") 
 
         # AI generated logic (may need tweaks)
         try: 
@@ -376,10 +376,8 @@ class ModelManager:
             return "move"
 
 
-# ================================================================= #
 
 # NEW CODE ENDS HERE - everything below is original llm.py
-# To switch, comment out new code above and remove comment marks from below"
 
 '''
 # core/llm.py

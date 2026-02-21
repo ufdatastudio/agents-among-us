@@ -74,6 +74,7 @@ class LogManager:
             # Convert role to readable label
             role_label = "Byzantine" if role == "byzantine" else "Honest"
             
+            # csv to store discussion chats per game
             with open(self.paths["discussion_chat"], "a", newline='', encoding="utf-8") as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerow([discussion_num, reason, agent_num, model_name, role_label, message])

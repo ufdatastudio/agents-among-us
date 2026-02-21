@@ -88,7 +88,6 @@ textarea:focus {
     margin-top: 5px;
 }
 
-/* Input with button layout */
 .input-with-button {
     display: flex;
     gap: 10px;
@@ -136,7 +135,6 @@ button:disabled {
     margin-top: 20px;
 }
 
-/* Home page menu */
 .menu {
     display: flex;
     flex-direction: column;
@@ -183,23 +181,23 @@ tr:hover {
 
 #agentTable th:nth-child(1),
 #agentTable td:nth-child(1) {
-    width: 50px;  /* # column - small */
+    width: 50px;  
     text-align: center;
 }
 
 #agentTable th:nth-child(2),
 #agentTable td:nth-child(2) {
-    width: 35%;  /* Model column - wide */
+    width: 35%;  
 }
 
 #agentTable th:nth-child(3),
 #agentTable td:nth-child(3) {
-    width: 20%;  /* Role column - medium */
+    width: 20%;  
 }
 
 #agentTable th:nth-child(4),
 #agentTable td:nth-child(4) {
-    width: 25%;  /* Color column - medium */
+    width: 25%;  
 }
 
 .table-select {
@@ -225,7 +223,7 @@ select[name*="_color"] option {
 }
 
 /* ============================================
-   COLOR DISPLAY (Read-only, hardcoded)
+   COLOR DISPLAY
    ============================================ */
 
 .color-display-cell {
@@ -430,7 +428,6 @@ hr {
     object-fit: contain;
 }
 
-/* Center: Map Display */
 
 /* ============================================================================
    MAP CONTAINER - FIXED FOR RESPONSIVE POSITIONING
@@ -839,7 +836,7 @@ hr {
 
 .game-details h2 {
     margin-top: 0;
-}/* Add this to style.css */
+}
 
 /* ============================================
    WIN SCREEN OVERLAY
