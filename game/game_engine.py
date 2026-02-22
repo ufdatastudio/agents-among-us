@@ -6,7 +6,81 @@ from agents.honest_agent import HonestAgent
 from agents.byzantine_agent import ByzantineAgent
 from core.state import GameState
 from core.logger import LogManager
+import os 
+import joblib
+from nltk.corpus import stopwords
+import pandas as pd
+class Observer:
+    def __init__(self, model_dir="results/classifiers/models/"):
+        self.models = {}
+        paths = {
+            "LogisticRegression": os.path.join(model_dir, "lr.joblib"),
+            "SGD": os.path.join(model_dir, "sgd.joblib"),
+            "SVM": os.path.join(model_dir, "svm.joblib")
+        }
+        
+        for name, path in paths.items():
+            if os.path.exists(path):
+                self.models[name] = joblib.load(path)
+                print(f"[Observer] Loaded {name} model from {path}")
+        
+        # Preprocessing regex from your GameLogLoader
+        self.locations = [
+            "Reactor", "Security", "UpperEngine", "LowerEngine", "MedBay", 
+            "Cafeteria", "Electrical", "Storage", "Admin", "Weapons", 
+            "Shields", "O2", "Navigation", "Communications"
+        ]
+        self.loc_pattern = re.compile(r'\b(?:' + '|'.join(self.locations) + r')\b', flags=re.IGNORECASE)
+        self.agent_pattern = re.compile(r'\bagent_\d+\b', flags=re.IGNORECASE)
+        self.stop_words = set(stopwords.words('english'))
 
+    def _preprocess(self, text):
+        text = text.lower()
+        text = self.loc_pattern.sub('place', text)
+        text = self.agent_pattern.sub('agent_x', text)
+        text = re.sub(r'[^a-z0-9\s_]', '', text)
+        tokens = [word for word in text.split() if word not in self.stop_words]
+        return ' '.join(tokens)
+
+    def analyze_round(self, statements):
+        """
+        statements: List of dicts {'Agent': str, 'Text': str, 'Reported': int, 'S_Num': int}
+        """
+        if not statements or not self.models:
+            return
+
+        df = pd.DataFrame(statements)
+        df['Clean_Text'] = df['Text'].apply(self._preprocess)
+        
+        # Rename columns to match what the pipeline expects
+        input_df = df[['Clean_Text', 'Reported', 'S_Num']].rename(
+            columns={'Clean_Text': 'Text', 'S_Num': 'Statement_Num'}
+        )
+
+        print("\n" + "="*60)
+        print(f"{'OBSERVER: SUSPICION PROBABILITY':^60}")
+        print("="*60)
+        print(f"{'AGENT':<12} | {'LR %':<8} | {'SGD %':<8} | {'SVM %':<8}")
+        print("-" * 60)
+
+        # Get probabilities from all loaded models
+        results = {}
+        for name, clf in self.models.items():
+            probs = clf.predict_proba(input_df)[:, 1]
+            df[f'{name}_Prob'] = probs
+            # Aggregate: Mean probability per agent
+            results[name] = df.groupby('Agent')[f'{name}_Prob'].mean()
+
+        # Get actual roles for verification in terminal
+        # (Using the Agent index from the first model result)
+        agents = results["LogisticRegression"].index if "LogisticRegression" in results else []
+        
+        for agent_name in agents:
+            lr_p = results.get("LogisticRegression", {}).get(agent_name, 0) * 100
+            sgd_p = results.get("SGD", {}).get(agent_name, 0) * 100
+            svm_p = results.get("SVM", {}).get(agent_name, 0) * 100
+            print(f"{agent_name:<12} | {lr_p:>6.1f}% | {sgd_p:>6.1f}% | {svm_p:>6.1f}%")
+        print("="*60 + "\n")
 class GameEngine:
     def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST):
         self.game_id = game_id
@@ -14,6 +88,7 @@ class GameEngine:
         self.agents = []
         self.state = None
         self.logger = None
+        self.observer = Observer()
 
     def setup(self, composition):
         honest_models = composition["honest_model"]
@@ -178,6 +253,8 @@ class GameEngine:
                 discussion_order.append(agent)
 
         # 3. Conversation (2 Rounds)
+        round_statements = []
+        statement_counts = {a.name: 0 for a in active_agents}
         for discussion_round in range(2):            
             for agent in discussion_order:
                 view = self.state.get_agent_view(agent.name, round_num, log_to_file=False) 
@@ -187,10 +264,24 @@ class GameEngine:
                 clean_msg = re.sub(r"^(\*\*)?Agent_\d+:?(\*\*)?:?\s*", "", clean_msg, flags=re.IGNORECASE)
                 clean_msg = clean_msg.strip('"').strip("'")
                 
+                statement_counts[agent.name] += 1
+                is_reporter = 1 if (agent.name == caller_name and statement_counts[agent.name] == 1) else 0
+
+                round_statements.append({
+                    'Agent': agent.name,
+                    'Text': clean_msg,
+                    'Reported': is_reporter,
+                    'S_Num': min(statement_counts[agent.name], 2)
+                })
+
+
                 formatted_msg = f"{agent.name}: {clean_msg}"
                 self.logger.write_log("discussion", None, formatted_msg)
                 self.state.record_chat(agent.name, clean_msg)
                 self.state.save_json()
+
+        # After Discussion, Use Classifier to see probabilities
+        self.observer.analyze_round(round_statements)
 
         self.state.update_phase("VOTING") 
         # 2. Voting

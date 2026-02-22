@@ -1,7 +1,7 @@
 #!/bin/bash
 
 compositions=(
-    "Apertus_Athene"
+    "Llama3_Apertus"
 )
 for comp in "${compositions[@]}"; do
     echo "Submitting batch for: $comp"

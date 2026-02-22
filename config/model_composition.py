@@ -1,10 +1,10 @@
 import itertools
 
-HW_FLAG = True
-LW_FLAG = False
+HW_FLAG = False
+LW_FLAG = True
 HOMOGENEOUS = False
 HETEROGENEOUS = True
-MW_FLAG = True
+MW_FLAG = False
 
 # Model Weight Class: Heavyweight
 LLAMA33_70B = "meta-llama/Llama-3.3-70B-Instruct" 

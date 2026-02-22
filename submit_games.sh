@@ -1,13 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=amongus_sim        
 #SBATCH --output=job_logs/slurm_%A_%a.log
-#SBATCH --nodes=3-3                    
-#SBATCH --ntasks=3
+#SBATCH --nodes=1-1                    
+#SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1                      
 #SBATCH --cpus-per-task=8                 
 #SBATCH --mem=120gb                   
-#SBATCH --time=1:10:00
-#SBATCH --array=0-5
+#SBATCH --time=0:10:00
+#SBATCH --array=0
 #SBATCH --partition=hpg-b200
 JOB_ID=${SLURM_ARRAY_JOB_ID:-$SLURM_JOB_ID}
 TASK_ID=${SLURM_ARRAY_TASK_ID:-0}
@@ -26,8 +26,8 @@ conda activate amongus
 sleep 5
 PYTHON_EXE=$(which python)
 
-MODELS_PER_GPU=4
-GAMES_PER_JOB=5
+MODELS_PER_GPU=10
+GAMES_PER_JOB=2
 MODEL_LIST=$(python config/generate_batch_list.py "$COMP_NAME")
 if [ $? -ne 0 ]; then
     echo "Error: Could not determine models for composition '$COMP_NAME'"
