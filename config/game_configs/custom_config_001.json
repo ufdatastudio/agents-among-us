@@ -1,0 +1,30 @@
+{
+  "name": "custom_config_001",
+  "honest_count": 6,
+  "byzantine_count": 2,
+  "honest_model": [
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+    "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+    "Qwen/Qwen2.5-1.5B-Instruct"
+  ],
+  "byzantine_model": [
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+  ],
+  "honest_colors": [
+    "red",
+    "orange",
+    "yellow",
+    "lime",
+    "cyan",
+    "blue"
+  ],
+  "byzantine_colors": [
+    "green",
+    "purple"
+  ],
+  "num_rounds": 10
+}

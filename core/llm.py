@@ -1,17 +1,20 @@
-# core/llm.py
+
+
 import os
 import json
 import time
 import re
+import logging
+import platform
+import torch
 
+
+IS_MAC = platform.system() == "Darwin"
 if os.environ.get("LLM_MODE", "LOCAL") != "CONTROLLER":
     import torch
     import gc
     from unsloth import FastLanguageModel
     from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, Mxfp4Config, AutoConfig
-    #from transformers.utils import logging
-    #logging.disable_progress_bar()
-
 CONCATENATE = {
     "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled",
     "google/gemma-2-9b-it",
@@ -39,7 +42,21 @@ class ModelManager:
     def __init__(self):
         self.models = {}
         self.tokenizers = {}
-        self._device = "cuda"
+        if IS_MAC:
+            if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+                self._device = "mps"
+                print("Using Apple Silicon GPU (MPS).")
+            else:
+                self._device = "cpu"
+                print("Using Apple Silicon CPU (MPS unavailable).")
+        else:
+            if torch.cuda.is_available():
+                self._device = "cuda"
+                print("Using NVIDIA (CUDA) GPU.")
+            else:
+                self._device = "cpu"
+                print("Using CPU (CUDA unavailable).")
+        
         self.mode = os.environ.get("LLM_MODE", "LOCAL") # LOCAL, CONTROLLER
         self.game_id = None
         self.base_ipc_path = None
@@ -172,6 +189,11 @@ class ModelManager:
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.cuda.synchronize() 
+        elif self._device == "mps":
+            try:
+                torch.mps.empty_cache()
+            except:
+                pass
 
     def generate(self, model_name, system_prompt, user_prompt, temperature=0.1):
         """
@@ -276,19 +298,6 @@ class ModelManager:
                     return_dict=True       
                 ).to(model.device)
             
-            # else:
-            #     text_prompt = tokenizer.apply_chat_template(
-            #         messages,
-            #         tokenize=False,        
-            #         add_generation_prompt=True,
-            #     )
-                
-                
-                # inputs = tokenizer(
-                #     [text_prompt], 
-                #     return_tensors="pt", 
-                #     add_special_tokens=False  
-                # ).to(model.device)
 
             if "token_type_ids" in inputs:
                 del inputs["token_type_ids"]

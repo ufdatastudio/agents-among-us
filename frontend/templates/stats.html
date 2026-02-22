@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Statistics - Agents Among Us</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header with navigation -->
+        <div class="stats-header">
+            <h1>Statistics</h1>
+            <div class="header-buttons">
+                <a href="/" class="btn">Back to Menu</a>
+                <button type="button" class="btn" onclick="refreshData()">Refresh Data</button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="stats-tabs">
+            <button type="button" class="stats-tab active" data-tab="agent-summary" onclick="showTab('agent-summary', event)">Agent Summary</button>
+            <button type="button" class="stats-tab" data-tab="single-game" onclick="showTab('single-game', event)">Single Game Data</button>
+        </div>
+
+        <!-- Tab 1: Agent Summary -->
+        <div id="agent-summary" class="stats-tab-content active">
+            <p class="stats-intro">Aggregated stats per model across all games. Models not yet used show "—".</p>
+
+            <div class="agent-summary-controls">
+                <input type="text" id="agent-summary-search" class="agent-summary-search" placeholder="Search models..." aria-label="Search models" />
+                <select id="agent-summary-sort" class="agent-summary-sort" aria-label="Sort by">
+                    <option value="a-z">A–Z (name)</option>
+                    <option value="z-a">Z–A (name)</option>
+                    <option value="most-used">Most used</option>
+                    <option value="least-used">Least used</option>
+                    <option value="most-parameters">Most parameters</option>
+                    <option value="least-parameters">Least parameters</option>
+                </select>
+            </div>
+
+            <!-- Sub-tabs: Honest / Byzantine -->
+            <div class="agent-summary-subtabs">
+                <button type="button" class="agent-subtab active" data-subtab="honest" onclick="showAgentSubtab('honest', event)">Honest</button>
+                <button type="button" class="agent-subtab" data-subtab="byzantine" onclick="showAgentSubtab('byzantine', event)">Byzantine</button>
+            </div>
+
+            <!-- Honest agents table -->
+            <div id="agent-summary-honest" class="agent-summary-panel active">
+                <div class="stats-table-wrapper">
+                    <table class="agent-summary-table" id="honest-table">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Games</th>
+                                <th>Wins</th>
+                                <th>Correct</th>
+                                <th>Incorrect</th>
+                                <th>Skipped</th>
+                                <th>Emerg</th>
+                                <th>Bodies</th>
+                                <th>Rounds</th>
+                                <th>Votes recv</th>
+                            </tr>
+                        </thead>
+                        <tbody id="honest-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Byzantine agents table -->
+            <div id="agent-summary-byzantine" class="agent-summary-panel">
+                <div class="stats-table-wrapper">
+                    <table class="agent-summary-table" id="byzantine-table">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Games</th>
+                                <th>Wins</th>
+                                <th>Kills</th>
+                                <th>Rounds</th>
+                                <th>Votes recv</th>
+                                <th>Elim</th>
+                                <th>Eject</th>
+                            </tr>
+                        </thead>
+                        <tbody id="byzantine-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="button" class="btn" onclick="exportCSV()">Export CSV</button>
+                <button type="button" class="btn" onclick="clearAllData()">Clear All Data</button>
+            </div>
+        </div>
+
+        <!-- Tab 2: Single Game Data -->
+        <div id="single-game" class="stats-tab-content">
+            <h2>Game History</h2>
+
+            <div class="stats-table-wrapper">
+                <table id="game-table">
+                    <thead>
+                        <tr>
+                            <th>Game ID</th>
+                            <th>Composition</th>
+                            <th>Agents</th>
+                            <th>Winner</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="game-tbody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="button-group">
+                <button type="button" class="btn" onclick="exportCSV()">Export All Games CSV</button>
+            </div>
+
+            <!-- Game details section -->
+            <div id="game-details" class="game-details" style="display: none;">
+                <h2>Game: <span id="detail-game-id"></span></h2>
+                <div class="summary-box">
+                    <p>Composition: <span id="detail-comp"></span></p>
+                    <p>Winner: <span id="detail-winner"></span></p>
+                    <p>Date: <span id="detail-date"></span></p>
+                </div>
+
+                <h3>Raw Agent Data</h3>
+                <div class="stats-table-wrapper">
+                    <table id="detail-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>model</th>
+                                <th>alignment</th>
+                                <th>correct_votes</th>
+                                <th>incorrect_votes</th>
+                                <th>skipped_votes</th>
+                                <th>emergency_meetings</th>
+                                <th>bodies_reported</th>
+                                <th>rounds_survived</th>
+                                <th>eliminations</th>
+                                <th>times_eliminated</th>
+                                <th>ejections</th>
+                                <th>num_moves</th>
+                                <th>votes_received</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detail-tbody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn" onclick="downloadGameCSV()">Download Game Stats</button>
+                    <button type="button" class="btn" onclick="downloadDiscussionCSV()">Download Discussion Data</button>
+                    <button type="button" class="btn" onclick="hideGameDetails()">Back to List</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/stats.js') }}"></script>
+</body>
+</html>

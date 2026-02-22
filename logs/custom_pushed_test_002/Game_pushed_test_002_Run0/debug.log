@@ -1,0 +1,144 @@
+[DEBUG] Agent_2 | honest | raw response: Electrical
+
+[DEBUG] Agent_4 | honest | raw response: Storage
+
+[DEBUG] Agent_1 | byzantine | raw response: Move to UpperEngine
+
+[DEBUG] Agent_3 | honest | raw response: Admin
+
+[DEBUG] Agent_0 | byzantine | raw response: Move to Cafeteria
+
+[DEBUG] Agent_5 | honest | raw response: Storage
+
+[DEBUG] Agent_2 | honest | raw response: Electrical
+
+[DEBUG] Agent_4 | honest | raw response: Storage
+
+[DEBUG] Agent_1 | byzantine | raw response: move -> Reactor
+
+[DEBUG] Agent_3 | honest | raw response: Admin
+
+[DEBUG] Agent_0 | byzantine | raw response: MOVE TO CAFETERIA
+
+[DEBUG] Agent_5 | honest | raw response: Storage
+
+[DEBUG] Agent_2 | honest | raw response: Electrical
+
+[DEBUG] Agent_4 | honest | raw response: Storage
+
+[DEBUG] Agent_1 | byzantine | raw response: Move -> Security
+
+[DEBUG] Agent_3 | honest | raw response: Admin
+
+[DEBUG] Agent_0 | byzantine | raw response: MOVE TO CAFETERIA
+
+[DEBUG] Agent_5 | honest | raw response: Storage
+
+[DEBUG] Agent_2 | honest | raw response: Electrical
+
+[DEBUG] Agent_4 | honest | raw response: Storage
+
+[DEBUG] Agent_1 | byzantine | raw response: Move -> Reactor
+
+[DEBUG] Agent_3 | honest | raw response: Admin
+
+[DEBUG] Agent_0 | byzantine | raw response: MOVE TO CAFETERIA
+
+[DEBUG] Agent_5 | honest | raw response: Storage
+
+[DEBUG] Agent_2 | honest | raw response: Electrical
+
+[DEBUG] Agent_4 | honest | raw response: Storage
+
+[DEBUG] Agent_1 | byzantine | raw response: Move to Security
+
+[DEBUG] Agent_3 | honest | raw response: Admin
+
+[DEBUG] Agent_0 | byzantine | raw response: BUTTON
+
+[DEBUG] Agent_5 | honest | raw response: Storage
+
+[DEBUG] Agent_2 | honest | raw response: move
+
+[DEBUG] Agent_4 | honest | raw response: move
+
+[DEBUG] Agent_1 | byzantine | raw response: move
+
+[DEBUG] Agent_3 | honest | raw response: move
+
+[DEBUG] Agent_0 | byzantine | raw response: move
+
+[DEBUG] Agent_5 | honest | raw response: move
+
+[DEBUG] Agent_2 | honest | raw response: move
+
+[DEBUG] Agent_4 | honest | raw response: move
+
+[DEBUG] Agent_1 | byzantine | raw response: move
+
+[DEBUG] Agent_3 | honest | raw response: move
+
+[DEBUG] Agent_0 | byzantine | raw response: move
+
+[DEBUG] Agent_5 | honest | raw response: move
+
+[DEBUG] Agent_2 | honest | raw response: move
+
+[DEBUG] Agent_4 | honest | raw response: move
+
+[DEBUG] Agent_1 | byzantine | raw response: move
+
+[DEBUG] Agent_3 | honest | raw response: move
+
+[DEBUG] Agent_0 | byzantine | raw response: move
+
+[DEBUG] Agent_5 | honest | raw response: move
+
+[DEBUG] Agent_2 | honest | raw response: move
+
+[DEBUG] Agent_4 | honest | raw response: move
+
+[DEBUG] Agent_1 | byzantine | raw response: move
+
+[DEBUG] Agent_3 | honest | raw response: move
+
+[DEBUG] Agent_0 | byzantine | raw response: move
+
+[DEBUG] Agent_5 | honest | raw response: move
+
+[DEBUG] Agent_2 | honest | raw response: move
+
+[DEBUG] Agent_4 | honest | raw response: move
+
+[DEBUG] Agent_1 | byzantine | raw response: move
+
+[DEBUG] Agent_3 | honest | raw response: move
+
+[DEBUG] Agent_0 | byzantine | raw response: move
+
+[DEBUG] Agent_5 | honest | raw response: move
+
+[DEBUG] Agent_2 | honest | raw response: move
+
+[DEBUG] Agent_4 | honest | raw response: move
+
+[DEBUG] Agent_1 | byzantine | raw response: move
+
+[DEBUG] Agent_3 | honest | raw response: move
+
+[DEBUG] Agent_0 | byzantine | raw response: move
+
+[DEBUG] Agent_5 | honest | raw response: move
+
+[DEBUG] Agent_2 | honest | raw response: move
+
+[DEBUG] Agent_4 | honest | raw response: move
+
+[DEBUG] Agent_1 | byzantine | raw response: move
+
+[DEBUG] Agent_3 | honest | raw response: move
+
+[DEBUG] Agent_0 | byzantine | raw response: move
+
+[DEBUG] Agent_5 | honest | raw response: move
+

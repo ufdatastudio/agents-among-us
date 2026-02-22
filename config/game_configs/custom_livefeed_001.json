@@ -1,0 +1,34 @@
+{
+  "name": "custom_livefeed_001",
+  "honest_count": 8,
+  "byzantine_count": 2,
+  "honest_model": [
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct"
+  ],
+  "byzantine_model": [
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct"
+  ],
+  "honest_colors": [
+    "yellow",
+    "lime",
+    "green",
+    "cyan",
+    "blue",
+    "purple",
+    "brown",
+    "pink"
+  ],
+  "byzantine_colors": [
+    "red",
+    "orange"
+  ],
+  "num_rounds": 10
+}

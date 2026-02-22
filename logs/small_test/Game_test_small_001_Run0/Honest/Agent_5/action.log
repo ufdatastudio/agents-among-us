@@ -1,0 +1,72 @@
+=== Action Log for Agent_5 ===
+
+Round 1/10
+Players Remaining: 6
+Current Location: [Weapons]
+  -> Occupants: []
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: None
+    [O2] -> Occupants: None
+    [Navigation] -> Occupants: ['Agent_2']
+    [Shields] -> Occupants: None
+Bodies Seen: None
+
+Action 1 Selected: move -> Weapons
+======================
+
+
+Current Location: [Weapons]
+  -> Occupants: ['Agent_2']
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: None
+    [O2] -> Occupants: None
+    [Navigation] -> Occupants: None
+    [Shields] -> Occupants: None
+Bodies Seen: None
+
+Action 2 Selected: move -> Cafeteria
+======================
+
+
+Current Location: [Cafeteria]
+  -> Occupants: ['Agent_1', 'Agent_0']
+Adjacent Location(s):
+    [UpperEngine] -> Occupants: None
+    [MedBay] -> Occupants: None
+    [Weapons] -> Occupants: None
+    [Admin] -> Occupants: None
+    [Storage] -> Occupants: None
+Bodies Seen: None
+
+Action 3 Selected: move -> Weapons
+======================
+
+
+Current Location: [Weapons]
+  -> Occupants: ['Agent_2']
+Adjacent Location(s):
+    [Cafeteria] -> Occupants: None
+    [O2] -> Occupants: None
+    [Navigation] -> Occupants: None
+    [Shields] -> Occupants: None
+Bodies Seen: None
+
+Action 4 Selected: move -> Cafeteria
+======================
+
+
+Round 2/10
+Players Remaining: 5
+Current Location: [Cafeteria]
+  -> Occupants: ['Agent_1', 'Agent_0']
+Adjacent Location(s):
+    [UpperEngine] -> Occupants: None
+    [MedBay] -> Occupants: None
+    [Weapons] -> Occupants: None
+    [Admin] -> Occupants: None
+    [Storage] -> Occupants: None
+Bodies Seen: None
+
+Action 1 Selected: move -> UpperEngine
+======================
+

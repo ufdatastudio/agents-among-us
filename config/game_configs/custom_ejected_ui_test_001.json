@@ -1,0 +1,30 @@
+{
+  "name": "custom_ejected_ui_test_001",
+  "honest_count": 6,
+  "byzantine_count": 2,
+  "honest_model": [
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct"
+  ],
+  "byzantine_model": [
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct"
+  ],
+  "honest_colors": [
+    "yellow",
+    "lime",
+    "green",
+    "cyan",
+    "blue",
+    "purple"
+  ],
+  "byzantine_colors": [
+    "red",
+    "orange"
+  ],
+  "num_rounds": 10
+}

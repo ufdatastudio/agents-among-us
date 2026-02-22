@@ -25,12 +25,16 @@ class LogManager:
             "stats": os.path.join(self.base_dir, "stats.log"),
             "agents": {},
             "discussion": os.path.join(self.base_dir, "discussion.log"),
-            "stats": os.path.join(self.base_dir, "stats.csv"),
+            "stats_csv": os.path.join(self.base_dir, "stats.csv"),
+            "discussion_chat": os.path.join(self.base_dir, "discussion_chat.csv"),
         }
 
         # Create Root Logs
         self._create_file(self.paths["round_results"], "=== Round Results Log ===\n")
         self._create_file(self.paths["discussion"], "=== Discussion Log ===\n")
+        
+        # Create Discussion Chat CSV with headers
+        self._init_discussion_chat_csv()
 
         # Create Agent Directories based on Role
         for agent in agents:
@@ -51,11 +55,31 @@ class LogManager:
                 "vote": vote_log_path
             }
 
-
-
     def _create_file(self, path, initial_content=""):
         with open(path, "w", encoding="utf-8") as f:
             f.write(initial_content)
+    
+    def _init_discussion_chat_csv(self):
+        """Initialize discussion_chat.csv with headers"""
+        with open(self.paths["discussion_chat"], "w", newline='', encoding="utf-8") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["discussion_num", "reason", "agent_num", "model", "role", "message"])
+
+    def log_discussion_chat(self, discussion_num, reason, agent_name, model_name, role, message):
+        """Log a discussion chat message to CSV"""
+        try:
+            # Extract agent number from Agent_0 -> 0
+            agent_num = agent_name.replace("Agent_", "") if agent_name.startswith("Agent_") else agent_name
+            
+            # Convert role to readable label
+            role_label = "Byzantine" if role == "byzantine" else "Honest"
+            
+            # csv to store discussion chats per game
+            with open(self.paths["discussion_chat"], "a", newline='', encoding="utf-8") as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow([discussion_num, reason, agent_num, model_name, role_label, message])
+        except Exception as e:
+            print(f"Error logging discussion chat: {e}")
 
     def write_log(self, log_type, agent_name=None, content=""):
         """
@@ -101,10 +125,10 @@ class LogManager:
         # Add 'Agent_Name' as the first column
         fieldnames = ["agent_name"] + stats_keys
 
-        print(f"Exporting Game Stats to: {self.paths['stats']}")
+        print(f"Exporting Game Stats to: {self.paths['stats_csv']}")
 
         try:
-            with open(self.paths["stats"], "w", newline='', encoding="utf-8") as csvfile:
+            with open(self.paths["stats_csv"], "w", newline='', encoding="utf-8") as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
                 
