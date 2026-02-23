@@ -437,7 +437,7 @@ hr {
     grid-column: 2;
     grid-row: 2;
     padding: 15px;
-    background: #050c0d;
+    background: #999999;
     overflow: auto;
     display: flex;
     align-items: center;

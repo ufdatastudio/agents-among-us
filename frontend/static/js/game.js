@@ -4,49 +4,49 @@
  */
 
 const ROOM_COORDINATES = {
-    "Clock": { x: 12.7, y: 54.3 },
-    "Air cooling": { x: 17.4, y: 22.3 },
-    "Liquid cooling": { x: 25.3, y: 86.4 },
-    "Logs": { x: 35.7, y: 43.9 },
-    "Diagnostics": { x: 30.3, y: 10.4},
-    "Bus": { x: 36.2, y: 60.1 },
-    "Cpu": { x: 49.0, y: 21.2 },
-    "Bios": { x: 60.2, y: 54.2 },
-    "Ssd": { x: 49.3, y: 84.2 },
-    "Gpu": { x: 78.9, y: 15.2 },
-    "Vrm": { x: 66.3, y: 33.3 },
-    "Network": { x: 91.6, y: 43.5 },
-    "Firewall": { x: 78.7, y: 68.8 },
-    "Io": { x: 79.0, y: 92.7 }
+    "Reactor": { x: 8.6, y: 48.3 },
+    "UpperEngine": { x: 17.6, y: 25.8 },
+    "LowerEngine": { x: 17.6, y: 72.1 },
+    "Security": { x: 26.2, y: 48.3 },
+    "MedBay": { x: 35.3, y: 40.1},
+    "Electrical": { x: 36.7, y: 64.7 },
+    "Cafeteria": { x: 53.2, y: 25.6 },
+    "Admin": { x: 63.8, y: 59.8 },
+    "Storage": { x: 50.4, y: 76.2 },
+    "Weapons": { x: 74.4, y: 23.7 },
+    "O2": { x: 68.4, y: 42.7 },
+    "Navigation": { x: 91.6, y: 46.0 },
+    "Shields": { x: 74.4, y: 74.2 },
+    "Communications": { x: 63.4, y: 87.6 }
 };
 
 const ROOM_HOUSING = {
-    "Clock": { width: 10, height: 20 },
-    "Air cooling": { width: 10, height: 20 },
-    "Liquid cooling": { width: 10, height: 20 },
-    "Logs": { width: 6, height: 12 },
-    "Diagnostics": { width: 6, height: 12 },
-    "Bus": { width: 6, height: 12 },
-    "Cpu": { width: 10, height: 20 },
-    "Bios": { width: 6, height: 12 },
-    "Ssd": { width: 12, height: 12 },
-    "Gpu": { width: 12, height: 12 },
-    "Vrm": { width: 6, height: 12 },
-    "Network": { width: 10, height: 20 },
-    "Firewall": { width: 12, height: 12 },
-    "Io": { width: 6, height: 12 }
+    "Reactor": { width: 9, height: 18 },
+    "UpperEngine": { width: 10, height: 20 },
+    "LowerEngine": { width: 10, height: 20 },
+    "Security": { width: 6, height: 15 },
+    "MedBay": { width: 9, height: 18 },
+    "Electrical": { width: 9, height: 18 },
+    "Cafeteria": { width: 20, height: 40 },
+    "Admin": { width: 8, height: 16 },
+    "Storage": { width: 13, height: 24 },
+    "Weapons": { width: 6, height: 12 },
+    "O2": { width: 6, height: 12 },
+    "Navigation": { width: 7, height: 14 },
+    "Shields": { width: 7, height: 14 },
+    "Communications": { width: 6, height: 12 }
 };
 
 const ROOM_CONNECTIONS = [
-    ["Clock", "Logs"], ["Clock", "Air cooling"], ["Clock", "Liquid cooling"],
-    ["Logs", "Air cooling"], ["Logs", "Liquid cooling"],
-    ["Air cooling", "Liquid cooling"], ["Air cooling", "Diagnostics"], ["Air cooling", "Cpu"],
-    ["Liquid cooling", "Bus"], ["Liquid cooling", "Ssd"],
-    ["Diagnostics", "Cpu"], ["Bus", "Ssd"],
-    ["Cpu", "Bios"], ["Cpu", "Ssd"], ["Cpu", "Gpu"],
-    ["Bios", "Ssd"], ["Gpu", "Vrm"], ["Gpu", "Network"], ["Gpu", "Firewall"],
-    ["Vrm", "Network"], ["Vrm", "Firewall"], ["Network", "Firewall"],
-    ["Ssd", "Firewall"], ["Ssd", "Io"], ["Firewall", "Io"]
+    ["Reactor", "Security"], ["Reactor", "UpperEngine"], ["Reactor", "LowerEngine"],
+    ["Security", "UpperEngine"], ["Security", "LowerEngine"],
+    ["UpperEngine", "LowerEngine"], ["UpperEngine", "MedBay"], ["UpperEngine", "Cafeteria"],
+    ["LowerEngine", "Electrical"], ["LowerEngine", "Storage"],
+    ["MedBay", "Cafeteria"], ["Electrical", "Storage"],
+    ["Cafeteria", "Admin"], ["Cafeteria", "Storage"], ["Cafeteria", "Weapons"],
+    ["Admin", "Storage"], ["Weapons", "O2"], ["Weapons", "Navigation"], ["Weapons", "Shields"],
+    ["O2", "Navigation"], ["O2", "Shields"], ["Navigation", "Shields"],
+    ["Storage", "Shields"], ["Storage", "Communications"], ["Shields", "Communications"]
 ];
 
 let debugOverlayVisible = false;
