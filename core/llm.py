@@ -53,9 +53,6 @@ class ModelManager:
             if torch.cuda.is_available():
                 self._device = "cuda"
                 print("Using NVIDIA (CUDA) GPU.")
-            else:
-                self._device = "cpu"
-                print("Using CPU (CUDA unavailable).")
         
         self.mode = os.environ.get("LLM_MODE", "LOCAL") # LOCAL, CONTROLLER
         self.game_id = None
@@ -146,19 +143,6 @@ class ModelManager:
 
                 )
             
-
-                # model, tokenizer = FastLanguageModel.from_pretrained(
-                #         model_name=model_name,
-                #         max_seq_length=8192,
-                #         load_in_4bit=True,
-                #         device_map="auto",
-                #         dtype=torch.bfloat16,
-                #         gpu_memory_utilization=0.25
-                #     )
-                # FastLanguageModel.for_inference(model)
-
-
-
 
             if tokenizer.pad_token_id is None:
                 tokenizer.pad_token_id = tokenizer.eos_token_id

@@ -11,8 +11,8 @@ if IS_MAC:
     os.environ["LLM_MODE"] = "LOCAL"
     os.environ["CUDA_VISIBLE_DEVICES"] = ""  # Empty on Mac, not -1
 else:
-    os.environ["LLM_MODE"] = "CONTROLLER"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+    os.environ["LLM_MODE"] = "LOCAL"
+    #os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 import time
 from uuid import uuid4

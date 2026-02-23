@@ -8,13 +8,32 @@
 // Ordered from most parameters to least parameters.
 // ---------------------------------------------------------------------------
 const MODELS = [
+    // 60B+ Class Models
     { value: "Qwen/Qwen3-Next-80B-A3B-Instruct", name: "Qwen 3 80B (Qwen/Qwen3-Next-80B-A3B-Instruct)" },
     { value: "arcee-ai/Arcee-Nova", name: "Arcee Nova 73B (arcee-ai/Arcee-Nova)" },
+    { value: "Nexusflow/Athene-V2-Chat", name: "Athene V2 73B (Nexusflow/Athene-V2-Chat)" },
     { value: "Qwen/Qwen2.5-72B-Instruct", name: "Qwen 2.5 72B (Qwen/Qwen2.5-72B-Instruct)" },
     { value: "meta-llama/Llama-3.3-70B-Instruct", name: "Llama 3.3 70B (meta-llama/Llama-3.3-70B-Instruct)" },
-    { value: "deepseek-ai/DeepSeek-R1-Distill-Llama-70B", name: "DeepSeek R1 70B (deepseek-ai/DeepSeek-R1-Distill-Llama-70B)" },
     { value: "zerofata/L3.3-GeneticLemonade-Final-v2-70B", name: "GeneticLemonade 70B (zerofata/L3.3-GeneticLemonade-Final-v2-70B)" },
     { value: "NousResearch/Hermes-4-70B", name: "Hermes 4 70B (NousResearch/Hermes-4-70B)" },
+    { value: "swiss-ai/Apertus-70B-Instruct-2509", name: "Apertus 70B (swiss-ai/Apertus-70B-Instruct-2509)" },
+    { value: "MultiverseComputingCAI/HyperNova-60B", name: "HyperNova 60B (MultiverseComputingCAI/HyperNova-60B)" },
+    { value: "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled", name: "Mixtral 8x7B (Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled)" },
+
+    // <20B Class Models
+    { value: "openai/gpt-oss-20b", name: "GPT OSS 20B (openai/gpt-oss-20b)" },
+    { value: "OpenPipe/Qwen3-14B-Instruct", name: "Qwen 3 14B (OpenPipe/Qwen3-14B-Instruct)" },
+    { value: "google/gemma-2-9b-it", name: "Gemma 2 9B (google/gemma-2-9b-it)" },
+
+    { value: "meta-llama/Meta-Llama-3-8B-Instruct", name: "Llama 3 8B (meta-llama/Meta-Llama-3-8B-Instruct)" },
+    { value: "meta-llama/Llama-3.1-8B-Instruct", name: "Llama 3.1 8B (meta-llama/Llama-3.1-8B-Instruct)" },
+    { value: "swiss-ai/Apertus-8B-Instruct-2509", name: "Apertus 8B (swiss-ai/Apertus-8B-Instruct-2509)" },
+    { value: "arcee-ai/Arcee-Agent", name: "Arcee Agent 8B (arcee-ai/Arcee-Agent)" },
+    { value: "allenai/Olmo-3-7B-Instruct", name: "Olmo 3 7B (allenai/Olmo-3-7B-Instruct)" },
+    { value: "Qwen/Qwen2-7B-Instruct", name: "Qwen 2 7B (Qwen/Qwen2-7B-Instruct)" },
+    { value: "Qwen/Qwen2.5-7B-Instruct", name: "Qwen 2.5 7B (Qwen/Qwen2.5-7B-Instruct)" },
+
+    // Sub-7B Class Models
     { value: "meta-llama/Llama-3.2-3B-Instruct", name: "Llama 3.2 3B (meta-llama/Llama-3.2-3B-Instruct)" },
     { value: "Qwen/Qwen2.5-1.5B-Instruct", name: "Qwen 1.5B (Qwen/Qwen2.5-1.5B-Instruct)" },
     { value: "TinyLlama/TinyLlama-1.1B-Chat-v1.0", name: "TinyLlama 1.1B (TinyLlama/TinyLlama-1.1B-Chat-v1.0)" }
@@ -56,14 +75,14 @@ const DEAD_COLOR_SPRITES = {
 };
 
 // Default model for new agents (TinyLlama = smallest, now last in dropdown)
-const TINY_LLAMA_VALUE = "TinyLlama/TinyLlama-1.1B-Chat-v1.0";
+const DEFAULT = "meta-llama/Llama-3.1-8B-Instruct";
 
 // Default config for first 4 agents: Model, Role, Color = Red, Orange, Yellow, Lime (then Green, Cyan, ... as you add agents)
 const DEFAULT_AGENTS_4 = [
-    { model: TINY_LLAMA_VALUE, role: "byzantine", color: "red" },
-    { model: TINY_LLAMA_VALUE, role: "byzantine", color: "orange" },
-    { model: TINY_LLAMA_VALUE, role: "honest", color: "yellow" },
-    { model: TINY_LLAMA_VALUE, role: "honest", color: "lime" }
+    { model: DEFAULT, role: "byzantine", color: "red" },
+    { model: DEFAULT, role: "byzantine", color: "orange" },
+    { model: DEFAULT, role: "honest", color: "yellow" },
+    { model: DEFAULT, role: "honest", color: "lime" }
 ];
 
 /**
@@ -91,7 +110,7 @@ function getDefaultForAgent(index) {
         return DEFAULT_AGENTS_4[index];
     }
     return {
-        model: TINY_LLAMA_VALUE,
+        model: DEFAULT,
         role: "honest",
         color: COLORS[index].value
     };

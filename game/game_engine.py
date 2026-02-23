@@ -1,6 +1,7 @@
 # game/engine.py - FIXED VERSION
 import random
 import re
+import time
 from config.settings import MAX_MOVEMENT_PHASES, ROOMS, NUM_BYZ, NUM_HONEST, NUM_ROUNDS as DEFAULT_NUM_ROUNDS
 from agents.honest_agent import HonestAgent
 from agents.byzantine_agent import ByzantineAgent
@@ -28,7 +29,10 @@ class Observer:
         self.locations = [
             "Reactor", "Security", "UpperEngine", "LowerEngine", "MedBay", 
             "Cafeteria", "Electrical", "Storage", "Admin", "Weapons", 
-            "Shields", "O2", "Navigation", "Communications"
+            "Shields", "O2", "Navigation", "Communications",
+
+            "Clock", "Air cooling", "Liquid cooling", "Logs", "Diagnostics",
+            "Bus", "Cpu", "Bios", "Ssd", "Io", "Gpu", "Vrm", "Network", "Firewall"
         ]
         self.loc_pattern = re.compile(r'\b(?:' + '|'.join(self.locations) + r')\b', flags=re.IGNORECASE)
         self.agent_pattern = re.compile(r'\bagent_\d+\b', flags=re.IGNORECASE)
@@ -176,6 +180,8 @@ class GameEngine:
                 view = self.state.get_agent_view(agent.name, round_num, log_to_file=True)
                 decision = agent.think_and_act(view, round_num)
                 decisions.append((agent, decision))
+                # wait a bit between agent actions to be watchable
+                time.sleep(1)
             
             reports, kills, buttons, moves = [], [], [], []
             
