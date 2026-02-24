@@ -3,35 +3,36 @@
  * Press D for debug overlay
  */
 
-/* Mapping for Skeld
+// motherboard map + skeld naming
+
 const ROOM_COORDINATES = {
-    "Reactor": { x: 8.6, y: 48.3 },
-    "UpperEngine": { x: 17.6, y: 25.8 },
-    "LowerEngine": { x: 17.6, y: 72.1 },
-    "Security": { x: 26.2, y: 48.3 },
-    "MedBay": { x: 35.3, y: 40.1},
-    "Electrical": { x: 36.7, y: 64.7 },
-    "Cafeteria": { x: 53.2, y: 25.6 },
-    "Admin": { x: 63.8, y: 59.8 },
-    "Storage": { x: 50.4, y: 76.2 },
-    "Weapons": { x: 74.4, y: 23.7 },
-    "O2": { x: 68.4, y: 42.7 },
-    "Navigation": { x: 91.6, y: 46.0 },
-    "Shields": { x: 74.4, y: 74.2 },
-    "Communications": { x: 63.4, y: 87.6 }
+    "Reactor": { x: 12.4, y: 54.0 },
+    "UpperEngine": { x: 17.4, y: 22.3 },
+    "LowerEngine": { x: 25.3, y: 85.3 },
+    "Security": { x: 36.3, y: 42.2 },
+    "MedBay": { x: 30.3, y: 9.8},
+    "Electrical": { x: 36.2, y: 60.1 },
+    "Cafeteria": { x: 49.3, y: 20.3 },
+    "Admin": { x: 60.2, y: 53.0 },
+    "Storage": { x: 49.3, y: 84.2 },
+    "Weapons": { x: 78.9, y: 14.8 },
+    "O2": { x: 66.0, y: 33.3 },
+    "Navigation": { x: 91.2, y: 43.1 },
+    "Shields": { x: 78.9, y: 68.2 },
+    "Communications": { x: 79.0, y: 91.9 }
 };
 
 const ROOM_HOUSING = {
-    "Reactor": { width: 9, height: 18 },
+    "Reactor": { width: 10, height: 20 },
     "UpperEngine": { width: 10, height: 20 },
     "LowerEngine": { width: 10, height: 20 },
-    "Security": { width: 6, height: 15 },
-    "MedBay": { width: 9, height: 18 },
-    "Electrical": { width: 9, height: 18 },
-    "Cafeteria": { width: 20, height: 40 },
-    "Admin": { width: 8, height: 16 },
-    "Storage": { width: 13, height: 24 },
-    "Weapons": { width: 6, height: 12 },
+    "Security": { width: 6, height: 12 },
+    "MedBay": { width: 6, height: 12 },
+    "Electrical": { width: 6, height: 12 },
+    "Cafeteria": { width: 10, height: 20 },
+    "Admin": { width: 6, height: 12 },
+    "Storage": { width: 12, height: 12 },
+    "Weapons": { width: 12, height: 12 },
     "O2": { width: 6, height: 12 },
     "Navigation": { width: 7, height: 14 },
     "Shields": { width: 7, height: 14 },
@@ -49,73 +50,6 @@ const ROOM_CONNECTIONS = [
     ["O2", "Navigation"], ["O2", "Shields"], ["Navigation", "Shields"],
     ["Storage", "Shields"], ["Storage", "Communications"], ["Shields", "Communications"]
 ];
-*/
-
-// motherboard map + skeld naming
-
-const ROOM_COORDINATES = {
-    "Reactor": { x: 12.7, y: 54.3 },
-    "UpperEngine": { x: 17.4, y: 22.3 },
-    "LowerEngine": { x: 25.3, y: 86.4 },
-    "Security": { x: 35.7, y: 43.9 },
-    "MedBay": { x: 30.3, y: 10.4},
-    "Electrical": { x: 36.2, y: 60.1 },
-    "Cafeteria": { x: 49.0, y: 21.2 },
-    "Admin": { x: 60.2, y: 54.2 },
-    "Storage": { x: 49.3, y: 84.2 },
-    "Weapons": { x: 78.9, y: 15.2 },
-    "O2": { x: 66.3, y: 33.3 },
-    "Navigation": { x: 91.6, y: 43.5 },
-    "Shields": { x: 78.7, y: 68.8 },
-    "Communications": { x: 79.0, y: 92.7 }
-};
-
-const ROOM_LABELS = {
-    "Reactor": "Reactor",
-    "UpperEngine": "UpperEngine",
-    "LowerEngine": "LowerEngine",
-    "Security": "Security",
-    "MedBay": "MedBay",
-    "Electrical": "Electrical",
-    "Cafeteria": "Cafeteria",
-    "Admin": "Admin",
-    "Storage": "Storage",
-    "Weapons": "Weapons",
-    "O2": "O2",
-    "Navigation": "Navigation",
-    "Shields": "Shields",
-    "Communications": "Communications"
-};
-
-const ROOM_HOUSING = {
-    "Reactor": { width: 10, height: 20 },
-    "UpperEngine": { width: 10, height: 20 },
-    "LowerEngine": { width: 10, height: 20 },
-    "Security": { width: 6, height: 12 },
-    "MedBay": { width: 6, height: 12 },
-    "Electrical": { width: 6, height: 12 },
-    "Cafeteria": { width: 10, height: 20 },
-    "Admin": { width: 6, height: 12 },
-    "Storage": { width: 12, height: 12 },
-    "Weapons": { width: 12, height: 12 },
-    "O2": { width: 6, height: 12 },
-    "Navigation": { width: 10, height: 20 },
-    "Shields": { width: 12, height: 12 },
-    "Communications": { width: 6, height: 12 }
-};
-
-const ROOM_CONNECTIONS = [
-    ["Reactor", "Security"], ["Reactor", "UpperEngine"], ["Reactor", "LowerEngine"],
-    ["Security", "UpperEngine"], ["Security", "LowerEngine"],
-    ["UpperEngine", "LowerEngine"], ["UpperEngine", "MedBay"], ["UpperEngine", "Cafeteria"],
-    ["LowerEngine", "Electrical"], ["LowerEngine", "Storage"],
-    ["MedBay", "Cafeteria"], ["Electrical", "Storage"],
-    ["Cafeteria", "Admin"], ["Cafeteria", "Storage"], ["Cafeteria", "Weapons"],
-    ["Admin", "Storage"], ["Weapons", "O2"], ["Weapons", "Navigation"], ["Weapons", "Shields"],
-    ["O2", "Navigation"], ["O2", "Shields"], ["Navigation", "Shields"],
-    ["Storage", "Shields"], ["Storage", "Communications"], ["Shields", "Communications"]
-];
-
 
 let debugOverlayVisible = false;
 let debugCanvas = null;
@@ -306,6 +240,83 @@ let pollingInterval = null;
 let lastPhase = "";
 let lastRound = 0;
 let clearedAgents = new Set();
+
+// === SUSPICION SCORES TRACKING ===
+let enabledClassifiers = {
+    sgd: false,
+    svm: false,
+    lr: false
+};
+let suspicionInitialized = false;
+
+function initSuspicionTracking(data) {
+    if (suspicionInitialized) return;
+    
+    // Check if suspicion data exists in game state
+    if (data && data.suspicion && data.suspicion.enabled_classifiers) {
+        enabledClassifiers = data.suspicion.enabled_classifiers;
+        setupClassifierColumns();
+        suspicionInitialized = true;
+    }
+}
+
+function setupClassifierColumns() {
+    // Show/hide column headers
+    const sgdHeader = document.getElementById('sgdHeader');
+    const svmHeader = document.getElementById('svmHeader');
+    const lrHeader = document.getElementById('lrHeader');
+    
+    if (sgdHeader) sgdHeader.style.display = enabledClassifiers.sgd ? '' : 'none';
+    if (svmHeader) svmHeader.style.display = enabledClassifiers.svm ? '' : 'none';
+    if (lrHeader) lrHeader.style.display = enabledClassifiers.lr ? '' : 'none';
+}
+
+function updateSuspicionScores(suspicionData) {
+    if (!suspicionData || !suspicionData.scores) return;
+    
+    const scores = suspicionData.scores;
+    
+    // Update only the score cells in existing rows
+    Object.keys(scores).forEach(agentKey => {
+        const agentScores = scores[agentKey];
+        const agentNum = agentKey.replace('Agent_', '');
+        
+        // Update SGD
+        if (enabledClassifiers.sgd) {
+            const sgdCell = document.getElementById(`suspicion-${agentNum}-sgd`);
+            if (sgdCell && agentScores.SGD !== undefined && agentScores.SGD !== null) {
+                sgdCell.textContent = agentScores.SGD.toFixed(2);
+                sgdCell.className = getSuspicionClass(agentScores.SGD);
+            }
+        }
+        
+        // Update SVM
+        if (enabledClassifiers.svm) {
+            const svmCell = document.getElementById(`suspicion-${agentNum}-svm`);
+            if (svmCell && agentScores.SVM !== undefined && agentScores.SVM !== null) {
+                svmCell.textContent = agentScores.SVM.toFixed(2);
+                svmCell.className = getSuspicionClass(agentScores.SVM);
+            }
+        }
+        
+        // Update LR
+        if (enabledClassifiers.lr) {
+            const lrCell = document.getElementById(`suspicion-${agentNum}-lr`);
+            if (lrCell && agentScores.LogisticRegression !== undefined && agentScores.LogisticRegression !== null) {
+                lrCell.textContent = agentScores.LogisticRegression.toFixed(2);
+                lrCell.className = getSuspicionClass(agentScores.LogisticRegression);
+            }
+        }
+    });
+}
+
+function getSuspicionClass(score) {
+    if (score === undefined || score === null) return '';
+    if (score >= 0.7) return 'suspicion-high';
+    if (score >= 0.4) return 'suspicion-medium';
+    return 'suspicion-low';
+}
+// === END SUSPICION SCORES ===
 
 function updateGameParams(gameInfo) {
     if (!gameInfo) return;
@@ -510,6 +521,28 @@ function updateStatusTable(agents) {
         }
         row.appendChild(killsCell);
         
+        // Add classifier columns if enabled
+        if (enabledClassifiers.sgd) {
+            const sgdCell = document.createElement("td");
+            sgdCell.id = `suspicion-${agentNumRaw}-sgd`;
+            sgdCell.textContent = "-";
+            row.appendChild(sgdCell);
+        }
+        
+        if (enabledClassifiers.svm) {
+            const svmCell = document.createElement("td");
+            svmCell.id = `suspicion-${agentNumRaw}-svm`;
+            svmCell.textContent = "-";
+            row.appendChild(svmCell);
+        }
+        
+        if (enabledClassifiers.lr) {
+            const lrCell = document.createElement("td");
+            lrCell.id = `suspicion-${agentNumRaw}-lr`;
+            lrCell.textContent = "-";
+            row.appendChild(lrCell);
+        }
+        
         tbody.appendChild(row);
     });
 }
@@ -589,6 +622,11 @@ async function updateGameState() {
         if (!response.ok) return;
         const data = await response.json();
         
+        // Initialize suspicion tracking once
+        if (!suspicionInitialized) {
+            initSuspicionTracking(data);
+        }
+        
         if (data.status === 'waiting') {
             const statusEl = document.getElementById("gameStatus");
             if (statusEl) statusEl.textContent = "Waiting...";
@@ -655,6 +693,11 @@ async function updateGameState() {
         if (data.agents && Object.keys(data.agents).length > 0) {
             updateAgentPositions(data.agents);
             updateStatusTable(data.agents);
+            
+            // Update suspicion scores if available
+            if (data.suspicion && data.suspicion.scores) {
+                updateSuspicionScores(data.suspicion);
+            }
         }
         
         if (data) {

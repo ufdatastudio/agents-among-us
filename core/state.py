@@ -10,8 +10,11 @@ class GameState:
         self.agents = agents
         self.logger = log_manager
         self.live_state_file = "live_state.json"
-        self.discussion_counter = 0  # track discussion number
-        self.current_discussion_reason = ""  #  why discussion started
+        
+        # ML Classifier tracking
+        self.enabled_classifiers = {}  # Will be set from composition
+        self.suspicion_scores = {}     # Format: {"Agent_0": {"SGD": 0.85, "SVM": 0.72, "LogisticRegression": 0.91}}
+        
         self.world_data = {
             "game_id": self.logger.game_id,
             "global": {
@@ -31,7 +34,7 @@ class GameState:
         # Initialize Data
         for agent in agents:
             start_room = random.choice(list(ROOMS.keys()))
-            #start_room = "Cpu" | any reason why we don't want to start them in the cpu (cafeteria) like a real game?
+            #start_room = "Cafeteria"
             alignment = 'B' if agent.role == 'byzantine' else 'H'
             self.world_data["agents"][agent.name] = {
                 "name": agent.name,
@@ -53,13 +56,13 @@ class GameState:
                     "skipped_votes": 0,
                     "emergency_meetings": 0,
                     "bodies_reported": 0,
-                    "rounds_survived": 0, 
+                    "rounds_survived": 0, # whether they made it to game end
                     "eliminations": 0,
                     "won_game": 0,
                     "rounds_survived": 0,
-                    "times_eliminated": 0,
+                    "times_eliminated": 0, # if the agent was eliminated, not ejections
                     "ejections": 0,
-                    "num_moves": 0, 
+                    "num_moves": 0, # if stays in place, does not count as move
                     "votes_received": 0
                     
                 }
@@ -71,14 +74,22 @@ class GameState:
         timestamp = datetime.now().strftime("%H:%M:%S")
         entry = {"time": timestamp, "msg": message, "type": category}
         
-        # Keep only last 50 events to prevent JSON bloat | should probably increase for larger tests
+        # No limit - keep all events
         log = self.world_data["global"]["ui_event_log"]
         log.append(entry)
-        if len(log) > 50:
-            log.pop(0)
+        # if len(log) > 50:
+        #     log.pop(0)
 
     def update_phase(self, phase_name):
         self.world_data["global"]["current_phase"] = phase_name
+    
+    def set_classifiers(self, enabled_classifiers):
+        """Called by game_engine during setup"""
+        self.enabled_classifiers = enabled_classifiers
+    
+    def update_suspicion_scores(self, scores):
+        """Called by game_engine after Observer analyzes round"""
+        self.suspicion_scores = scores
 
     def update_round(self, round_num):
         """Updates the current round number in the state."""
@@ -89,21 +100,8 @@ class GameState:
                     agent_data["stats"]["rounds_survived"] += 1
     
     def record_chat(self, agent_name, message):
-        """Pushes an agent's chat message to the UI log and discussion CSV."""
+        """Pushes an agent's chat message to the UI log."""
         self.add_ui_event(f"{agent_name}: {message}", "chat")
-        
-        # Log to discussion CSV if in discussion phase
-        if self.world_data["global"]["current_phase"] == "DISCUSSION":
-            agent_data = self.world_data["agents"].get(agent_name)
-            if agent_data:
-                self.logger.log_discussion_chat(
-                    discussion_num=self.discussion_counter,
-                    reason=self.current_discussion_reason,
-                    agent_name=agent_name,
-                    model_name=agent_data["stats"]["model_name"],
-                    role=agent_data["role"],
-                    message=message
-                )
         
     def get_agent_view(self, agent_name, round_num, log_to_file=True):
         """
@@ -121,6 +119,7 @@ class GameState:
         
 
         for body in current_bodies:
+            # Check if we already know about this body in this specific room
             already_known = False
             for kb in agent_data["known_bodies"]:
                 if kb["name"] == body and kb["room"] == loc:
@@ -131,7 +130,7 @@ class GameState:
                 agent_data["known_bodies"].append({"name": body, "room": loc})
 
 
-        # calculate stats
+        # --- 1. Calculate Stats ---
         active_honest = len([a for n, a in self.world_data["agents"].items() 
                              if a["role"] == "honest" and a["status"] == "active"])
         total_active = len([a for n, a in self.world_data["agents"].items() 
@@ -144,11 +143,12 @@ class GameState:
 
         current_room_bodies = self.world_data["rooms"][loc]["bodies"]
         
+        # Structure the data with room info as requested
         visible_bodies = []
         for body in current_room_bodies:
             visible_bodies.append({"name": body, "room": loc})
     
-        # build surroundings
+        # --- 2. Build Surroundings ---
         surroundings = {loc: {"occupants": occupants, "bodies": current_room_bodies}}
         adj_log_str = ""
         if loc in ROOMS:
@@ -160,7 +160,7 @@ class GameState:
                 occ = [p for p in self.world_data["rooms"][neighbor]["occupants"] if p != agent_name]
                 adj_log_str += f"\n    [{neighbor}] -> Occupants: {occ if occ else 'None'}"
 
-        # role specific info 
+        # --- 3. Role Specific (Teammates) ---
         teammate_str = ""
         if agent_data["role"] == "byzantine":
             teammates = [a.name for a in self.agents if a.role == "byzantine" and a.name != agent_name]
@@ -170,8 +170,9 @@ class GameState:
                 tm_status.append(f"{tm}: {status}")
             teammate_str = f"Teammate(s) Status: {' || '.join(tm_status)}\n"
 
-        # conditional header
+        # --- 4. Conditional Header ---
         header_str = ""
+        # Only check/update header if we are actually logging
         if log_to_file and agent_data["last_round_seen"] < round_num:
             header_str = (
                 f"Round {round_num}/{NUM_ROUNDS}\n"
@@ -181,6 +182,9 @@ class GameState:
             self.world_data["agents"][agent_name]["last_round_seen"] = round_num
 
 
+
+        # --- 5. Construct Observation Block ---
+        # Only construct and write this string if we are in the movement phase
         if log_to_file:
 
             if agent_data["known_bodies"]:
@@ -196,7 +200,7 @@ class GameState:
             )
             self.logger.write_log("agent", agent_name, log_entry)
 
-        # returns data structure
+        # Return Data Structure
         view = {
             "self": agent_data.copy(),
             "surroundings": surroundings,
@@ -250,9 +254,6 @@ class GameState:
         self.add_ui_event(f"{target_name} eliminated in {location}", "kill")
     
     def report_body(self, reporter_name, body_name):
-        self.discussion_counter += 1
-        self.current_discussion_reason = "body report"
-        
         self.world_data["global"]["body_reported"] = True
         self.world_data["global"]["reported_victims"].append(body_name)
         self.world_data["global"]["meeting_caller"] = reporter_name
@@ -273,12 +274,14 @@ class GameState:
 
         newly_discovered = list(set(newly_discovered))
 
+        # --- FIND BODY LOCATION ---
         body_location = "Unknown Location"
         # Search all rooms to find where the body is currently located
         for room_name, room_data in self.world_data["rooms"].items():
             if body_name in room_data["bodies"]:
                 body_location = room_name
                 break
+        # --------------------------
 
         # Log to Discussion file
         victims_str = ", ".join(newly_discovered)
@@ -295,9 +298,6 @@ class GameState:
 
     def call_emergency_meeting(self, agent_name):
         """Called when button is pressed."""
-        self.discussion_counter += 1
-        self.current_discussion_reason = "emergency meeting"
-        
         self.world_data["global"]["meeting_called"] = True
         self.world_data["global"]["meeting_caller"] = agent_name
         self.world_data["agents"][agent_name]["button_used"] = True
@@ -360,7 +360,14 @@ class GameState:
     def save_json(self):
         """Exports the current state to a JSON file for the Live Map."""        
         try:
+            # Add suspicion data to export
+            output_data = self.world_data.copy()
+            output_data['suspicion'] = {
+                'enabled_classifiers': self.enabled_classifiers,
+                'scores': self.suspicion_scores
+            }
+            
             with open(self.live_state_file, "w", encoding="utf-8") as f:
-                json.dump(self.world_data, f, indent=4)
+                json.dump(output_data, f, indent=4)
         except Exception as e:
             print(f"[Warning] Could not save live state: {e}")

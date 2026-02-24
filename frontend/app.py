@@ -1,6 +1,6 @@
 """
 Agents Among Us - Flask Web Application
-Complete backend integration with all API routes
+Complete backend integration with all API routes + ML Classifiers
 """
 
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session, send_file
@@ -101,6 +101,17 @@ def start_game():
         num_rounds = int(request.form.get('num_rounds', 10))
         game_id = request.form.get('game_id', '').strip()
         
+        # === NEW: Get ML Classifier selections ===
+        classifier_sgd = request.form.get('classifier_sgd') == 'true'
+        classifier_svm = request.form.get('classifier_svm') == 'true'
+        classifier_lr = request.form.get('classifier_lr') == 'true'
+        
+        enabled_classifiers = {
+            'sgd': classifier_sgd,
+            'svm': classifier_svm,
+            'lr': classifier_lr
+        }
+        
         # auto-generate game_id if empty
         if not game_id:
             game_id = f"game_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -124,13 +135,14 @@ def start_game():
             else:
                 honest_count += 1
         
-        # create custom composition JSON with FULL agent configuration
+        # create custom composition JSON with FULL agent configuration + classifiers
         composition = {
             "name": f"custom_{game_id}",
             "honest_count": honest_count,
             "byzantine_count": byzantine_count,
-            "agents": agents,  # NEW: Full per-agent configuration
-            "num_rounds": num_rounds
+            "agents": agents,  # Full per-agent configuration
+            "num_rounds": num_rounds,
+            "enabled_classifiers": enabled_classifiers  # NEW: ML Classifiers
         }
         
         # save composition to temporary file
@@ -147,6 +159,13 @@ def start_game():
         for agent in agents:
             role_label = "Byzantine" if agent['role'] == 'byzantine' else "Honest"
             print(f"  Agent_{agent['agent_num']}: {role_label} | {agent['model']} | {agent['color']}")
+        
+        # Print classifier config
+        classifiers_enabled = [k.upper() for k, v in enabled_classifiers.items() if v]
+        if classifiers_enabled:
+            print(f"\n🔬 ML Classifiers Enabled: {', '.join(classifiers_enabled)}")
+        else:
+            print(f"\n🔬 ML Classifiers: DISABLED")
         print(f"{'='*60}\n")
         
         # store in session
@@ -531,5 +550,4 @@ if __name__ == '__main__':
     print(f"Open: http://localhost:8000")
     print("="*60 + "\n")
     
-    #app.run(debug=True, port=8000, use_reloader=False)
     app.run(host="0.0.0.0", port=8000, debug=False)
