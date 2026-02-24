@@ -3,6 +3,7 @@
  * Press D for debug overlay
  */
 
+/* Mapping for Skeld
 const ROOM_COORDINATES = {
     "Reactor": { x: 8.6, y: 48.3 },
     "UpperEngine": { x: 17.6, y: 25.8 },
@@ -48,6 +49,73 @@ const ROOM_CONNECTIONS = [
     ["O2", "Navigation"], ["O2", "Shields"], ["Navigation", "Shields"],
     ["Storage", "Shields"], ["Storage", "Communications"], ["Shields", "Communications"]
 ];
+*/
+
+// motherboard map + skeld naming
+
+const ROOM_COORDINATES = {
+    "Reactor": { x: 12.7, y: 54.3 },
+    "UpperEngine": { x: 17.4, y: 22.3 },
+    "LowerEngine": { x: 25.3, y: 86.4 },
+    "Security": { x: 35.7, y: 43.9 },
+    "MedBay": { x: 30.3, y: 10.4},
+    "Electrical": { x: 36.2, y: 60.1 },
+    "Cafeteria": { x: 49.0, y: 21.2 },
+    "Admin": { x: 60.2, y: 54.2 },
+    "Storage": { x: 49.3, y: 84.2 },
+    "Weapons": { x: 78.9, y: 15.2 },
+    "O2": { x: 66.3, y: 33.3 },
+    "Navigation": { x: 91.6, y: 43.5 },
+    "Shields": { x: 78.7, y: 68.8 },
+    "Communications": { x: 79.0, y: 92.7 }
+};
+
+const ROOM_LABELS = {
+    "Reactor": "Reactor",
+    "UpperEngine": "UpperEngine",
+    "LowerEngine": "LowerEngine",
+    "Security": "Security",
+    "MedBay": "MedBay",
+    "Electrical": "Electrical",
+    "Cafeteria": "Cafeteria",
+    "Admin": "Admin",
+    "Storage": "Storage",
+    "Weapons": "Weapons",
+    "O2": "O2",
+    "Navigation": "Navigation",
+    "Shields": "Shields",
+    "Communications": "Communications"
+};
+
+const ROOM_HOUSING = {
+    "Reactor": { width: 10, height: 20 },
+    "UpperEngine": { width: 10, height: 20 },
+    "LowerEngine": { width: 10, height: 20 },
+    "Security": { width: 6, height: 12 },
+    "MedBay": { width: 6, height: 12 },
+    "Electrical": { width: 6, height: 12 },
+    "Cafeteria": { width: 10, height: 20 },
+    "Admin": { width: 6, height: 12 },
+    "Storage": { width: 12, height: 12 },
+    "Weapons": { width: 12, height: 12 },
+    "O2": { width: 6, height: 12 },
+    "Navigation": { width: 10, height: 20 },
+    "Shields": { width: 12, height: 12 },
+    "Communications": { width: 6, height: 12 }
+};
+
+const ROOM_CONNECTIONS = [
+    ["Reactor", "Security"], ["Reactor", "UpperEngine"], ["Reactor", "LowerEngine"],
+    ["Security", "UpperEngine"], ["Security", "LowerEngine"],
+    ["UpperEngine", "LowerEngine"], ["UpperEngine", "MedBay"], ["UpperEngine", "Cafeteria"],
+    ["LowerEngine", "Electrical"], ["LowerEngine", "Storage"],
+    ["MedBay", "Cafeteria"], ["Electrical", "Storage"],
+    ["Cafeteria", "Admin"], ["Cafeteria", "Storage"], ["Cafeteria", "Weapons"],
+    ["Admin", "Storage"], ["Weapons", "O2"], ["Weapons", "Navigation"], ["Weapons", "Shields"],
+    ["O2", "Navigation"], ["O2", "Shields"], ["Navigation", "Shields"],
+    ["Storage", "Shields"], ["Storage", "Communications"], ["Shields", "Communications"]
+];
+
 
 let debugOverlayVisible = false;
 let debugCanvas = null;
