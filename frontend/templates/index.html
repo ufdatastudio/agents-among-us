@@ -6,16 +6,19 @@
     <title>Agents Among Us</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
-    <div class="container">
-        <h1>Agents Among Us - LLM Simulator</h1>
-         
-        <!-- buttons -->
-        <div class="menu">
-            <a href="/game" class="menu-btn btn">Start Simulation</a>
-            <a href="/config" class="menu-btn btn">Settings</a>
-            <a href="/stats" class="menu-btn btn">View Statistics</a>
+<body class="page-home">
+    <main class="home-hero">
+        <div class="home-content">
+            <div class="home-inner">
+                <h1 class="home-title">Agents Among Us</h1>
+                <span class="home-title-line" aria-hidden="true"></span>
+                <nav class="home-actions">
+                    <a href="/game" class="home-btn home-btn-primary">Start Simulation</a>
+                    <a href="/config" class="home-btn">Configure</a>
+                    <a href="/stats" class="home-btn">View Statistics</a>
+                </nav>
+            </div>
         </div>
-    </div>
+    </main>
 </body>
 </html>

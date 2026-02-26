@@ -307,7 +307,7 @@ function updateGameList() {
     if (winners.length > 0) {
       const align = winners[0].alignment;
       if (align === "H") winnerLabelText = "Honest";
-      else if (align === "B") winnerLabelText = "Byz";
+      else if (align === "B") winnerLabelText = "Byzantine";
     }
 
     games.push({
