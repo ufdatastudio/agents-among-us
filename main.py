@@ -42,7 +42,7 @@ def main():
         if os.path.exists(game_configs_file):
             with open(game_configs_file, 'r') as f:
                 selected_composition = json.load(f)
-                print(f"✅ Loaded custom composition from: {game_configs_file}", flush=True)
+                print(f"Loaded custom composition from: {game_configs_file}", flush=True)
 
     # Fallback: check config/ root folder
     if selected_composition is None:
@@ -51,7 +51,7 @@ def main():
         if os.path.exists(config_file):
             with open(config_file, 'r') as f:
                 selected_composition = json.load(f)
-                print(f"✅ Loaded custom composition from: {config_file}", flush=True)
+                print(f"Loaded custom composition from: {config_file}", flush=True)
 
     if selected_composition is None:
         raise ValueError(f"Composition '{args.composition_name}' not found in COMPOSITION list or config directory.")

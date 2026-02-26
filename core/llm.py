@@ -160,7 +160,7 @@ class ModelManager:
                 mem_taken = (initial_free - final_free) / 1024**3
                 print(f"Loaded {model_name} | VRAM Usage: {mem_taken:.2f} GiB | Memory Remaining: {final_free / 1024**3:.2f} GiB", flush=True)
             else:
-                print(f"✅ Loaded {model_name} on {self._device}", flush=True)
+                print(f"Loaded {model_name} on {self._device}", flush=True)
 
         except Exception as e:
             print(f"Error loading model {model_name}: {e}")

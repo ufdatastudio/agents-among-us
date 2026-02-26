@@ -420,10 +420,21 @@ function showGameDetails(gameId) {
       tr.appendChild(cell(Number(row.num_moves) || 0));
       tr.appendChild(cell(Number(row.votes_received) || 0));
 
+      // Classifier scores (sgd_score, svm_score, lr_score) - show number or dash if unused/missing
+      tr.appendChild(cell(formatClassifier(row.sgd_score)));
+      tr.appendChild(cell(formatClassifier(row.svm_score)));
+      tr.appendChild(cell(formatClassifier(row.lr_score)));
+
       tbody.appendChild(tr);
     });
 
   details.style.display = "block";
+}
+
+function formatClassifier(val) {
+  if (val === undefined || val === null || val === "") return DASH;
+  const n = Number(val);
+  return Number.isNaN(n) ? DASH : n.toFixed(2);
 }
 
 function hideGameDetails() {

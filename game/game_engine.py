@@ -139,7 +139,7 @@ class GameEngine:
                         HonestAgent(agent_name, color, model)
                     )
             
-            print(f"✅ Created {len(self.agents)} agents with EXACT configuration from frontend")
+            print(f"Created {len(self.agents)} agents with EXACT configuration from frontend")
             
         else:
             honest_models = composition["honest_model"]
@@ -179,7 +179,7 @@ class GameEngine:
             self.state.set_classifiers(self.enabled_classifiers)
             classifiers_enabled = [k.upper() for k, v in self.enabled_classifiers.items() if v]
             if classifiers_enabled:
-                print(f"🔬 Observer initialized with classifiers: {', '.join(classifiers_enabled)}")
+                print(f"Observer initialized with classifiers: {', '.join(classifiers_enabled)}")
         
         self.state.save_json()
         print(f"--- Game Setup Complete. Logs at: {self.logger.base_dir} ---")
