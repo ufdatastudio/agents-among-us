@@ -91,13 +91,14 @@
         </div>
     </div>
 
-    <!-- Discussion Chat Popup -->
+    <!-- Discussion Chat Popup (drag by header, resize by corner handle) -->
     <div id="discussionChat" class="discussion-chat" style="display: none;">
-        <div class="discussion-chat-header">
-            <span class="discussion-chat-title" id="discussionChatTitle">💬 Discussion</span>
-            <button class="discussion-chat-close" onclick="closeDiscussionChat()">×</button>
+        <div class="discussion-chat-header" id="discussionChatHeader">
+            <span class="discussion-chat-title" id="discussionChatTitle">Discussion</span>
+            <button class="discussion-chat-close" onclick="closeDiscussionChat()">x</button>
         </div>
         <div class="discussion-chat-messages" id="discussionChatMessages"></div>
+        <div class="discussion-chat-resize-handle" aria-label="Resize"></div>
     </div>
 
     <script src="{{ url_for('static', filename='js/game.js') }}"></script>

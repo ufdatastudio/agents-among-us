@@ -1,6 +1,7 @@
 /**
  * Game Simulation 
  * Press D for debug overlay
+ * ADDED: Draggable/Resizable discussion chat + ML classifier score caching for dead agents
  */
 
 // motherboard map + skeld naming
@@ -446,6 +447,47 @@ function updateStatusTable(agents) {
     if (!agents) return;
     const tbody = document.getElementById("statusTableBody");
     if (!tbody) return;
+    
+    // === ADDED: Cache existing classifier scores before clearing table ===
+    const cachedScores = {};
+    tbody.querySelectorAll('tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length > 0) {
+            const agentNum = cells[0].textContent;
+            cachedScores[agentNum] = {};
+            
+            if (enabledClassifiers.sgd) {
+                const sgdCell = row.querySelector(`[id$="-sgd"]`);
+                if (sgdCell && sgdCell.textContent !== "-") {
+                    cachedScores[agentNum].sgd = {
+                        value: sgdCell.textContent,
+                        className: sgdCell.className
+                    };
+                }
+            }
+            
+            if (enabledClassifiers.svm) {
+                const svmCell = row.querySelector(`[id$="-svm"]`);
+                if (svmCell && svmCell.textContent !== "-") {
+                    cachedScores[agentNum].svm = {
+                        value: svmCell.textContent,
+                        className: svmCell.className
+                    };
+                }
+            }
+            
+            if (enabledClassifiers.lr) {
+                const lrCell = row.querySelector(`[id$="-lr"]`);
+                if (lrCell && lrCell.textContent !== "-") {
+                    cachedScores[agentNum].lr = {
+                        value: lrCell.textContent,
+                        className: lrCell.className
+                    };
+                }
+            }
+        }
+    });
+    
     tbody.innerHTML = "";
     
     const agentKeys = Object.keys(agents).sort(function(a, b) {
@@ -521,25 +563,46 @@ function updateStatusTable(agents) {
         }
         row.appendChild(killsCell);
         
-        // Add classifier columns if enabled
+        // === ADDED: Add classifier columns with cached value restoration ===
         if (enabledClassifiers.sgd) {
             const sgdCell = document.createElement("td");
             sgdCell.id = `suspicion-${agentNumRaw}-sgd`;
-            sgdCell.textContent = "-";
+            
+            // Restore cached value if exists
+            if (cachedScores[displayNum] && cachedScores[displayNum].sgd) {
+                sgdCell.textContent = cachedScores[displayNum].sgd.value;
+                sgdCell.className = cachedScores[displayNum].sgd.className;
+            } else {
+                sgdCell.textContent = "-";
+            }
             row.appendChild(sgdCell);
         }
         
         if (enabledClassifiers.svm) {
             const svmCell = document.createElement("td");
             svmCell.id = `suspicion-${agentNumRaw}-svm`;
-            svmCell.textContent = "-";
+            
+            // Restore cached value if exists
+            if (cachedScores[displayNum] && cachedScores[displayNum].svm) {
+                svmCell.textContent = cachedScores[displayNum].svm.value;
+                svmCell.className = cachedScores[displayNum].svm.className;
+            } else {
+                svmCell.textContent = "-";
+            }
             row.appendChild(svmCell);
         }
         
         if (enabledClassifiers.lr) {
             const lrCell = document.createElement("td");
             lrCell.id = `suspicion-${agentNumRaw}-lr`;
-            lrCell.textContent = "-";
+            
+            // Restore cached value if exists
+            if (cachedScores[displayNum] && cachedScores[displayNum].lr) {
+                lrCell.textContent = cachedScores[displayNum].lr.value;
+                lrCell.className = cachedScores[displayNum].lr.className;
+            } else {
+                lrCell.textContent = "-";
+            }
             row.appendChild(lrCell);
         }
         
@@ -783,6 +846,9 @@ window.addEventListener("DOMContentLoaded", function() {
     const exitBtn = document.getElementById("exitBtn");
     if (exitBtn) exitBtn.addEventListener("click", exitToHome);
     
+    // === ADDED: Initialize draggable/resizable discussion chat ===
+    initializeDraggableChat();
+    
     console.log("🎮 Press 'D' for debug!");
 });
 
@@ -897,4 +963,93 @@ function addDiscussionMessage(event) {
     
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
+}
+
+// =====================================================================
+// === ADDED: DRAGGABLE & RESIZABLE DISCUSSION CHAT ===
+// =====================================================================
+
+function initializeDraggableChat() {
+    const chat = document.getElementById("discussionChat");
+    const header = document.getElementById("discussionChatHeader");
+    const resizeHandle = chat.querySelector(".discussion-chat-resize-handle");
+    
+    if (!chat || !header) return;
+    
+    // Draggable functionality
+    let isDragging = false;
+    let currentX, currentY, initialX, initialY;
+    
+    header.addEventListener("mousedown", function(e) {
+        // Don't drag if clicking close button
+        if (e.target.classList.contains("discussion-chat-close")) return;
+        
+        isDragging = true;
+        
+        // Get current transform or use default center position
+        const rect = chat.getBoundingClientRect();
+        initialX = rect.left;
+        initialY = rect.top;
+        currentX = e.clientX - initialX;
+        currentY = e.clientY - initialY;
+        
+        // Remove transform centering when starting to drag
+        chat.style.transform = "none";
+        chat.style.left = initialX + "px";
+        chat.style.top = initialY + "px";
+        
+        e.preventDefault();
+    });
+    
+    document.addEventListener("mousemove", function(e) {
+        if (!isDragging) return;
+        
+        e.preventDefault();
+        
+        const newX = e.clientX - currentX;
+        const newY = e.clientY - currentY;
+        
+        chat.style.left = newX + "px";
+        chat.style.top = newY + "px";
+    });
+    
+    document.addEventListener("mouseup", function() {
+        isDragging = false;
+    });
+    
+    // Resizable functionality
+    if (resizeHandle) {
+        let isResizing = false;
+        let startX, startY, startWidth, startHeight;
+        
+        resizeHandle.addEventListener("mousedown", function(e) {
+            isResizing = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            const rect = chat.getBoundingClientRect();
+            startWidth = rect.width;
+            startHeight = rect.height;
+            
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        
+        document.addEventListener("mousemove", function(e) {
+            if (!isResizing) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            const newWidth = Math.max(300, startWidth + deltaX);
+            const newHeight = Math.max(200, startHeight + deltaY);
+            
+            chat.style.width = newWidth + "px";
+            chat.style.height = newHeight + "px";
+        });
+        
+        document.addEventListener("mouseup", function() {
+            isResizing = false;
+        });
+    }
 }

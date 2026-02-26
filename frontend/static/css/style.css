@@ -965,6 +965,8 @@ hr {
     border-bottom: 1px solid #bbb;
     flex-shrink: 0;
     border-radius: 4px 4px 0 0;
+    cursor: move;
+    user-select: none;
 }
 
 .discussion-chat-title { font-size: 15px; font-weight: 600; color: #222; }
@@ -979,6 +981,7 @@ hr {
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
+    flex-shrink: 0;
     line-height: 1;
     transition: background 0.15s;
     display: flex;
@@ -1001,6 +1004,17 @@ hr {
 .discussion-chat-messages::-webkit-scrollbar { width: 6px; }
 .discussion-chat-messages::-webkit-scrollbar-track { background: #e0e0e0; }
 .discussion-chat-messages::-webkit-scrollbar-thumb { background: #bbb; }
+
+.discussion-chat-resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 50%, #999 50%);
+    border-bottom-right-radius: 4px;
+}
 
 .chat-message {
     display: flex;
