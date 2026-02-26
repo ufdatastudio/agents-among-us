@@ -9,6 +9,7 @@ import os
 import json
 import sys
 import glob
+import csv
 import pandas as pd
 from datetime import datetime
 import signal
@@ -31,6 +32,40 @@ LIVE_STATE_FILE = os.path.join(BACKEND_PATH, 'live_state.json')
 current_game_process = None
 
 os.makedirs(DATA_DIR, exist_ok=True)
+
+
+def read_stats_csv(csv_path=None):
+    """
+    Read frontend_stats.csv and return list of row dicts.
+    Tolerates mixed column counts: older rows have 18 columns, newer rows
+    have 21 or 22 (extra sgd_score, svm_score, lr_score). Normalizes so every
+    row has the same keys.
+    """
+    path = csv_path or MASTER_CSV
+    if not os.path.exists(path):
+        return []
+    out = []
+    try:
+        with open(path, "r", encoding="utf-8", newline="") as f:
+            reader = csv.reader(f)
+            header = next(reader, None)
+            if not header:
+                return []
+            # Normalize header: if 18 cols, add sgd_score, svm_score, lr_score before last (timestamp)
+            if len(header) == 18:
+                header = header[:17] + ["sgd_score", "svm_score", "lr_score"] + header[17:]
+            ncols = len(header)
+            for row in reader:
+                if len(row) == 18:
+                    row = row[:17] + ["", "", ""] + row[17:18]
+                elif len(row) > ncols:
+                    row = row[:ncols]
+                while len(row) < ncols:
+                    row.append("")
+                out.append(dict(zip(header, row)))
+    except Exception as e:
+        print(f"ERROR reading stats CSV: {e}")
+    return out
 
 
 # =============================================================================
@@ -163,9 +198,9 @@ def start_game():
         # Print classifier config
         classifiers_enabled = [k.upper() for k, v in enabled_classifiers.items() if v]
         if classifiers_enabled:
-            print(f"\n🔬 ML Classifiers Enabled: {', '.join(classifiers_enabled)}")
+            print(f"\nML Classifiers Enabled: {', '.join(classifiers_enabled)}")
         else:
-            print(f"\n🔬 ML Classifiers: DISABLED")
+            print(f"\nML Classifiers: DISABLED")
         print(f"{'='*60}\n")
         
         # store in session
@@ -179,7 +214,7 @@ def start_game():
             if os.path.exists(LIVE_STATE_FILE):
                 os.remove(LIVE_STATE_FILE)
         except Exception as e:
-            print(f"⚠️  Could not clear live_state.json: {e}")
+            print(f"WARNING: Could not clear live_state.json: {e}")
         
         # Build command
         cmd = [
@@ -318,16 +353,10 @@ def get_game_status():
 
 @app.route('/api/stats/all')
 def get_all_stats():
-    """Return all data from frontend_stats.csv"""
+    """Return all data from frontend_stats.csv (tolerates 18 vs 21 column rows)."""
     try:
-        if not os.path.exists(MASTER_CSV):
-            return jsonify([])
-        
-        df = pd.read_csv(MASTER_CSV)
-        data = df.to_dict('records')
-        
+        data = read_stats_csv(MASTER_CSV)
         return jsonify(data)
-        
     except Exception as e:
         print(f"ERROR reading stats: {e}")
         return jsonify({'error': str(e)}), 500
@@ -337,17 +366,15 @@ def get_all_stats():
 def refresh_stats():
     """Scan logs/ folder for new games and append to frontend_stats.csv"""
     try:
-        # load existing game IDs to avoid duplicates
-        existing_game_ids = set()
-        if os.path.exists(MASTER_CSV):
-            existing_df = pd.read_csv(MASTER_CSV)
-            existing_game_ids = set(existing_df['game_id'].unique())
+        # load existing game IDs to avoid duplicates (use tolerant reader)
+        existing_data = read_stats_csv(MASTER_CSV)
+        existing_game_ids = set(r.get("game_id") for r in existing_data if r.get("game_id"))
         
         # find all stats.csv files in logs
         pattern = os.path.join(BACKEND_PATH, 'logs', '*', 'Game_*_Run0', 'stats.csv')
         csv_files = glob.glob(pattern)
         
-        print(f"\n🔍 Scanning for new games...")
+        print(f"\nScanning for new games...")
         print(f"Found {len(csv_files)} total stats.csv files")
         print(f"Already have {len(existing_game_ids)} games in database")
         
@@ -374,7 +401,7 @@ def refresh_stats():
                 
                 new_data.append(df)
                 new_games += 1
-                print(f"  ✅ Added: {game_id} ({composition})")
+                print(f"  Added: {game_id} ({composition})")
                 
             except Exception as e:
                 print(f"ERROR reading {csv_file}: {e}")
@@ -388,9 +415,9 @@ def refresh_stats():
             else:
                 combined.to_csv(MASTER_CSV, mode='w', header=True, index=False)
             
-            print(f"\n✅ Added {new_games} new games to database\n")
+            print(f"\nAdded {new_games} new games to database\n")
         else:
-            print(f"\n📊 No new games found\n")
+            print(f"\nNo new games found\n")
         
         return jsonify({'new_games': new_games})
         
@@ -426,20 +453,17 @@ def export_game():
         if not game_id:
             return "game_id parameter required", 400
         
-        if not os.path.exists(MASTER_CSV):
-            return "No statistics available", 404
-        
-        # Filter the CSV for this game
-        df = pd.read_csv(MASTER_CSV)
-        game_df = df[df['game_id'] == game_id]
-        
-        if game_df.empty:
+        data = read_stats_csv(MASTER_CSV)
+        game_rows = [r for r in data if r.get("game_id") == game_id]
+        if not game_rows:
             return f"No data found for game: {game_id}", 404
         
-        # Save to temporary file
         temp_file = os.path.join(DATA_DIR, f'temp_{game_id}.csv')
-        game_df.to_csv(temp_file, index=False)
-        
+        keys = list(game_rows[0].keys())
+        with open(temp_file, "w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=keys)
+            w.writeheader()
+            w.writerows(game_rows)
         return send_file(
             temp_file,
             mimetype='text/csv',
@@ -488,7 +512,7 @@ def clear_stats():
     try:
         if os.path.exists(MASTER_CSV):
             os.remove(MASTER_CSV)
-            print("🗑️  Deleted frontend_stats.csv")
+            print("Deleted frontend_stats.csv")
             return jsonify({'status': 'cleared'})
         else:
             return jsonify({'status': 'no_data'})

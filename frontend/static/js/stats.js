@@ -8,19 +8,28 @@
 let allData = [];          // All raw rows from frontend_stats.csv
 let currentGameId = null;  // Selected game in Single Game Data tab
 
-// All models in backend (config/model_composition.py). Order: heavyweight then small. Used for Agent Summary tables.
+// Agent Summary: list every model from config (Settings). Same order as config.js MODELS. Unused models show dash.
 const ALL_MODELS = [
   "Qwen/Qwen3-Next-80B-A3B-Instruct",
   "arcee-ai/Arcee-Nova",
+  "Nexusflow/Athene-V2-Chat",
   "Qwen/Qwen2.5-72B-Instruct",
   "meta-llama/Llama-3.3-70B-Instruct",
-  "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
   "zerofata/L3.3-GeneticLemonade-Final-v2-70B",
   "NousResearch/Hermes-4-70B",
-  "unsloth/Apertus-70B-Instruct-2509-unsloth-bnb-4bit",
-  "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled",
-  "Nexusflow/Athene-V2-Chat",
+  "swiss-ai/Apertus-70B-Instruct-2509",
   "MultiverseComputingCAI/HyperNova-60B",
+  "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled",
+  "openai/gpt-oss-20b",
+  "OpenPipe/Qwen3-14B-Instruct",
+  "google/gemma-2-9b-it",
+  "meta-llama/Meta-Llama-3-8B-Instruct",
+  "meta-llama/Llama-3.1-8B-Instruct",
+  "swiss-ai/Apertus-8B-Instruct-2509",
+  "arcee-ai/Arcee-Agent",
+  "allenai/Olmo-3-7B-Instruct",
+  "Qwen/Qwen2-7B-Instruct",
+  "Qwen/Qwen2.5-7B-Instruct",
   "meta-llama/Llama-3.2-3B-Instruct",
   "Qwen/Qwen2.5-1.5B-Instruct",
   "TinyLlama/TinyLlama-1.1B-Chat-v1.0",

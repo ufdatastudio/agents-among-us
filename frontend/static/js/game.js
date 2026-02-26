@@ -156,7 +156,7 @@ function drawDebugOverlay() {
     ctx.fillRect(10, 10, 280, 140);
     ctx.font = "14px Arial";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText("🔍 DEBUG (Press 'D')", 20, 30);
+    ctx.fillText("DEBUG (Press 'D')", 20, 30);
     ctx.font = "12px Arial";
     ctx.fillStyle = "#FF0000"; ctx.fillText("■ Red: Map boundary", 20, 55);
     ctx.fillStyle = "#00FFFF"; ctx.fillText("■ Cyan: Pathways", 20, 75);
@@ -168,7 +168,7 @@ function toggleDebug() {
     debugOverlayVisible = !debugOverlayVisible;
     if (debugCanvas) debugCanvas.style.display = debugOverlayVisible ? "block" : "none";
     drawDebugOverlay();
-    console.log(debugOverlayVisible ? "🔍 Debug ON" : "🔍 Debug OFF");
+    console.log(debugOverlayVisible ? "Debug ON" : "Debug OFF");
 }
 
 const COLOR_MAP = {
@@ -737,7 +737,7 @@ async function updateGameState() {
             
             const currentPhase = (data.global && data.global.current_phase) || "";
             if (currentPhase === "GAME OVER" && pollingInterval) {
-                console.log("🎮 Game ended, stopping polling");
+                console.log("Game ended, stopping polling");
                 clearInterval(pollingInterval);
                 pollingInterval = null;
                 
@@ -849,7 +849,7 @@ window.addEventListener("DOMContentLoaded", function() {
     // === ADDED: Initialize draggable/resizable discussion chat ===
     initializeDraggableChat();
     
-    console.log("🎮 Press 'D' for debug!");
+    console.log("Press 'D' for debug!");
 });
 
 function showWinScreen(winner) {
