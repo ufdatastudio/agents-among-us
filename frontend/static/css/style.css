@@ -514,7 +514,7 @@ select[name*="_color"] {
 }
 
 .status-table tr.agent-dead {
-    background: #b0b0b0;
+    background: #c8c8c8;
     color: #333;
 }
 
@@ -523,7 +523,7 @@ select[name*="_color"] {
 }
 
 .status-table tr.agent-byzantine.agent-dead {
-    background: #b0b0b0;
+    background: #c8c8c8;
     color: #333;
 }
 
