@@ -199,5 +199,3 @@ Found a bug or have a feature request?
 Please [open an issue](https://www.google.com/search?q=https://github.com/ufdatastudio/agents-among-us/issues) on GitHub.
 
 Contributions to extend the game map, add new roles, or optimize inference workflows are always welcome!
-
-```
