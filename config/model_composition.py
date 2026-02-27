@@ -6,7 +6,6 @@ HW_FLAG = False
 LW_FLAG = True
 HOMOGENEOUS = False
 HETEROGENEOUS = True
-MW_FLAG = False
 
 # Model Weight Class: Heavyweight
 LLAMA33_70B = "meta-llama/Llama-3.3-70B-Instruct" 
@@ -62,8 +61,8 @@ LW_MODELS_MAP = {
     "gpt-oss": GPT_OSS_20B,
     "Apertus": APERTUS_8B,
     "Arcee-Agent":  ARCEE_AGENT_8B,
-    "Qwen1.5B": QWEN_1_5B,
-    "TinyLlama": TINY_LLAMA,
+    #"Qwen1.5B": QWEN_1_5B,
+    #"TinyLlama": TINY_LLAMA,
 
 }
 
@@ -155,26 +154,3 @@ if MW_FLAG:
     # The Anchors
     ANCHOR_LW = GEMMA2_9B      
     ANCHOR_HW = ARCEE_NOVA_73B
-    
-    
-    # ==========================================
-    # EXP 1: Weight Class Mismatch (Max Offense vs Min Defense)
-    # ==========================================
-    COMPOSITION.append({
-        "name": "HWvsLW",
-        "honest_count": 8,
-        "byzantine_count": 2,
-        "honest_model": make_crew(LW_CREW_POOL), 
-        "byzantine_model": HW_IMP_PAIR 
-    })
-
-    # ==========================================
-    # EXP 2  Weight Class Mismatch (Min Offense vs Max Defense)
-    # Hypothesis: HW Crew deduction should suppress LW Imposter win rates significantly.
-    COMPOSITION.append({
-        "name": "LWvsHW",
-        "honest_count": 8,
-        "byzantine_count": 2,
-        "honest_model": make_crew(HW_CREW_POOL),
-        "byzantine_model": LW_IMP_PAIR
-    })

@@ -123,7 +123,7 @@ INSTRUCTIONS:
     def vote(self, world_view, candidates, round_num):
         discussion_log = self._read_file(world_view["discussion_log_path"])
         round_num = int(round_num)
-        recent_discussion = self._get_current_round_log(discussion_log, round_num-3)
+        recent_discussion = self._get_current_round_log(discussion_log, round_num-3) # can adjust as needed
         results_log = self._read_file(world_view["results_log_path"])
 
         prompt = f"""

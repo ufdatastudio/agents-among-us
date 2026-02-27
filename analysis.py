@@ -166,7 +166,7 @@ def load_data_from_dirs(root_dir, experiments_list):
                     df["game_id"] = exp_id + "_" + os.path.basename(root)
                     
                     if 'model_name' in df.columns: df['model_name'] = df['model_name'].apply(normalize_model_name)
-                    alignment_map = {'H': 'Crew', 'B': 'Imposter', 'Imposter': 'Imposter'}
+                    alignment_map = {'H': 'Crew', 'B': 'Imposter'}
                     if 'alignment' in df.columns: df['alignment'] = df['alignment'].replace(alignment_map)
                     all_data.append(df)
                 except Exception as e: 

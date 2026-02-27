@@ -20,4 +20,4 @@ full_experiments_game_level.csv
 global_game_model.json__pycache__/
 *.pyc
 live_state*.json
-config/game_configs/
+archived/
