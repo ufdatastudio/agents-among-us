@@ -72,7 +72,6 @@ INSTRUCTIONS:
 3. Do NOT write "Action:", "I will", or explain your reasoning. 
 4. Do NOT output markdown or punctuation. One word or phrase only.
 """
-        # Call synchronous generate with low temp
         response = self.llm.generate(self.model_name, self._system_prompt(), prompt, temperature=0.1)
         clean_resp = response.strip().upper()
         
@@ -117,7 +116,6 @@ INSTRUCTIONS:
 9. **DO NOT** include your name or "Agent_X:" at the start.
 10. **DO NOT** use quotes. Just output the sentence.
 """
-        # Call synchronous generate with high temp
         return self.llm.generate(self.model_name, self._system_prompt(), prompt, temperature=1.0)
 
     def vote(self, world_view, candidates, round_num):

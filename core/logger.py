@@ -14,12 +14,10 @@ class LogManager:
         else:
             self.base_dir = os.path.join("logs", f"Game_{game_id}")
         
-        # Clean/Create Directory
         if os.path.exists(self.base_dir):
             shutil.rmtree(self.base_dir)
         os.makedirs(self.base_dir)
 
-        # File Paths
         self.paths = {
             "round_results": os.path.join(self.base_dir, "roundResults.log"),
             "stats": os.path.join(self.base_dir, "stats.log"),
@@ -32,8 +30,6 @@ class LogManager:
         # Create Root Logs
         self._create_file(self.paths["round_results"], "=== Round Results Log ===\n")
         self._create_file(self.paths["discussion"], "=== Discussion Log ===\n")
-        
-        # Create Discussion Chat CSV with headers
         self._init_discussion_chat_csv()
 
         # Create Agent Directories based on Role
@@ -70,11 +66,8 @@ class LogManager:
         try:
             # Extract agent number from Agent_0 -> 0
             agent_num = agent_name.replace("Agent_", "") if agent_name.startswith("Agent_") else agent_name
-            
-            # Convert role to readable label
             role_label = "Byzantine" if role == "byzantine" else "Honest"
             
-            # csv to store discussion chats per game
             with open(self.paths["discussion_chat"], "a", newline='', encoding="utf-8") as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerow([discussion_num, reason, agent_num, model_name, role_label, message])
@@ -119,10 +112,8 @@ class LogManager:
         if not agents_data:
             return
 
-        # extract one agent to get headers
         first_agent = list(agents_data.values())[0]
         stats_keys = list(first_agent["stats"].keys())
-        # Add 'Agent_Name' as the first column
         fieldnames = ["agent_name"] + stats_keys
 
         print(f"Exporting Game Stats to: {self.paths['stats_csv']}")
@@ -139,7 +130,6 @@ class LogManager:
         except Exception as e:
             print(f"Error exporting CSV stats: {e}")
 
-        
     def get_agent_log_path(self, agent_name):
         return self.paths["agents"][agent_name]["action"]
     

@@ -1,14 +1,9 @@
 // Statistics page logic for Agents Among Us
 // Agent Summary: per-model aggregates (Honest / Byzantine). Single Game Data: game list + detail.
 
-// =====================================================================
-// Global state
-// =====================================================================
-
 let allData = [];          // All raw rows from frontend_stats.csv
 let currentGameId = null;  // Selected game in Single Game Data tab
 
-// Agent Summary: list every model from config (Settings). Same order as config.js MODELS. Unused models show dash.
 const ALL_MODELS = [
   "Qwen/Qwen3-Next-80B-A3B-Instruct",
   "arcee-ai/Arcee-Nova",
@@ -35,10 +30,6 @@ const ALL_MODELS = [
   "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
 ];
 const DASH = "—";
-
-// =====================================================================
-// Utility helpers
-// =====================================================================
 
 // Abbreviate game id: "test_005" -> "005"
 function abbreviateGameId(gameId) {
@@ -97,10 +88,6 @@ function shortTime(ts) {
   return `${hh}:${mm}`;
 }
 
-// =====================================================================
-// Data loading
-// =====================================================================
-
 async function loadStats() {
   try {
     const res = await fetch("/api/stats/all");
@@ -118,9 +105,6 @@ async function loadStats() {
   }
 }
 
-// =====================================================================
-// Agent Summary (per-model aggregates, Honest / Byzantine tabs)
-// =====================================================================
 
 function showAgentSubtab(subtabName, evt) {
   document.querySelectorAll(".agent-summary-panel").forEach((el) => el.classList.remove("active"));
@@ -269,10 +253,6 @@ function cell(val) {
   td.textContent = val === undefined || val === null ? DASH : String(val);
   return td;
 }
-
-// =====================================================================
-// Single Game Data tab (game list + detail)
-// =====================================================================
 
 function groupByGame() {
   const map = new Map();
@@ -534,10 +514,6 @@ async function refreshData() {
   }
 }
 
-// =====================================================================
-// Tab handling
-// =====================================================================
-
 function showTab(tabName, evt) {
   document
     .querySelectorAll(".stats-tab-content")
@@ -553,10 +529,6 @@ function showTab(tabName, evt) {
     evt.currentTarget.classList.add("active");
   }
 }
-
-// =====================================================================
-// Initialization
-// =====================================================================
 
 window.addEventListener("DOMContentLoaded", () => {
   const searchEl = document.getElementById("agent-summary-search");

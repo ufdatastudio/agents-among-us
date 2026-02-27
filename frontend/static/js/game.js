@@ -1,7 +1,6 @@
 /**
  * Game Simulation 
  * Press D for debug overlay
- * ADDED: Draggable/Resizable discussion chat + ML classifier score caching for dead agents
  */
 
 // motherboard map + skeld naming
@@ -242,7 +241,7 @@ let lastPhase = "";
 let lastRound = 0;
 let clearedAgents = new Set();
 
-// === SUSPICION SCORES TRACKING ===
+// SUSPICION SCORES 
 let enabledClassifiers = {
     sgd: false,
     svm: false,
@@ -317,7 +316,6 @@ function getSuspicionClass(score) {
     if (score >= 0.4) return 'suspicion-medium';
     return 'suspicion-low';
 }
-// === END SUSPICION SCORES ===
 
 function updateGameParams(gameInfo) {
     if (!gameInfo) return;
@@ -448,7 +446,6 @@ function updateStatusTable(agents) {
     const tbody = document.getElementById("statusTableBody");
     if (!tbody) return;
     
-    // === ADDED: Cache existing classifier scores before clearing table ===
     const cachedScores = {};
     tbody.querySelectorAll('tr').forEach(row => {
         const cells = row.querySelectorAll('td');
@@ -563,7 +560,6 @@ function updateStatusTable(agents) {
         }
         row.appendChild(killsCell);
         
-        // === ADDED: Add classifier columns with cached value restoration ===
         if (enabledClassifiers.sgd) {
             const sgdCell = document.createElement("td");
             sgdCell.id = `suspicion-${agentNumRaw}-sgd`;
@@ -639,19 +635,15 @@ function updateLiveFeed(events) {
             showDiscussionChat(title);
         }
 
-        // Add chat messages to discussion window only (not feed)
         if (eventType === "chat") {
             addDiscussionMessage(event);
             return;
         }
 
-        // Add vote messages to discussion window
         if (eventType === "vote") {
             addDiscussionMessage(event);
-            // Continue to also add to feed below
         }
 
-        // Add event to feed
         const eventDiv = document.createElement("div");
         eventDiv.className = "feed-event";
         if (eventType === "kill" || eventType === "eject") {
@@ -688,7 +680,6 @@ async function updateGameState() {
         if (!response.ok) return;
         const data = await response.json();
         
-        // Initialize suspicion tracking once
         if (!suspicionInitialized) {
             initSuspicionTracking(data);
         }
@@ -760,7 +751,6 @@ async function updateGameState() {
             updateAgentPositions(data.agents);
             updateStatusTable(data.agents);
             
-            // Update suspicion scores if available
             if (data.suspicion && data.suspicion.scores) {
                 updateSuspicionScores(data.suspicion);
             }
@@ -849,7 +839,6 @@ window.addEventListener("DOMContentLoaded", function() {
     const exitBtn = document.getElementById("exitBtn");
     if (exitBtn) exitBtn.addEventListener("click", exitToHome);
     
-    // === ADDED: Initialize draggable/resizable discussion chat ===
     initializeDraggableChat();
     
     console.log("Press 'D' for debug!");
@@ -967,11 +956,6 @@ function addDiscussionMessage(event) {
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
 }
-
-// =====================================================================
-// === ADDED: DRAGGABLE & RESIZABLE DISCUSSION CHAT ===
-// =====================================================================
-
 function initializeDraggableChat() {
     const chat = document.getElementById("discussionChat");
     const header = document.getElementById("discussionChatHeader");

@@ -9,16 +9,16 @@ import platform
 IS_MAC = platform.system() == "Darwin"
 if IS_MAC:
     os.environ["LLM_MODE"] = "LOCAL"
-    os.environ["CUDA_VISIBLE_DEVICES"] = ""  # Empty on Mac, not -1
+    os.environ["CUDA_VISIBLE_DEVICES"] = "" 
 else:
     os.environ["LLM_MODE"] = "LOCAL"
-    #os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+    #os.environ["CUDA_VISIBLE_DEVICES"] = "-1" # Enable this for distributed GPU runs
 
 import time
 from uuid import uuid4
 from config.settings import NUM_ROUNDS as DEFAULT_NUM_ROUNDS
 from config.model_composition import COMPOSITION
-from game.game_engine import GameEngine
+from core.game_engine import GameEngine
 from core.llm import ModelManager
 import random
 
@@ -65,14 +65,7 @@ def main():
         num_agents=selected_composition['honest_count'] + selected_composition['byzantine_count'],
         num_rounds=num_rounds  # Pass num_rounds to engine
     )
-
-    # Preload Model
-    #manager = ModelManager.get_instance()
-    # all_models_list = selected_composition['honest_model'] + selected_composition['byzantine_model']
-    # unique_models = set(all_models_list)
-    # for model in unique_models:
-    #     manager.load_model(model)
-    
+   
     engine.setup(composition=selected_composition)
     final_result = None
 
@@ -80,13 +73,12 @@ def main():
         # Run Movement (Sync)
         meeting_called = engine.run_movement_phase(round_num)
                 
-        # Check 1: Did anyone die during movement?
+        # Did anyone die during movement?
         final_result = engine.check_win_condition()
         if final_result:
             break
             
         if meeting_called:
-            # Run Discussion
             engine.run_discussion_phase(round_num)
             
             final_result = engine.check_win_condition()
@@ -97,8 +89,6 @@ def main():
         final_result = "Honest Agents Win, Max Rounds Reached"
         engine.finalize_stats(final_result) 
     print(f"Game Over. Result: {final_result}")
-
-    #manager.unload_all_models()
 
 if __name__ == "__main__":
     main()

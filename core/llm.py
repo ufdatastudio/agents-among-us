@@ -11,10 +11,11 @@ IS_MAC = platform.system() == "Darwin"
 if os.environ.get("LLM_MODE", "LOCAL") != "CONTROLLER":
     import torch
     import gc
-    if not IS_MAC:  # Only import unsloth on non-Mac systems
+    if not IS_MAC: 
         from unsloth import FastLanguageModel
     from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, Mxfp4Config, AutoConfig
-    
+
+# See Model Specific Documentation   
 CONCATENATE = {
     "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled",
     "google/gemma-2-9b-it",
@@ -144,7 +145,6 @@ class ModelManager:
                     use_safetensors=True,
                     device_map="auto",
                     dtype=torch.bfloat16,
-
                 )
             
 
@@ -166,18 +166,12 @@ class ModelManager:
         except Exception as e:
             print(f"Error loading model {model_name}: {e}")
             raise e
-
-
+        
     def unload_all_models(self):
-  
-        # 1. Clear Dictionary References
         self.models.clear()
         self.tokenizers.clear()
-        
-        # 2. Force Python Garbage Collection
         gc.collect()
         
-        # 3. Empty PyTorch CUDA Cache
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.cuda.synchronize() 

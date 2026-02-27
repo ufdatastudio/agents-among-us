@@ -1,8 +1,6 @@
-# config/settings.py
 # Global settings and game constants (map, rounds, agent counts, quantization flags) used across the project.
-
-NUM_ROUNDS = 10 # 7 total rounds for real simulations || front end now handles this, but just kept it here anyways
-MAX_MOVEMENT_PHASES = 4  # How many "ticks" of movement occur before a forced check/pause
+NUM_ROUNDS = 10 
+MAX_MOVEMENT_PHASES = 4  
 
 ROOMS = {
     # --- Left Side (Reactor & Engines) ---
@@ -93,7 +91,7 @@ AGENT_COLORS = ["🔴", "🟠", "🟡", "🟩", "🟢", "🔷", "🔵", "🟣", 
 NUM_BYZ = 2
 NUM_HONEST = 8
 
-# new mad names (not using anymore)
+# archived map
 '''
 ROOMS = {
     # --- left side ---

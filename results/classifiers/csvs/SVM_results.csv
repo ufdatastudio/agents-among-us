@@ -1,0 +1,6 @@
+Experiment,Precision,Recall,F1
+Train_Homogenous_Test_Heterogenous,0.82 ± 0.00,0.92 ± 0.00,0.86 ± 0.00
+Train_Heterogenous_Test_Homogenous,0.87 ± 0.00,0.93 ± 0.00,0.90 ± 0.00
+Train_Lightweight_Test_Heavyweight,0.69 ± 0.00,0.88 ± 0.00,0.77 ± 0.00
+Train_Heavyweight_Test_Lightweight,0.77 ± 0.00,0.94 ± 0.00,0.85 ± 0.00
+AVERAGE,0.79,0.92,0.85

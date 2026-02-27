@@ -1,0 +1,13 @@
+--- Misclassifications (Deception): Train_Lightweight_Test_Heavyweight ---
+LLM MODEL                                                    | EVASIONS   | TOTAL    | RATE    
+-------------------------------------------------------------------------------------
+meta-llama/Llama-3.3-70B-Instruct                  | 1094       | 1962     |   55.8%
+Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled        | 886        | 1952     |   45.4%
+zerofata/L3.3-GeneticLemonade-Final-v2-70B         | 936        | 2197     |   42.6%
+NousResearch/Hermes-4-70B                          | 874        | 2193     |   39.9%
+Nexusflow/Athene-V2-Chat                           | 807        | 2342     |   34.5%
+Qwen/Qwen2.5-72B-Instruct                          | 736        | 2294     |   32.1%
+Qwen/Qwen3-Next-80B-A3B-Instruct                   | 634        | 2043     |   31.0%
+MultiverseComputingCAI/HyperNova-60B               | 585        | 2081     |   28.1%
+Apertus-70B-Instruct-2509                          | 339        | 2190     |   15.5%
+arcee-ai/Arcee-Nova                                | 212        | 2134     |    9.9%

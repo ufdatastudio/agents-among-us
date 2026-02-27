@@ -65,8 +65,6 @@ for (( i=0; i<TOTAL_MODELS; i+=MODELS_PER_GPU )); do
     
 done
 
-
-
 MAX_RETRIES=120  
 COUNT=0        
 

@@ -1,0 +1,21 @@
+Feature,Weight,Correlated_Role
+teammate,4.229478675520941,Imposter
+teammates,3.136082794714294,Imposter
+honest agents,2.653062543878866,Imposter
+quite,2.6510097375406008,Imposter
+strange,2.3452581303000675,Imposter
+someones,2.3235917071424095,Imposter
+team,2.286937698136413,Imposter
+interesting,2.2667686511428484,Imposter
+place tagging,2.1849050649229906,Imposter
+initial thought saw,2.115804924381635,Imposter
+consider votes,-2.8600607658847266,Crewmate
+claims tagged,-2.7393343467987887,Crewmate
+analysiswe,-2.3633507390621022,Crewmate
+analysiswe need,-2.3138776720232856,Crewmate
+pressed emergency,-2.265368207523839,Crewmate
+lets consider,-2.177140005193236,Crewmate
+correlate,-2.092063619515486,Crewmate
+lets review,-2.0537351707845666,Crewmate
+eject,-2.000305904852915,Crewmate
+pressed button,-1.9627003102212848,Crewmate

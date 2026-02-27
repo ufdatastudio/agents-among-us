@@ -1,5 +1,3 @@
-# config/model_composition.py
-# Defines model constants and constructs heterogeneous/homogeneous compositions used to spawn agents in experiments.
 import itertools
 
 HW_FLAG = False
@@ -32,7 +30,7 @@ GPT_OSS_20B = "openai/gpt-oss-20b"
 APERTUS_8B = "swiss-ai/Apertus-8B-Instruct-2509"
 ARCEE_AGENT_8B = "arcee-ai/Arcee-Agent"
 
-# small models (added for easier testing - not rlly good though)
+# small models, added for easier testing - not very functional for the game, but useful for debugging 
 QWEN_1_5B = "Qwen/Qwen2.5-1.5B-Instruct" 
 TINY_LLAMA = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 

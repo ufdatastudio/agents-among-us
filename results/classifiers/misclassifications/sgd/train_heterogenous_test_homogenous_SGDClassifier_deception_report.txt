@@ -1,0 +1,22 @@
+--- Misclassifications (Deception): Train_Heterogenous_Test_Homogenous ---
+LLM MODEL                                          | EVASIONS   | TOTAL    | RATE    
+-------------------------------------------------------------------------------------
+Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled        | 14         | 32       |   43.8%
+Qwen/Qwen2-7B-Instruct                             | 13         | 32       |   40.6%
+meta-llama/Llama-3.3-70B-Instruct                  | 52         | 146      |   35.6%
+NousResearch/Hermes-4-70B                          | 89         | 270      |   33.0%
+zerofata/L3.3-GeneticLemonade-Final-v2-70B         | 88         | 274      |   32.1%
+arcee-ai/Arcee-Agent                               | 19         | 82       |   23.2%
+meta-llama/Llama-3.1-8B-Instruct                   | 48         | 223      |   21.5%
+swiss-ai/Apertus-8B-Instruct-2509                  | 7          | 34       |   20.6%
+google/gemma-2-9b-it                               | 38         | 199      |   19.1%
+OpenPipe/Qwen3-14B-Instruct                        | 49         | 281      |   17.4%
+MultiverseComputingCAI/HyperNova-60B               | 31         | 184      |   16.8%
+openai/gpt-oss-20b                                 | 40         | 252      |   15.9%
+Nexusflow/Athene-V2-Chat                           | 43         | 300      |   14.3%
+Apertus-70B-Instruct-2509                          | 32         | 231      |   13.9%
+meta-llama/Meta-Llama-3-8B-Instruct                | 2          | 15       |   13.3%
+Qwen/Qwen2.5-72B-Instruct                          | 36         | 275      |   13.1%
+Qwen/Qwen2.5-7B-Instruct                           | 15         | 206      |    7.3%
+arcee-ai/Arcee-Nova                                | 20         | 280      |    7.1%
+Qwen/Qwen3-Next-80B-A3B-Instruct                   | 16         | 227      |    7.0%

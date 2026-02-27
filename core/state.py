@@ -1,4 +1,3 @@
-# core/state.py
 # Maintains the authoritative game world state and provides per-agent views/observations for decision making.
 import json
 import random
@@ -11,9 +10,9 @@ class GameState:
         self.logger = log_manager
         self.live_state_file = "live_state.json"
         
-        # ML Classifier tracking
-        self.enabled_classifiers = {}  # Will be set from composition
-        self.suspicion_scores = {}     # Format: {"Agent_0": {"SGD": 0.85, "SVM": 0.72, "LogisticRegression": 0.91}}
+        # Onserver tracking
+        self.enabled_classifiers = {}  
+        self.suspicion_scores = {} 
         
         self.world_data = {
             "game_id": self.logger.game_id,
@@ -74,11 +73,8 @@ class GameState:
         timestamp = datetime.now().strftime("%H:%M:%S")
         entry = {"time": timestamp, "msg": message, "type": category}
         
-        # No limit - keep all events
         log = self.world_data["global"]["ui_event_log"]
         log.append(entry)
-        # if len(log) > 50:
-        #     log.pop(0)
 
     def update_phase(self, phase_name):
         self.world_data["global"]["current_phase"] = phase_name
@@ -94,7 +90,7 @@ class GameState:
     def update_round(self, round_num):
         """Updates the current round number in the state."""
         self.world_data["global"]["round"] = round_num
-        if round_num > 1: # everyone starts alive
+        if round_num > 1: 
             for agent_name, agent_data in self.world_data["agents"].items():
                 if agent_data["status"] == "active":
                     agent_data["stats"]["rounds_survived"] += 1
@@ -129,8 +125,6 @@ class GameState:
             if not already_known:
                 agent_data["known_bodies"].append({"name": body, "room": loc})
 
-
-        # --- 1. Calculate Stats ---
         active_honest = len([a for n, a in self.world_data["agents"].items() 
                              if a["role"] == "honest" and a["status"] == "active"])
         total_active = len([a for n, a in self.world_data["agents"].items() 
@@ -142,13 +136,11 @@ class GameState:
             count_str = f"Players Remaining: {total_active}"
 
         current_room_bodies = self.world_data["rooms"][loc]["bodies"]
-        
-        # Structure the data with room info as requested
+
         visible_bodies = []
         for body in current_room_bodies:
             visible_bodies.append({"name": body, "room": loc})
     
-        # --- 2. Build Surroundings ---
         surroundings = {loc: {"occupants": occupants, "bodies": current_room_bodies}}
         adj_log_str = ""
         if loc in ROOMS:
@@ -156,11 +148,9 @@ class GameState:
                 neighbor_data = self.world_data["rooms"][neighbor].copy()
                 neighbor_data["bodies"] = []
                 surroundings[neighbor] = neighbor_data
-                # Determine occupants string for log
                 occ = [p for p in self.world_data["rooms"][neighbor]["occupants"] if p != agent_name]
                 adj_log_str += f"\n    [{neighbor}] -> Occupants: {occ if occ else 'None'}"
 
-        # --- 3. Role Specific (Teammates) ---
         teammate_str = ""
         if agent_data["role"] == "byzantine":
             teammates = [a.name for a in self.agents if a.role == "byzantine" and a.name != agent_name]
@@ -170,9 +160,8 @@ class GameState:
                 tm_status.append(f"{tm}: {status}")
             teammate_str = f"Teammate(s) Status: {' || '.join(tm_status)}\n"
 
-        # --- 4. Conditional Header ---
         header_str = ""
-        # Only check/update header if we are actually logging
+        # Only check/update header
         if log_to_file and agent_data["last_round_seen"] < round_num:
             header_str = (
                 f"Round {round_num}/{NUM_ROUNDS}\n"
@@ -181,12 +170,8 @@ class GameState:
             )
             self.world_data["agents"][agent_name]["last_round_seen"] = round_num
 
-
-
-        # --- 5. Construct Observation Block ---
-        # Only construct and write this string if we are in the movement phase
+        # Agent Observation Block 
         if log_to_file:
-
             if agent_data["known_bodies"]:
                 bodies_log_str = ", ".join([f"{b['name']} (in {b['room']})" for b in agent_data['known_bodies']])
             else:
@@ -200,7 +185,7 @@ class GameState:
             )
             self.logger.write_log("agent", agent_name, log_entry)
 
-        # Return Data Structure
+        # Agent View
         view = {
             "self": agent_data.copy(),
             "surroundings": surroundings,
@@ -213,7 +198,6 @@ class GameState:
 
     def record_action(self, agent_name, action_text, raw_response=None):
         """Records the selected action to the log file, ensuring it is one line."""
-        # Post-process: Remove newlines to keep log clean
         clean_action = action_text.replace("\n", " ").replace("\r", "").strip()
         current_loc = self.world_data["agents"][agent_name]["location"]
         if '->' in clean_action:
@@ -229,7 +213,6 @@ class GameState:
         if raw_response is not None:
             self.logger.write_log("debug", None, f"[DEBUG] {agent_name} | {self.world_data['agents'][agent_name]['role']} | raw response: {raw_response}\n")
 
-        # Stat Tracking
         if action_type == "move" and target_dest.lower() != current_loc.lower():
             self.world_data["agents"][agent_name]["stats"]["num_moves"] += 1
 
@@ -274,14 +257,13 @@ class GameState:
 
         newly_discovered = list(set(newly_discovered))
 
-        # --- FIND BODY LOCATION ---
+        # FIND BODY LOCATION 
         body_location = "Unknown Location"
         # Search all rooms to find where the body is currently located
         for room_name, room_data in self.world_data["rooms"].items():
             if body_name in room_data["bodies"]:
                 body_location = room_name
                 break
-        # --------------------------
 
         # Log to Discussion file
         victims_str = ", ".join(newly_discovered)
@@ -303,7 +285,6 @@ class GameState:
         self.world_data["agents"][agent_name]["button_used"] = True
         self.world_data["agents"][agent_name]["stats"]["emergency_meetings"] += 1
         self.update_phase("DISCUSSION")
-        
         # Identify any unreported deaths that are revealed by the meeting start
         newly_discovered = []
         for room_data in self.world_data["rooms"].values():

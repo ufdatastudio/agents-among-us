@@ -18,7 +18,6 @@ import threading
 app = Flask(__name__)
 app.secret_key = 'agents-among-us-secret-key-change-in-production'
 
-# Suppress Flask request logs (stops 200 GET spam in terminal)
 import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
@@ -68,9 +67,7 @@ def read_stats_csv(csv_path=None):
     return out
 
 
-# =============================================================================
-# PAGE ROUTES
-# =============================================================================
+
 
 @app.route('/') 
 def index():
@@ -119,11 +116,6 @@ def stats():
 def win():
     winner = request.args.get('winner', 'Unknown')
     return render_template('win.html', winner=winner)
-
-
-# =============================================================================
-# GAME CONTROL API ROUTES
-# =============================================================================
 
 @app.route('/start_game', methods=['POST'])
 def start_game():
@@ -347,10 +339,6 @@ def get_game_status():
         return jsonify({'running': False})
 
 
-# =============================================================================
-# STATISTICS API ROUTES
-# =============================================================================
-
 @app.route('/api/stats/all')
 def get_all_stats():
     """Return all data from frontend_stats.csv (tolerates 18 vs 21 column rows)."""
@@ -535,10 +523,6 @@ def get_game_stats(game_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
-# =============================================================================
-# UTILITY ROUTES
-# =============================================================================
 
 @app.route('/api/health')
 def health_check():

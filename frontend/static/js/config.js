@@ -71,10 +71,9 @@ const DEAD_COLOR_SPRITES = {
     black: "https://preview.redd.it/6vegnf3kzwn51.png?width=720&format=png&auto=webp&s=4ea01f3bd3597b3e10674acf20cd7af468dfd583"
 };
 
-// default model when in config
-const DEFAULT = "google/gemma-2-9b-it"; // made it easier for menubar; but you can change 
+const DEFAULT = "google/gemma-2-9b-it";
 const DEFAULT2 = "OpenPipe/Qwen3-14B-Instruct";
-// Default config for first 4 agents: Model, Role, Color = Red, Orange, Yellow, Lime (then Green, Cyan, ... as you add agents)
+// Default config for first 8 agents: Model, Role, Color = Red, Orange, Yellow, Lime (then Green, Cyan, ... as you add agents)
 const DEFAULT_AGENTS_4 = [
     { model: DEFAULT, role: "byzantine", color: "red" },
     { model: DEFAULT2, role: "honest", color: "orange" },
@@ -303,9 +302,8 @@ function onConfigSubmit(e) {
     return true;
 }
 
-// ---------------------------------------------------------------------------
+
 // Initialize on DOM ready: build default 4-agent table and bind CONFIRM + form
-// ---------------------------------------------------------------------------
 window.addEventListener("DOMContentLoaded", function () {
     generateAgentTable();
 

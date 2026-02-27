@@ -1,0 +1,21 @@
+Feature,Weight,Correlated_Role
+followup,4.711665640289007,Imposter
+might,3.436712447668834,Imposter
+could,3.258733835585131,Imposter
+tagged,2.9873289526561377,Imposter
+noticed,2.691399837752712,Imposter
+honest,2.6513529916953127,Imposter
+lets,2.478105214152186,Imposter
+crew,2.452144278459114,Imposter
+perhaps,2.426915010067616,Imposter
+maybe,2.262824315132302,Imposter
+suspect,-5.228626138503664,Crewmate
+suspect agent_x,-4.597977860881121,Crewmate
+eject,-3.667888696665323,Crewmate
+suspicious,-3.5324582407770797,Crewmate
+eject agent_x,-3.385255576806884,Crewmate
+saw agent_x,-2.5094841532619885,Crewmate
+saw,-2.4719592217988082,Crewmate
+new,-2.4626400466504133,Crewmate
+saw agent_x place,-2.31684636461971,Crewmate
+byzantine,-2.2952677471430265,Crewmate

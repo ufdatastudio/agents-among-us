@@ -16,7 +16,7 @@ def flush_memory():
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 def run_worker(game_id, model_names_str, comp_name):
-    # Set mode to LOCAL so it actually loads models
+    # Set mode to LOCAL loads models
     os.environ["LLM_MODE"] = "LOCAL" 
     model_list = [m.strip() for m in model_names_str.split(',') if m.strip()]
     print(f"--- Starting Worker for Game {game_id} ---")
@@ -52,7 +52,7 @@ def run_worker(game_id, model_names_str, comp_name):
         for req_file in relevant_files:
             lock_file = req_file + ".lock"
             
-            # 1. Attempt to Lock file (Atomic rename)
+            # Attempt to Lock file (Atomic rename)
             try:
                 os.rename(req_file, lock_file)
             except OSError:
@@ -64,11 +64,10 @@ def run_worker(game_id, model_names_str, comp_name):
                     data = json.load(f)
                 
                 if data["model_name"] not in model_list:
-                    # Not my job, unlock it
+                    # unlock it
                     try:
                         os.rename(lock_file, req_file)
                     except OSError:
-                        #  ignore it to prevent crashing.
                         pass
                     continue
                                 

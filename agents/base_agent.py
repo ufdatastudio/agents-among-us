@@ -1,4 +1,3 @@
-# agents/base_agent.py
 from core.llm import ModelManager
 from config.settings import ROOMS
 

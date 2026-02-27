@@ -1,0 +1,12 @@
+--- Misclassifications (Deception): Train_Heavyweight_Test_Lightweight ---
+LLM MODEL                                          | EVASIONS   | TOTAL    | RATE    
+-------------------------------------------------------------------------------------
+arcee-ai/Arcee-Agent                               | 591        | 1462     |   40.4%
+Qwen/Qwen2-7B-Instruct                             | 475        | 1303     |   36.5%
+Qwen/Qwen2.5-7B-Instruct                           | 457        | 1738     |   26.3%
+swiss-ai/Apertus-8B-Instruct-2509                  | 292        | 1315     |   22.2%
+google/gemma-2-9b-it                               | 349        | 1632     |   21.4%
+meta-llama/Meta-Llama-3-8B-Instruct                | 299        | 1549     |   19.3%
+openai/gpt-oss-20b                                 | 332        | 1753     |   18.9%
+OpenPipe/Qwen3-14B-Instruct                        | 369        | 2021     |   18.3%
+meta-llama/Llama-3.1-8B-Instruct                   | 260        | 1590     |   16.4%
