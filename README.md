@@ -1,123 +1,195 @@
-# Agents Among Us: Fault-Tolerant Consensus with LLMs
+# Agents Among Us: Multi-Agent Social Deduction Framework
 
-<img width="1173" height="631" alt="image" src="https://github.com/user-attachments/assets/1a1bbbb2-c002-459d-a8d9-ecaa221fac7c" />
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Flask](https://img.shields.io/badge/Flask-2.0+-lightgrey.svg?logo=flask)](https://flask.palletsprojects.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+Interactive web demo and distributed inference framework for **Agents Among Us**, inspired by the popular mobile game. Observe the zero-shot social deduction and deception capabilities in Large Language Models (LLMs).
 
-## Project Overview
-The project explores fault-tolerant consensus-building in distributed AI systems using large language models (LLMs). Inspired by the classic Byzantine Generals Problem and the social deduction game, Among Us, this project simulates an environment where autonomous agents must collaborate to maintain a spaceship while identifying and ejecting malicious "Byzantine" actors.
+Despite their impressive capabilities, LLMs struggle to effectively utilize textual evidence in this social deduction environment. This framework lets you explore these limitations firsthand by comparing generative agent decisions against supervised machine learning "observers" trained on the exact same interaction logs.
 
-The system utilizes local LLMs (specifically Llama-3.1 via Hugging Face) to drive agent logic, allowing them to perceive their environment, form memories, debate in natural language, and cast votes to achieve consensus.
+## Links
 
-## Objectives
-TBD
+- [**Watch the System Demonstration Video here**] 
+- [**Access the Live Interactive Simulation here**]
+- [UF Data Studio](https://github.com/ufdatastudio)
+## Features
 
-## Technologies
-This project is built using Python and NLP libraries for agent cognition and Pygame for real-time visualization.
+- **Interactive Simulation:** Flask-based UI with a live map, discussion chats, and real-time observer suspicion scores.
+- **Distributed Architecture:** Decoupled asynchronous worker scripts supporting multi-GPU and multi-node execution via SLURM.
+- **Customizable Crews:** Configure homogeneous or heterogeneous crews of open-weight LLMs with specific roles (Honest or Byzantine).
+- **Observer Pipeline:** Built-in classical ML classifier suite to calculate the "observer-player gap" on generated datasets.
+- **Phase-Dependent Memory:** Automated state management that filters context windows based on movement, discussion, and voting phases.
 
-* **Core Language:** Python 3.10+
-* **Machine Learning:**
-    * **PyTorch:**
-    * **Hugging Face Transformers:**
-    * **BitsAndBytes:** Used for 4-bit quantization to run large models efficiently on consumer hardware.
-* **Visualization:**
-    * **Pygame:** Renders the live map, agent movements, and status logs.
-* **Data Management:**
-    * **JSON/CSV:** For state serialization and statistical logging.
+## Installation
 
-## Project Structure
+The project uses a Conda environment to manage Python dependencies, PyTorch, and local inference libraries (Transformers, BitsAndBytes).
 
-```text
-agents-among-us/
-├── agents/                 # Agent Logic
-│   ├── base_agent.py       # Abstract base class for all agents
-│   ├── honest_agent.py     # Logic for Crewmates (Reasoning, Tasking, Voting)
-│   └── byzantine_agent.py  # Logic for Impostors (Deception, Tagging, Sabotage)
-├── config/                 # Configuration
-│   └── settings.py         # Global constants (Map layout, Model paths, Rules)
-├── core/                   # System Utilities
-│   ├── llm.py              # ModelManager: Handles loading and inference of LLMs
-│   ├── logger.py           # LogManager: Handles CSV/Text logging of game events
-│   └── state.py            # GameState: Manages the "World Truth" and JSON export
-├── game/                   # Game Loop
-│   └── game_engine.py      # Controls phases (Movement, Discussion, Voting)
-├── logs/                   # Generated logs for each simulation run
-├── main.py                 # Headless entry point for the simulation backend
-├── live_map.py             # Graphical User Interface (GUI) and visualizer
-└── README.md
-```
-
-## Installation & Setup
-
-### 1. Prerequisites
-Ensure you have **Python 3.10+** installed. You will also need a GPU with CUDA support (NVIDIA) for efficient LLM inference
-
-### 2. Clone the Repository
 ```bash
-git clone https://github.com/ufdatastudio/agents-among-us.git
-cd agents-among-us
+conda env create -f environment.yaml
+conda activate amongus
+
 ```
-# Install PyTorch with CUDA support (adjust index-url for your specific CUDA version)
-pip install torch torchvision torchaudio --index-url [https://download.pytorch.org/whl/cu118](https://download.pytorch.org/whl/cu118)
-
-# Install Project Dependencies
-pip install transformers accelerate bitsandbytes pygame
-
-## Model Configuration
-By default, the project is configured to use `meta-llama/Llama-3.1-8B-Instruct`. You must have access to this model via Hugging Face to run the simulation.
-
-1.  **Authenticate:** Log in to Hugging Face via the CLI:
-    ```bash
-    huggingface-cli login
-    ```
-2.  **Customization:** You can change the target model by modifying the `AGENT_LLM_CONFIG` list in `config/settings.py`.
-3.  **Quantization:** The system defaults to 4-bit quantization to optimize memory usage. This behavior is toggled via the `QUANTIZATION` boolean in `config/settings.py` and implemented in `core/llm.py`.
 
 ## Usage
 
-### Option 1: Live Visualization (Recommended)
-The project includes a `pygame`-based GUI that acts as both a visualizer and a launcher.
+You can run the framework in three primary modes depending on your compute environment.
 
-1.  Run the visualizer:
-    ```bash
-    python live_map.py
-    ```
-2.  **Start:** Click the **START SIM** button in the top right corner. This automatically spawns the `main.py` game engine process via a subprocess.
-3.  **Observe:** Watch the agents move, interact, and discuss in real-time. The sidebar displays live agent status, and the bottom panel shows the event log.
-4.  **Control:** Click **STOP SIM** to abort the run, or **CLEAR** to delete the map data and reset the view.
+### 1. Interactive Web UI (Local/Hosted)
 
-### Option 2
-To run the simulation without the graphics window (useful for faster batch data collection):
+To run the Flask frontend on your local machine or a virtual machine:
 
 ```bash
-python main.py
+python frontend/app.py
+
 ```
 
-### Option 3: Web Frontend (New UI)
+*The app binds to port `8080`. Open `http://localhost:8080` in your browser. Launching games from the UI automatically spawns the backend controller processes.*
 
-The project now includes a modern web-based interface for configuring games, viewing live simulations, and analyzing statistics.
+### 2. High-Performance Cluster (SLURM)
 
-#### Running the Web Interface
+For large-scale dataset generation across compute nodes, this framework provides bash scripts configured for SLURM workload managers.
 
-1. **Start the Flask server:**
-   ```bash
-   cd frontend
-   python app.py
-   ```
+**Step 1: Configure the Controller (`main.py`)**
+When spawning decoupled inference workers via SLURM, the main game controller (`main.py`) does not need GPU access. To prevent it from attempting to reserve GPU memory, open `main.py` and ensure `CUDA_VISIBLE_DEVICES` is set to `-1`:
 
-2. **Open in browser:** Navigate to `http://localhost:3000`
+```python
+# In main.py
+os.environ["LLM_MODE"] = "LOCAL"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1" # Enable this for distributed GPU runs
 
-3. **Configure and run:**
-   - Click "Configure New Game"
-   - Set number of agents (4-12) and rounds (1-20)
-   - Select model, role, and color for each agent
-   - Click "Start Game"
-   - Watch live simulation with map, agent status, and event feed
-   - View statistics and download CSV data from Stats page
+```
 
-#### Output Files
+**Step 2: Define Target Compositions**
+Open `submit_all.sh` and populate the `compositions` array with the exact names of the model matchups you wish to run. These names must match the configurations generated by `config/model_composition.py`.
 
-Each game generates logs in `logs/<scenario_name>/Game_<game_id>_Run0/`:
-- **stats.csv** - Per-agent statistics (votes, eliminations, win/loss)
-- **discussion_chat.csv** - All discussion messages with metadata
-- **roundResults.log** - Round-by-round outcomes
-- **Agent_X/** - Individual agent observation logs
+```bash
+compositions=(
+    "Llama3_Apertus"
+    "Qwen2.5_Hermes4"
+)
+
+```
+
+**Step 3: Execute the Batch Submitter**
+Run the wrapper script from the repository root:
+
+```bash
+bash submit_all.sh
+
+```
+
+**Bash Scripts:**
+
+* **`submit_all.sh`**: Iterates through defined `compositions`. For each entry, it submits a SLURM job via `sbatch`, passing the composition name as an environment variable (`--export=ALL,COMP_NAME="$comp"`).
+* **`submit_games.sh`**: The core distributed job script.
+* **Allocation:** Requests SLURM resources (e.g., `--nodes=1`, `--gpus-per-node=1`, `--mem=120gb`).
+* **Worker Spawning:** Calls `config/generate_batch_list.py` to determine which models are required for the `COMP_NAME`. It then uses `srun` to asynchronously launch `worker.py` instances pinned to the allocated GPUs (can be specified in submit_games.sh)
+* **Synchronization:** Genearates and polls the `logs/<COMP_NAME>/.../ipc` directory for `ready_*.signal` files. LLMs are fully loaded into VRAM before the game engine starts.
+* **Execution:** Once workers signal readiness, the script iteratively runs `main.py` to orchestrate the games, utilizing file-based IPC to request text generation from the background workers.
+
+
+
+### 3. Manual Headless Execution
+
+For local debugging or running specific configurations without the UI or SLURM:
+
+```bash
+# Start the inference worker in Terminal 1:
+# Arguments: --game_id <SessionIdentifier> --model_names <CommaSeparatedModels> --comp_name <ConfigName>
+python worker.py --game_id SESSION1 --model_names meta-llama/Llama-3.1-8B-Instruct --comp_name MyComp
+
+# Run the game controller in Terminal 2:
+# Arguments: --composition_name <ConfigName> --job_index <Int> --game_id <SessionIdentifier> --num_rounds <Int>
+python main.py --composition_name MyComp --job_index 0 --game_id SESSION1 --num_rounds 10
+
+```
+
+## Configuration & Adding New Models
+
+The framework is model-agnostic and relies on Hugging Face transformers. You can test your own models or community fine-tunes by modifying the backend configurations.
+
+**Adding Custom Models:**
+To add a new model, simply add its Hugging Face repository ID to `config/model_composition.py`.
+
+1. Define the model path:
+```python
+MY_CUSTOM_MODEL = "username/my-custom-llm-7B"
+
+```
+
+
+2. Add it to the appropriate weight class dictionary (`HW_MODELS_MAP` for Heavyweight, `LW_MODELS_MAP` for Lightweight):
+```python
+LW_MODELS_MAP = {
+    "Llama3": LLAMA3_8B,
+    "MyCustom": MY_CUSTOM_MODEL,
+}
+
+```
+
+
+
+## Code Structure
+
+```text
+.
+├── main.py              # Orchestrates game runs (movement → discussion → voting)
+├── worker.py            # Async decoupled inference worker (IPC)
+├── submit_games.sh      # SLURM job script for cluster execution
+├── agents/              # Agent behavior definitions and prompts
+├── config/              # Game settings and model compositions
+├── core/                # Core simulation logic and state management
+├── frontend/            # Flask application and UI assets
+└── results/             # Data analysis, classifiers, and parsed datasets
+
+```
+
+| Module | Description |
+| --- | --- |
+| `main.py` | Controller that manages phase transitions and evaluates win conditions. |
+| `worker.py` | Loads models, handles local quantization, and processes generation requests. |
+| `agents/` | Contains `honest_agent.py` and `byzantine_agent.py` with role-specific logic. |
+| `config/` | Includes `cache_models.py`, `settings.py`, etc. |
+| `core/` | Includes `game_engine.py`, `state.py`, and `llm.py`. |
+| `frontend/` | Flask routes (`app.py`), HTML templates, and live state visualizers. |
+| `results/` | Machine learning pipeline for the offline observers and metric calculation. |
+
+## Paper
+
+This demo is based on the system demonstration paper:
+
+**Agents Among Us: Identifying Deceptive Agents in a Multi-Agent Social Deduction Environment**
+
+*Under Review: ACL 2026 System Demonstrations*
+
+## Citation
+
+If you use this framework or dataset in your research, please cite:
+
+```bibtex
+@inproceedings{agentsamongus2026,
+    title = "Agents Among Us: Identifying Deceptive Agents in a Multi-Agent Social Deduction Environment",
+    author = "Anonymous",
+    booktitle = "",
+    year = "2026",
+    publisher = ""
+}
+
+```
+
+*(Note: Citation details will be updated upon publication to reflect the full author list).*
+
+## Features Coming Soon
+- Hybridized agents
+- Frontend prompt customization, game ticks
+- Frontend model caching and quantization
+- Agent movement tracing during gameplay
+## Issues and Contributions
+
+Found a bug or have a feature request?
+Please [open an issue](https://www.google.com/search?q=https://github.com/ufdatastudio/agents-among-us/issues) on GitHub.
+
+Contributions to extend the game map, add new roles, or optimize inference workflows are always welcome!
+
+```
