@@ -141,16 +141,3 @@ if LW_FLAG:
             COMPOSITION.append(comp_entry)
             
             
-if MW_FLAG: 
-    def make_crew(pool, count=8):
-            return [pool[i % len(pool)] for i in range(count)]
-        
-    # Hardest Environment
-    HW_CREW_POOL = [ARCEE_NOVA_73B, MIXTRAL_8X7B, ATHENE_73B]
-    HW_IMP_PAIR = [ARCEE_NOVA_73B, MIXTRAL_8X7B]
-    
-    LW_CREW_POOL = [QWEN3_14B, GPT_OSS_20B, LLAMA31_8B, GEMMA2_9B]
-    LW_IMP_PAIR = [GEMMA2_9B, GPT_OSS_20B]
-    # The Anchors
-    ANCHOR_LW = GEMMA2_9B      
-    ANCHOR_HW = ARCEE_NOVA_73B

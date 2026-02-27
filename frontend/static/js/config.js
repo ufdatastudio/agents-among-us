@@ -72,14 +72,19 @@ const DEAD_COLOR_SPRITES = {
 };
 
 // default model when in config
-const DEFAULT = "Qwen/Qwen2.5-1.5B-Instruct"; // made it easier for menubar; but you can change 
-
+const DEFAULT = "google/gemma-2-9b-it"; // made it easier for menubar; but you can change 
+const DEFAULT2 = "OpenPipe/Qwen3-14B-Instruct";
 // Default config for first 4 agents: Model, Role, Color = Red, Orange, Yellow, Lime (then Green, Cyan, ... as you add agents)
 const DEFAULT_AGENTS_4 = [
     { model: DEFAULT, role: "byzantine", color: "red" },
-    { model: DEFAULT, role: "byzantine", color: "orange" },
-    { model: DEFAULT, role: "honest", color: "yellow" },
-    { model: DEFAULT, role: "honest", color: "lime" }
+    { model: DEFAULT2, role: "honest", color: "orange" },
+    { model: DEFAULT2, role: "honest", color: "yellow" },
+    { model: DEFAULT2, role: "honest", color: "lime" },
+    { model: DEFAULT2, role: "honest", color: "green" },
+    { model: DEFAULT2, role: "honest", color: "cyan" },
+    { model: DEFAULT2, role: "honest", color: "blue" },
+    { model: DEFAULT2, role: "honest", color: "purple" },
+
 ];
 
 /**

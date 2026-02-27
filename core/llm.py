@@ -14,6 +14,7 @@ if os.environ.get("LLM_MODE", "LOCAL") != "CONTROLLER":
     if not IS_MAC:  # Only import unsloth on non-Mac systems
         from unsloth import FastLanguageModel
     from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, Mxfp4Config, AutoConfig
+    
 CONCATENATE = {
     "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled",
     "google/gemma-2-9b-it",

@@ -1,4 +1,3 @@
-# game/engine.py - FIXED VERSION
 import random
 import re
 import time
@@ -11,6 +10,7 @@ import os
 import joblib
 from nltk.corpus import stopwords
 import pandas as pd
+
 class Observer:
     def __init__(self, model_dir="results/classifiers/models/"):
         self.models = {}
@@ -99,6 +99,7 @@ class Observer:
         print("="*60 + "\n")
         
         return scores_by_agent  # NEW: Return scores instead of just printing
+
 class GameEngine:
     def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST, num_rounds=DEFAULT_NUM_ROUNDS):
         self.game_id = game_id
@@ -320,9 +321,19 @@ class GameEngine:
                     'S_Num': min(statement_counts[agent.name], 2)
                 })
 
-
                 formatted_msg = f"{agent.name}: {clean_msg}"
                 self.logger.write_log("discussion", None, formatted_msg)
+                
+               
+                self.logger.log_discussion_chat(
+                    discussion_num=round_num,
+                    reason=reason,
+                    agent_name=agent.name,
+                    model_name=agent.model_name,
+                    role=agent.role,
+                    message=clean_msg
+                )
+                
                 self.state.record_chat(agent.name, clean_msg)
                 self.state.save_json()
 

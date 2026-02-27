@@ -1,0 +1,61 @@
+{
+  "name": "custom_game_20260226_200305",
+  "honest_count": 6,
+  "byzantine_count": 2,
+  "agents": [
+    {
+      "agent_num": 0,
+      "model": "google/gemma-2-9b-it",
+      "role": "byzantine",
+      "color": "red"
+    },
+    {
+      "agent_num": 1,
+      "model": "google/gemma-2-9b-it",
+      "role": "byzantine",
+      "color": "orange"
+    },
+    {
+      "agent_num": 2,
+      "model": "OpenPipe/Qwen3-14B-Instruct",
+      "role": "honest",
+      "color": "yellow"
+    },
+    {
+      "agent_num": 3,
+      "model": "OpenPipe/Qwen3-14B-Instruct",
+      "role": "honest",
+      "color": "lime"
+    },
+    {
+      "agent_num": 4,
+      "model": "OpenPipe/Qwen3-14B-Instruct",
+      "role": "honest",
+      "color": "green"
+    },
+    {
+      "agent_num": 5,
+      "model": "OpenPipe/Qwen3-14B-Instruct",
+      "role": "honest",
+      "color": "cyan"
+    },
+    {
+      "agent_num": 6,
+      "model": "OpenPipe/Qwen3-14B-Instruct",
+      "role": "honest",
+      "color": "blue"
+    },
+    {
+      "agent_num": 7,
+      "model": "OpenPipe/Qwen3-14B-Instruct",
+      "role": "honest",
+      "color": "purple"
+    }
+  ],
+  "num_rounds": 10,
+  "enabled_classifiers": {
+    "sgd": true,
+    "svm": true,
+    "lr": true
+  }
+}

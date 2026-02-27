@@ -1,0 +1,38 @@
+{
+  "name": "custom_test",
+  "honest_count": 4,
+  "byzantine_count": 1,
+  "agents": [
+    {
+      "agent_num": 0,
+      "model": "google/gemma-2-9b-it",
+      "role": "byzantine",
+      "color": "red"
+    },
+    {
+      "agent_num": 1,
+      "model": "google/gemma-2-9b-it",
+      "role": "honest",
+      "color": "orange"
+    },
+    {
+      "agent_num": 2,
+      "model": "google/gemma-2-9b-it",
+      "role": "honest",
+      "color": "yellow"
+    },
+    {
+      "agent_num": 3,
+      "model": "google/gemma-2-9b-it",
+      "role": "honest",
+      "color": "lime"
+    },
+    {
+      "agent_num": 4,
+      "model": "google/gemma-2-9b-it",
+      "role": "honest",
+      "color": "green"
+    }
+  ],
+  "num_rounds": 10
+}
