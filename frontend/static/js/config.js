@@ -39,10 +39,7 @@ const MODELS = [
     { value: "TinyLlama/TinyLlama-1.1B-Chat-v1.0", name: "TinyLlama 1.1B (TinyLlama/TinyLlama-1.1B-Chat-v1.0)" }
 ];
 
-// ---------------------------------------------------------------------------
-// Among Us colors with sprite URLs (order: Red, Orange, Yellow, Lime, Green, Cyan, Blue, Purple, Brown, Pink, White, Black)
-// Sprites also saved in static/data/among-us-sprites.json for future use.
-// ---------------------------------------------------------------------------
+// among us agent sprites
 const COLORS = [
     { value: "red", name: "Red", spriteUrl: "https://preview.redd.it/an871k4o1sn51.png?width=440&format=png&auto=webp&s=85dcd6cb73b8760802e254ee14dfa3c7ab444591" },
     { value: "orange", name: "Orange", spriteUrl: "https://preview.redd.it/iio3xm4o1sn51.png?width=440&format=png&auto=webp&s=2b9fb1b29396502998feda5c6ed2ed75919c6ad8" },
@@ -58,7 +55,7 @@ const COLORS = [
     { value: "black", name: "Black", spriteUrl: "https://preview.redd.it/4eof2l4o1sn51.png?width=440&format=png&auto=webp&s=02f3a9c7fdb96a50204c5dc272a7e72dfff7cbac" }
 ];
 
-// Dead body sprites (for future use, same color order as COLORS)
+// among us dead body sprites
 const DEAD_COLOR_SPRITES = {
     red: "https://preview.redd.it/rnj1si3kzwn51.png?width=720&format=png&auto=webp&s=6e7243bb5c2d8f27921313b0f8ef27617523d604",
     orange: "https://preview.redd.it/h506lc3kzwn51.png?width=720&format=png&auto=webp&s=de8d4c645916b08bec416f5d9d3a1486f25aa8a3",
@@ -74,8 +71,8 @@ const DEAD_COLOR_SPRITES = {
     black: "https://preview.redd.it/6vegnf3kzwn51.png?width=720&format=png&auto=webp&s=4ea01f3bd3597b3e10674acf20cd7af468dfd583"
 };
 
-// Default model for new agents (TinyLlama = smallest, now last in dropdown)
-const DEFAULT = "meta-llama/Llama-3.1-8B-Instruct";
+// default model when in config
+const DEFAULT = "Qwen/Qwen2.5-1.5B-Instruct"; // made it easier for menubar; but you can change 
 
 // Default config for first 4 agents: Model, Role, Color = Red, Orange, Yellow, Lime (then Green, Cyan, ... as you add agents)
 const DEFAULT_AGENTS_4 = [

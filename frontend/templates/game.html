@@ -49,6 +49,9 @@
                             <th>Location</th>
                             <th>Votes</th>
                             <th>Kills</th>
+                            <th id="sgdHeader" style="display: none;">SGD</th>
+                            <th id="svmHeader" style="display: none;">SVM</th>
+                            <th id="lrHeader" style="display: none;">LR</th>
                         </tr>
                     </thead>
                     <tbody id="statusTableBody">
@@ -72,7 +75,7 @@
         <section class="live-feed">
             <div class="live-feed-header">
                 <h3>Live Feed</h3>
-                <button class="open-chat-btn" onclick="openDiscussionChat()">💬 Open Discussion Chats</button>
+                <button class="open-chat-btn" onclick="openDiscussionChat()">Open Discussion Chats</button>
             </div>
             <div class="feed-content" id="feedContent">
                 <!-- Events added by JavaScript -->
@@ -88,13 +91,14 @@
         </div>
     </div>
 
-    <!-- Discussion Chat Popup -->
+    <!-- Discussion Chat Popup (drag by header, resize by corner handle) -->
     <div id="discussionChat" class="discussion-chat" style="display: none;">
-        <div class="discussion-chat-header">
-            <span class="discussion-chat-title" id="discussionChatTitle">💬 Discussion</span>
-            <button class="discussion-chat-close" onclick="closeDiscussionChat()">×</button>
+        <div class="discussion-chat-header" id="discussionChatHeader">
+            <span class="discussion-chat-title" id="discussionChatTitle">Discussion</span>
+            <button class="discussion-chat-close" onclick="closeDiscussionChat()">x</button>
         </div>
         <div class="discussion-chat-messages" id="discussionChatMessages"></div>
+        <div class="discussion-chat-resize-handle" aria-label="Resize"></div>
     </div>
 
     <script src="{{ url_for('static', filename='js/game.js') }}"></script>

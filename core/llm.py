@@ -1,5 +1,3 @@
-
-
 import os
 import json
 import time
@@ -13,7 +11,8 @@ IS_MAC = platform.system() == "Darwin"
 if os.environ.get("LLM_MODE", "LOCAL") != "CONTROLLER":
     import torch
     import gc
-    from unsloth import FastLanguageModel
+    if not IS_MAC:  # Only import unsloth on non-Mac systems
+        from unsloth import FastLanguageModel
     from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, Mxfp4Config, AutoConfig
 CONCATENATE = {
     "Aratako/Mixtral-8x7B-Instruct-v0.1-upscaled",
@@ -83,10 +82,14 @@ class ModelManager:
             return
         
         gc.collect()
-        torch.cuda.empty_cache()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
-        initial_free, total = torch.cuda.mem_get_info()
-        print(f"Loading Model: {model_name}:  [Memory] Before Load: {initial_free/1024**3:.2f} GB free", flush=True)
+        if torch.cuda.is_available():
+            initial_free, total = torch.cuda.mem_get_info()
+            print(f"Loading Model: {model_name}:  [Memory] Before Load: {initial_free/1024**3:.2f} GB free", flush=True)
+        else:
+            print(f"Loading Model: {model_name} on {self._device}...", flush=True)
 
         try:
             
@@ -149,11 +152,15 @@ class ModelManager:
                 
             self.models[model_name] = model
             self.tokenizers[model_name] = tokenizer
-            torch.cuda.empty_cache()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
-            final_free, _ = torch.cuda.mem_get_info()
-            mem_taken = (initial_free - final_free) / 1024**3
-            print(f"Loaded {model_name} | VRAM Usage: {mem_taken:.2f} GiB | Memory Remaining: {final_free / 1024**3:.2f} GiB", flush=True)
+            if torch.cuda.is_available():
+                final_free, _ = torch.cuda.mem_get_info()
+                mem_taken = (initial_free - final_free) / 1024**3
+                print(f"Loaded {model_name} | VRAM Usage: {mem_taken:.2f} GiB | Memory Remaining: {final_free / 1024**3:.2f} GiB", flush=True)
+            else:
+                print(f"Loaded {model_name} on {self._device}", flush=True)
 
         except Exception as e:
             print(f"Error loading model {model_name}: {e}")
@@ -316,4 +323,4 @@ class ModelManager:
             
         except Exception as e:
             print(f"\n[LLM ERROR on {model_name}]: {e}")
-            return "move" 
+            return "move"

@@ -81,6 +81,28 @@
                     <small class="form-hint">Leave empty for auto-generated ID</small>
                 </div>
             </div>
+
+            <!-- ML Classifiers -->
+            <div class="form-section">
+                <h2>ML Classifiers</h2>
+                <div class="form-group">
+                    <label>Select classifiers to display suspicion scores (optional):</label>
+                    <div style="display: flex; gap: 20px; margin-top: 10px;">
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" name="classifier_sgd" value="true">
+                            <span>SGD</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" name="classifier_svm" value="true">
+                            <span>SVM</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" name="classifier_lr" value="true">
+                            <span>LR</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
             
             <!-- Buttons -->
             <div class="button-group">

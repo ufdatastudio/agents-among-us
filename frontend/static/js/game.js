@@ -1,52 +1,55 @@
 /**
  * Game Simulation 
  * Press D for debug overlay
+ * ADDED: Draggable/Resizable discussion chat + ML classifier score caching for dead agents
  */
 
+// motherboard map + skeld naming
+
 const ROOM_COORDINATES = {
-    "Clock": { x: 12.7, y: 54.3 },
-    "Air cooling": { x: 17.4, y: 22.3 },
-    "Liquid cooling": { x: 25.3, y: 86.4 },
-    "Logs": { x: 35.7, y: 43.9 },
-    "Diagnostics": { x: 30.3, y: 10.4},
-    "Bus": { x: 36.2, y: 60.1 },
-    "Cpu": { x: 49.0, y: 21.2 },
-    "Bios": { x: 60.2, y: 54.2 },
-    "Ssd": { x: 49.3, y: 84.2 },
-    "Gpu": { x: 78.9, y: 15.2 },
-    "Vrm": { x: 66.3, y: 33.3 },
-    "Network": { x: 91.6, y: 43.5 },
-    "Firewall": { x: 78.7, y: 68.8 },
-    "Io": { x: 79.0, y: 92.7 }
+    "Reactor": { x: 12.4, y: 54.0 },
+    "UpperEngine": { x: 17.4, y: 22.3 },
+    "LowerEngine": { x: 25.3, y: 85.3 },
+    "Security": { x: 36.3, y: 42.2 },
+    "MedBay": { x: 30.3, y: 9.8},
+    "Electrical": { x: 36.2, y: 60.1 },
+    "Cafeteria": { x: 49.3, y: 20.3 },
+    "Admin": { x: 60.2, y: 53.0 },
+    "Storage": { x: 49.3, y: 84.2 },
+    "Weapons": { x: 78.9, y: 14.8 },
+    "O2": { x: 66.0, y: 33.3 },
+    "Navigation": { x: 91.2, y: 43.1 },
+    "Shields": { x: 78.9, y: 68.2 },
+    "Communications": { x: 79.0, y: 91.9 }
 };
 
 const ROOM_HOUSING = {
-    "Clock": { width: 10, height: 20 },
-    "Air cooling": { width: 10, height: 20 },
-    "Liquid cooling": { width: 10, height: 20 },
-    "Logs": { width: 6, height: 12 },
-    "Diagnostics": { width: 6, height: 12 },
-    "Bus": { width: 6, height: 12 },
-    "Cpu": { width: 10, height: 20 },
-    "Bios": { width: 6, height: 12 },
-    "Ssd": { width: 12, height: 12 },
-    "Gpu": { width: 12, height: 12 },
-    "Vrm": { width: 6, height: 12 },
-    "Network": { width: 10, height: 20 },
-    "Firewall": { width: 12, height: 12 },
-    "Io": { width: 6, height: 12 }
+    "Reactor": { width: 10, height: 20 },
+    "UpperEngine": { width: 10, height: 20 },
+    "LowerEngine": { width: 10, height: 20 },
+    "Security": { width: 6, height: 12 },
+    "MedBay": { width: 6, height: 12 },
+    "Electrical": { width: 6, height: 12 },
+    "Cafeteria": { width: 10, height: 20 },
+    "Admin": { width: 6, height: 12 },
+    "Storage": { width: 12, height: 12 },
+    "Weapons": { width: 12, height: 12 },
+    "O2": { width: 6, height: 12 },
+    "Navigation": { width: 7, height: 14 },
+    "Shields": { width: 7, height: 14 },
+    "Communications": { width: 6, height: 12 }
 };
 
 const ROOM_CONNECTIONS = [
-    ["Clock", "Logs"], ["Clock", "Air cooling"], ["Clock", "Liquid cooling"],
-    ["Logs", "Air cooling"], ["Logs", "Liquid cooling"],
-    ["Air cooling", "Liquid cooling"], ["Air cooling", "Diagnostics"], ["Air cooling", "Cpu"],
-    ["Liquid cooling", "Bus"], ["Liquid cooling", "Ssd"],
-    ["Diagnostics", "Cpu"], ["Bus", "Ssd"],
-    ["Cpu", "Bios"], ["Cpu", "Ssd"], ["Cpu", "Gpu"],
-    ["Bios", "Ssd"], ["Gpu", "Vrm"], ["Gpu", "Network"], ["Gpu", "Firewall"],
-    ["Vrm", "Network"], ["Vrm", "Firewall"], ["Network", "Firewall"],
-    ["Ssd", "Firewall"], ["Ssd", "Io"], ["Firewall", "Io"]
+    ["Reactor", "Security"], ["Reactor", "UpperEngine"], ["Reactor", "LowerEngine"],
+    ["Security", "UpperEngine"], ["Security", "LowerEngine"],
+    ["UpperEngine", "LowerEngine"], ["UpperEngine", "MedBay"], ["UpperEngine", "Cafeteria"],
+    ["LowerEngine", "Electrical"], ["LowerEngine", "Storage"],
+    ["MedBay", "Cafeteria"], ["Electrical", "Storage"],
+    ["Cafeteria", "Admin"], ["Cafeteria", "Storage"], ["Cafeteria", "Weapons"],
+    ["Admin", "Storage"], ["Weapons", "O2"], ["Weapons", "Navigation"], ["Weapons", "Shields"],
+    ["O2", "Navigation"], ["O2", "Shields"], ["Navigation", "Shields"],
+    ["Storage", "Shields"], ["Storage", "Communications"], ["Shields", "Communications"]
 ];
 
 let debugOverlayVisible = false;
@@ -153,7 +156,7 @@ function drawDebugOverlay() {
     ctx.fillRect(10, 10, 280, 140);
     ctx.font = "14px Arial";
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillText("🔍 DEBUG (Press 'D')", 20, 30);
+    ctx.fillText("DEBUG (Press 'D')", 20, 30);
     ctx.font = "12px Arial";
     ctx.fillStyle = "#FF0000"; ctx.fillText("■ Red: Map boundary", 20, 55);
     ctx.fillStyle = "#00FFFF"; ctx.fillText("■ Cyan: Pathways", 20, 75);
@@ -165,7 +168,7 @@ function toggleDebug() {
     debugOverlayVisible = !debugOverlayVisible;
     if (debugCanvas) debugCanvas.style.display = debugOverlayVisible ? "block" : "none";
     drawDebugOverlay();
-    console.log(debugOverlayVisible ? "🔍 Debug ON" : "🔍 Debug OFF");
+    console.log(debugOverlayVisible ? "Debug ON" : "Debug OFF");
 }
 
 const COLOR_MAP = {
@@ -238,6 +241,83 @@ let pollingInterval = null;
 let lastPhase = "";
 let lastRound = 0;
 let clearedAgents = new Set();
+
+// === SUSPICION SCORES TRACKING ===
+let enabledClassifiers = {
+    sgd: false,
+    svm: false,
+    lr: false
+};
+let suspicionInitialized = false;
+
+function initSuspicionTracking(data) {
+    if (suspicionInitialized) return;
+    
+    // Check if suspicion data exists in game state
+    if (data && data.suspicion && data.suspicion.enabled_classifiers) {
+        enabledClassifiers = data.suspicion.enabled_classifiers;
+        setupClassifierColumns();
+        suspicionInitialized = true;
+    }
+}
+
+function setupClassifierColumns() {
+    // Show/hide column headers
+    const sgdHeader = document.getElementById('sgdHeader');
+    const svmHeader = document.getElementById('svmHeader');
+    const lrHeader = document.getElementById('lrHeader');
+    
+    if (sgdHeader) sgdHeader.style.display = enabledClassifiers.sgd ? '' : 'none';
+    if (svmHeader) svmHeader.style.display = enabledClassifiers.svm ? '' : 'none';
+    if (lrHeader) lrHeader.style.display = enabledClassifiers.lr ? '' : 'none';
+}
+
+function updateSuspicionScores(suspicionData) {
+    if (!suspicionData || !suspicionData.scores) return;
+    
+    const scores = suspicionData.scores;
+    
+    // Update only the score cells in existing rows
+    Object.keys(scores).forEach(agentKey => {
+        const agentScores = scores[agentKey];
+        const agentNum = agentKey.replace('Agent_', '');
+        
+        // Update SGD
+        if (enabledClassifiers.sgd) {
+            const sgdCell = document.getElementById(`suspicion-${agentNum}-sgd`);
+            if (sgdCell && agentScores.SGD !== undefined && agentScores.SGD !== null) {
+                sgdCell.textContent = agentScores.SGD.toFixed(2);
+                sgdCell.className = getSuspicionClass(agentScores.SGD);
+            }
+        }
+        
+        // Update SVM
+        if (enabledClassifiers.svm) {
+            const svmCell = document.getElementById(`suspicion-${agentNum}-svm`);
+            if (svmCell && agentScores.SVM !== undefined && agentScores.SVM !== null) {
+                svmCell.textContent = agentScores.SVM.toFixed(2);
+                svmCell.className = getSuspicionClass(agentScores.SVM);
+            }
+        }
+        
+        // Update LR
+        if (enabledClassifiers.lr) {
+            const lrCell = document.getElementById(`suspicion-${agentNum}-lr`);
+            if (lrCell && agentScores.LogisticRegression !== undefined && agentScores.LogisticRegression !== null) {
+                lrCell.textContent = agentScores.LogisticRegression.toFixed(2);
+                lrCell.className = getSuspicionClass(agentScores.LogisticRegression);
+            }
+        }
+    });
+}
+
+function getSuspicionClass(score) {
+    if (score === undefined || score === null) return '';
+    if (score >= 0.7) return 'suspicion-high';
+    if (score >= 0.4) return 'suspicion-medium';
+    return 'suspicion-low';
+}
+// === END SUSPICION SCORES ===
 
 function updateGameParams(gameInfo) {
     if (!gameInfo) return;
@@ -367,6 +447,47 @@ function updateStatusTable(agents) {
     if (!agents) return;
     const tbody = document.getElementById("statusTableBody");
     if (!tbody) return;
+    
+    // === ADDED: Cache existing classifier scores before clearing table ===
+    const cachedScores = {};
+    tbody.querySelectorAll('tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length > 0) {
+            const agentNum = cells[0].textContent;
+            cachedScores[agentNum] = {};
+            
+            if (enabledClassifiers.sgd) {
+                const sgdCell = row.querySelector(`[id$="-sgd"]`);
+                if (sgdCell && sgdCell.textContent !== "-") {
+                    cachedScores[agentNum].sgd = {
+                        value: sgdCell.textContent,
+                        className: sgdCell.className
+                    };
+                }
+            }
+            
+            if (enabledClassifiers.svm) {
+                const svmCell = row.querySelector(`[id$="-svm"]`);
+                if (svmCell && svmCell.textContent !== "-") {
+                    cachedScores[agentNum].svm = {
+                        value: svmCell.textContent,
+                        className: svmCell.className
+                    };
+                }
+            }
+            
+            if (enabledClassifiers.lr) {
+                const lrCell = row.querySelector(`[id$="-lr"]`);
+                if (lrCell && lrCell.textContent !== "-") {
+                    cachedScores[agentNum].lr = {
+                        value: lrCell.textContent,
+                        className: lrCell.className
+                    };
+                }
+            }
+        }
+    });
+    
     tbody.innerHTML = "";
     
     const agentKeys = Object.keys(agents).sort(function(a, b) {
@@ -441,6 +562,49 @@ function updateStatusTable(agents) {
             killsCell.textContent = "n/a";
         }
         row.appendChild(killsCell);
+        
+        // === ADDED: Add classifier columns with cached value restoration ===
+        if (enabledClassifiers.sgd) {
+            const sgdCell = document.createElement("td");
+            sgdCell.id = `suspicion-${agentNumRaw}-sgd`;
+            
+            // Restore cached value if exists
+            if (cachedScores[displayNum] && cachedScores[displayNum].sgd) {
+                sgdCell.textContent = cachedScores[displayNum].sgd.value;
+                sgdCell.className = cachedScores[displayNum].sgd.className;
+            } else {
+                sgdCell.textContent = "-";
+            }
+            row.appendChild(sgdCell);
+        }
+        
+        if (enabledClassifiers.svm) {
+            const svmCell = document.createElement("td");
+            svmCell.id = `suspicion-${agentNumRaw}-svm`;
+            
+            // Restore cached value if exists
+            if (cachedScores[displayNum] && cachedScores[displayNum].svm) {
+                svmCell.textContent = cachedScores[displayNum].svm.value;
+                svmCell.className = cachedScores[displayNum].svm.className;
+            } else {
+                svmCell.textContent = "-";
+            }
+            row.appendChild(svmCell);
+        }
+        
+        if (enabledClassifiers.lr) {
+            const lrCell = document.createElement("td");
+            lrCell.id = `suspicion-${agentNumRaw}-lr`;
+            
+            // Restore cached value if exists
+            if (cachedScores[displayNum] && cachedScores[displayNum].lr) {
+                lrCell.textContent = cachedScores[displayNum].lr.value;
+                lrCell.className = cachedScores[displayNum].lr.className;
+            } else {
+                lrCell.textContent = "-";
+            }
+            row.appendChild(lrCell);
+        }
         
         tbody.appendChild(row);
     });
@@ -521,6 +685,11 @@ async function updateGameState() {
         if (!response.ok) return;
         const data = await response.json();
         
+        // Initialize suspicion tracking once
+        if (!suspicionInitialized) {
+            initSuspicionTracking(data);
+        }
+        
         if (data.status === 'waiting') {
             const statusEl = document.getElementById("gameStatus");
             if (statusEl) statusEl.textContent = "Waiting...";
@@ -568,7 +737,7 @@ async function updateGameState() {
             
             const currentPhase = (data.global && data.global.current_phase) || "";
             if (currentPhase === "GAME OVER" && pollingInterval) {
-                console.log("🎮 Game ended, stopping polling");
+                console.log("Game ended, stopping polling");
                 clearInterval(pollingInterval);
                 pollingInterval = null;
                 
@@ -587,6 +756,11 @@ async function updateGameState() {
         if (data.agents && Object.keys(data.agents).length > 0) {
             updateAgentPositions(data.agents);
             updateStatusTable(data.agents);
+            
+            // Update suspicion scores if available
+            if (data.suspicion && data.suspicion.scores) {
+                updateSuspicionScores(data.suspicion);
+            }
         }
         
         if (data) {
@@ -672,7 +846,10 @@ window.addEventListener("DOMContentLoaded", function() {
     const exitBtn = document.getElementById("exitBtn");
     if (exitBtn) exitBtn.addEventListener("click", exitToHome);
     
-    console.log("🎮 Press 'D' for debug!");
+    // === ADDED: Initialize draggable/resizable discussion chat ===
+    initializeDraggableChat();
+    
+    console.log("Press 'D' for debug!");
 });
 
 function showWinScreen(winner) {
@@ -786,4 +963,93 @@ function addDiscussionMessage(event) {
     
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
+}
+
+// =====================================================================
+// === ADDED: DRAGGABLE & RESIZABLE DISCUSSION CHAT ===
+// =====================================================================
+
+function initializeDraggableChat() {
+    const chat = document.getElementById("discussionChat");
+    const header = document.getElementById("discussionChatHeader");
+    const resizeHandle = chat.querySelector(".discussion-chat-resize-handle");
+    
+    if (!chat || !header) return;
+    
+    // Draggable functionality
+    let isDragging = false;
+    let currentX, currentY, initialX, initialY;
+    
+    header.addEventListener("mousedown", function(e) {
+        // Don't drag if clicking close button
+        if (e.target.classList.contains("discussion-chat-close")) return;
+        
+        isDragging = true;
+        
+        // Get current transform or use default center position
+        const rect = chat.getBoundingClientRect();
+        initialX = rect.left;
+        initialY = rect.top;
+        currentX = e.clientX - initialX;
+        currentY = e.clientY - initialY;
+        
+        // Remove transform centering when starting to drag
+        chat.style.transform = "none";
+        chat.style.left = initialX + "px";
+        chat.style.top = initialY + "px";
+        
+        e.preventDefault();
+    });
+    
+    document.addEventListener("mousemove", function(e) {
+        if (!isDragging) return;
+        
+        e.preventDefault();
+        
+        const newX = e.clientX - currentX;
+        const newY = e.clientY - currentY;
+        
+        chat.style.left = newX + "px";
+        chat.style.top = newY + "px";
+    });
+    
+    document.addEventListener("mouseup", function() {
+        isDragging = false;
+    });
+    
+    // Resizable functionality
+    if (resizeHandle) {
+        let isResizing = false;
+        let startX, startY, startWidth, startHeight;
+        
+        resizeHandle.addEventListener("mousedown", function(e) {
+            isResizing = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            const rect = chat.getBoundingClientRect();
+            startWidth = rect.width;
+            startHeight = rect.height;
+            
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        
+        document.addEventListener("mousemove", function(e) {
+            if (!isResizing) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            const newWidth = Math.max(300, startWidth + deltaX);
+            const newHeight = Math.max(200, startHeight + deltaY);
+            
+            chat.style.width = newWidth + "px";
+            chat.style.height = newHeight + "px";
+        });
+        
+        document.addEventListener("mouseup", function() {
+            isResizing = false;
+        });
+    }
 }

@@ -49,9 +49,10 @@ class Observer:
     def analyze_round(self, statements):
         """
         statements: List of dicts {'Agent': str, 'Text': str, 'Reported': int, 'S_Num': int}
+        Returns: Dict of {agent_name: {model_name: probability}} or None
         """
         if not statements or not self.models:
-            return
+            return None
 
         df = pd.DataFrame(statements)
         df['Clean_Text'] = df['Text'].apply(self._preprocess)
@@ -69,6 +70,8 @@ class Observer:
 
         # Get probabilities from all loaded models
         results = {}
+        scores_by_agent = {}  # NEW: Store for export
+        
         for name, clf in self.models.items():
             probs = clf.predict_proba(input_df)[:, 1]
             df[f'{name}_Prob'] = probs
@@ -76,15 +79,26 @@ class Observer:
             results[name] = df.groupby('Agent')[f'{name}_Prob'].mean()
 
         # Get actual roles for verification in terminal
-        # (Using the Agent index from the first model result)
         agents = results["LogisticRegression"].index if "LogisticRegression" in results else []
         
         for agent_name in agents:
-            lr_p = results.get("LogisticRegression", {}).get(agent_name, 0) * 100
-            sgd_p = results.get("SGD", {}).get(agent_name, 0) * 100
-            svm_p = results.get("SVM", {}).get(agent_name, 0) * 100
-            print(f"{agent_name:<12} | {lr_p:>6.1f}% | {sgd_p:>6.1f}% | {svm_p:>6.1f}%")
+            lr_p = results.get("LogisticRegression", {}).get(agent_name, 0)
+            sgd_p = results.get("SGD", {}).get(agent_name, 0)
+            svm_p = results.get("SVM", {}).get(agent_name, 0)
+            
+            # Store scores for export (as raw probabilities 0-1)
+            scores_by_agent[agent_name] = {
+                "LogisticRegression": float(lr_p),
+                "SGD": float(sgd_p),
+                "SVM": float(svm_p)
+            }
+            
+            # Print to terminal (as percentages)
+            print(f"{agent_name:<12} | {lr_p*100:>6.1f}% | {sgd_p*100:>6.1f}% | {svm_p*100:>6.1f}%")
+        
         print("="*60 + "\n")
+        
+        return scores_by_agent  # NEW: Return scores instead of just printing
 class GameEngine:
     def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST, num_rounds=DEFAULT_NUM_ROUNDS):
         self.game_id = game_id
@@ -94,6 +108,9 @@ class GameEngine:
         self.state = None
         self.logger = None
         self.observer = Observer()
+        
+        # ML Classifier config (will be set during setup)
+        self.enabled_classifiers = {}
 
     def setup(self, composition):
         scen_name = composition.get("name", "Unknown_Scenario")
@@ -122,7 +139,7 @@ class GameEngine:
                         HonestAgent(agent_name, color, model)
                     )
             
-            print(f"✅ Created {len(self.agents)} agents with EXACT configuration from frontend")
+            print(f"Created {len(self.agents)} agents with EXACT configuration from frontend")
             
         else:
             honest_models = composition["honest_model"]
@@ -155,6 +172,15 @@ class GameEngine:
 
         self.logger = LogManager(self.game_id, self.agents, scen_name)
         self.state = GameState(self.agents, self.logger)
+        
+        # Set up ML classifiers from composition
+        if "enabled_classifiers" in composition:
+            self.enabled_classifiers = composition["enabled_classifiers"]
+            self.state.set_classifiers(self.enabled_classifiers)
+            classifiers_enabled = [k.upper() for k, v in self.enabled_classifiers.items() if v]
+            if classifiers_enabled:
+                print(f"Observer initialized with classifiers: {', '.join(classifiers_enabled)}")
+        
         self.state.save_json()
         print(f"--- Game Setup Complete. Logs at: {self.logger.base_dir} ---")
         
@@ -300,8 +326,10 @@ class GameEngine:
                 self.state.record_chat(agent.name, clean_msg)
                 self.state.save_json()
 
-        # After Discussion, Use Classifier to see probabilities
-        self.observer.analyze_round(round_statements)
+        # After Discussion, Use Classifier to see probabilities and store results
+        suspicion_scores = self.observer.analyze_round(round_statements)
+        if suspicion_scores:
+            self.state.update_suspicion_scores(suspicion_scores)
 
         self.state.update_phase("VOTING") 
         votes = {}
@@ -396,6 +424,18 @@ class GameEngine:
                 stats["won_game"] = 1
             else:
                 stats["won_game"] = 0
+            
+            # Add final classifier scores to stats (if any exist)
+            if self.state.suspicion_scores and agent_name in self.state.suspicion_scores:
+                agent_scores = self.state.suspicion_scores[agent_name]
+                stats["sgd_score"] = agent_scores.get("SGD", None)
+                stats["svm_score"] = agent_scores.get("SVM", None)
+                stats["lr_score"] = agent_scores.get("LogisticRegression", None)
+            else:
+                # No scores available - set to None
+                stats["sgd_score"] = None
+                stats["svm_score"] = None
+                stats["lr_score"] = None
 
         self.state.update_phase("GAME OVER")
         self.state.add_ui_event(f"{result.upper()}", "info")
