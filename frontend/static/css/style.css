@@ -477,14 +477,15 @@ select[name*="_color"] {
 }
 
 .status-table-wrapper {
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
     max-width: 100%;
 }
 
 .status-table {
     width: 100%;
     max-width: 100%;
-    table-layout: fixed;
+    table-layout: auto;
     border-collapse: collapse;
     font-size: 0.72rem;
 }
@@ -495,8 +496,6 @@ select[name*="_color"] {
     padding: 0.3rem 0.25rem;
     text-align: left;
     border: 1px solid var(--border);
-    overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
@@ -504,9 +503,26 @@ select[name*="_color"] {
     padding: 0.25rem;
     border: 1px solid var(--border);
     text-align: left;
-    overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Prefer content-sized columns (compact numerics, wider text) */
+.status-table th:nth-child(1),
+.status-table td:nth-child(1),
+.status-table th:nth-child(3),
+.status-table td:nth-child(3),
+.status-table th:nth-child(6),
+.status-table td:nth-child(6),
+.status-table th:nth-child(7),
+.status-table td:nth-child(7),
+.status-table th:nth-child(n + 8),
+.status-table td:nth-child(n + 8) {
+    width: 1%;
+}
+
+.status-table th:nth-child(4),
+.status-table td:nth-child(4) {
+    width: 40px;
 }
 
 .status-table tbody tr:nth-child(even):not(.agent-dead):not(.agent-byzantine) {
@@ -705,12 +721,17 @@ select[name*="_color"] {
 }
 
 .feed-event--danger .feed-text {
-    color: var(--text);
+    color: #8b2f2f;
     font-weight: 600;
 }
 
 .feed-event--warning .feed-text {
     color: var(--text-muted);
+    font-weight: 600;
+}
+
+.feed-event--vote .feed-text {
+    color: #7a5c00;
     font-weight: 600;
 }
 

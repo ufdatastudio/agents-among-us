@@ -659,6 +659,9 @@ function updateLiveFeed(events) {
         } else if (eventType === "meeting" || eventType === "vote") {
             eventDiv.classList.add("feed-event--warning");
         }
+        if (eventType === "vote") {
+            eventDiv.classList.add("feed-event--vote");
+        }
         const timestampSpan = document.createElement("span");
         timestampSpan.className = "feed-timestamp";
         timestampSpan.textContent = "[" + (event.time || event.timestamp || "--:--") + "]";
