@@ -1,4 +1,4 @@
-# Agents Among Us: Multi-Agent Social Deduction Framework
+# Agents Among Us
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Flask](https://img.shields.io/badge/Flask-2.0+-lightgrey.svg?logo=flask)](https://flask.palletsprojects.com/)
@@ -7,6 +7,14 @@
 Interactive web demo and distributed inference framework for **Agents Among Us**, inspired by the popular mobile game. Observe the zero-shot social deduction and deception capabilities in Large Language Models (LLMs).
 
 Despite their impressive capabilities, LLMs struggle to effectively utilize textual evidence in this social deduction environment. This framework lets you explore these limitations firsthand by comparing generative agent decisions against supervised machine learning "observers" trained on the exact same interaction logs.
+
+<div align="center">
+  <img width="2553" height="1157" alt="image" src="https://github.com/user-attachments/assets/2b0414de-91e2-47ff-922b-0b14d82536cf" />
+  <br>
+  <em>Live gameplay simulation interface</em>
+</div>
+
+
 
 ## Links
 
