@@ -18,7 +18,7 @@ Despite their impressive capabilities, LLMs struggle to effectively utilize text
 
 ## Links
 
-- [**Watch the System Demonstration Video here**] 
+- [Watch the System Demonstration Video here(https://youtu.be/fQIflkO-zg4)**] 
 - [**Access the Live Interactive Simulation here**]
 - [UF Data Studio](https://github.com/ufdatastudio)
 ## Features
