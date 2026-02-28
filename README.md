@@ -140,7 +140,7 @@ LW_MODELS_MAP = {
 
 The preprocessed dataset containing over 10,000 parsed game logs and approximately 290,000 labeled utterances used for the offline observer pipeline is located at:
 
-`results/observer_dataset.csv
+`results/observer_dataset.csv`
 
 ## Code Structure
 
