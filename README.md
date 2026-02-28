@@ -18,8 +18,8 @@ Despite their impressive capabilities, LLMs struggle to effectively utilize text
 
 ## Links
 
-- [Watch the System Demonstration Video here](https://youtu.be/fQIflkO-zg4)
-- [**Access the Live Interactive Simulation here**]
+- [Watch the system demonstration video here](https://youtu.be/fQIflkO-zg4)
+- [Access live demo website here]()
 - [UF Data Studio](https://github.com/ufdatastudio)
 ## Features
 
@@ -136,7 +136,11 @@ LW_MODELS_MAP = {
 
 ```
 
+## Dataset
 
+The preprocessed dataset containing over 10,000 parsed game logs and approximately 290,000 labeled utterances used for the offline observer pipeline is located at:
+
+`results/observer_dataset.csv
 
 ## Code Structure
 
