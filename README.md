@@ -36,7 +36,20 @@ The project uses a Conda environment to manage Python dependencies, PyTorch, and
 ```bash
 conda env create -f environment.yaml
 conda activate amongus
+```
 
+### Container Installation (Podman/Apptainer)
+
+For containerized deployments, use the provided container definitions. Both Podman and Apptainer/Singularity are supported.
+
+**Build with Podman:**
+```bash
+./container/build-podman.sh
+```
+
+**Build with Apptainer:**
+```bash
+./container/build-apptainer.sh
 ```
 
 ## Usage
@@ -110,8 +123,58 @@ python worker.py --game_id SESSION1 --model_names meta-llama/Llama-3.1-8B-Instru
 # Run the game controller in Terminal 2:
 # Arguments: --composition_name <ConfigName> --job_index <Int> --game_id <SessionIdentifier> --num_rounds <Int>
 python main.py --composition_name MyComp --job_index 0 --game_id SESSION1 --num_rounds 10
-
 ```
+
+### 4. HiPerGator PubApps Deployment
+
+For hosting on UF Research Computing's [PubApps](https://docs.rc.ufl.edu/services/web_hosting/) infrastructure:
+
+**Prerequisites:**
+1. Open a support ticket with UF Research Computing to request a PubApps instance
+2. Specify your resource requirements (CPU, memory, GPU if needed)
+3. Obtain your assigned port number and VM access
+
+**Deployment Steps:**
+
+Once you have SSH access to your PubApps VM:
+
+```bash
+# Clone the repository
+git clone https://github.com/ufdatastudio/agents-among-us.git
+cd agents-among-us
+
+# Run the deployment script with your assigned port
+./container/pubapps-deploy.sh --port <YOUR_PORT>
+
+# For GPU-enabled deployment (if allocated)
+./container/pubapps-deploy.sh --port <YOUR_PORT> --gpu
+```
+
+The deployment script will:
+- Build the Podman container image
+- Configure systemd for automatic startup via Quadlet
+- Start the service
+
+**Service Management:**
+
+```bash
+# Check service status
+./container/pubapps-deploy.sh status
+
+# View container logs
+./container/pubapps-deploy.sh logs
+
+# Restart the service
+./container/pubapps-deploy.sh restart
+
+# Stop the service
+./container/pubapps-deploy.sh stop
+
+# Remove the deployment
+./container/pubapps-deploy.sh uninstall
+```
+
+Your application will be accessible at `https://<your-project>.rc.ufl.edu` after the reverse proxy is configured by RC support.
 
 ## Configuration & Adding New Models
 
@@ -149,12 +212,14 @@ The preprocessed dataset containing over 10,000 parsed game logs and approximate
 ├── main.py              # Orchestrates game runs (movement → discussion → voting)
 ├── worker.py            # Async decoupled inference worker (IPC)
 ├── submit_games.sh      # SLURM job script for cluster execution
+├── Dockerfile           # Podman/Docker container definition
+├── agents-among-us.def  # Apptainer/Singularity container definition
 ├── agents/              # Agent behavior definitions and prompts
 ├── config/              # Game settings and model compositions
+├── container/           # Container build/run scripts and PubApps deployment
 ├── core/                # Core simulation logic and state management
 ├── frontend/            # Flask application and UI assets
 └── results/             # Data analysis, classifiers, and parsed datasets
-
 ```
 
 | Module | Description |
@@ -163,6 +228,7 @@ The preprocessed dataset containing over 10,000 parsed game logs and approximate
 | `worker.py` | Loads models, handles local quantization, and processes generation requests. |
 | `agents/` | Contains `honest_agent.py` and `byzantine_agent.py` with role-specific logic. |
 | `config/` | Includes `cache_models.py`, `settings.py`, etc. |
+| `container/` | Podman and Apptainer build scripts, PubApps deployment automation. |
 | `core/` | Includes `game_engine.py`, `state.py`, and `llm.py`. |
 | `frontend/` | Flask routes (`app.py`), HTML templates, and live state visualizers. |
 | `results/` | Machine learning pipeline for the offline observers and metric calculation. |
