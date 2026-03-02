@@ -1,0 +1,54 @@
+# Podman Quadlet container file for HiPerGator PubApps
+# Place this file in ~/.config/containers/systemd/
+#
+# After placing the file, run:
+#   loginctl enable-linger $USER
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now agents-among-us
+#
+# Service management:
+#   systemctl --user start agents-among-us
+#   systemctl --user stop agents-among-us
+#   systemctl --user restart agents-among-us
+#   systemctl --user status agents-among-us
+
+[Unit]
+Description=Agents Among Us - LLM Social Deduction Game
+After=network-online.target
+
+[Container]
+# Container image - update path after building on PubApps
+Image=localhost/agents-among-us:latest
+ContainerName=agents-among-us
+
+# Port mapping - UPDATE THIS to your assigned port from RC support
+# Format: HOST_PORT:CONTAINER_PORT
+PublishPort=8080:8080
+
+# Volume mounts for persistent data
+Volume=%h/agents-among-us/logs:/app/logs:Z
+Volume=%h/agents-among-us/frontend/data:/app/frontend/data:Z
+Volume=%h/.cache/huggingface:/app/.cache/huggingface:Z
+
+# Environment variables
+Environment=PORT=8080
+Environment=PYTHONUNBUFFERED=1
+Environment=LLM_MODE=LOCAL
+
+# GPU access (uncomment if GPU allocated to your VM)
+# AddDevice=nvidia.com/gpu=all
+
+# Resource limits (adjust based on your allocation)
+# Memory=16g
+
+# Restart policy
+AutoUpdate=registry
+
+[Service]
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=300
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target

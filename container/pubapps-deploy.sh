@@ -1,23 +1,51 @@
 #!/bin/bash
-# HiPerGator PUBAPPS Deployment Script
+# HiPerGator PubApps Deployment Script
 #
-# This script is designed for deployment on UF HiPerGator PUBAPPS infrastructure.
-# See: https://docs.rc.ufl.edu/services/web_hosting/deployment/
+# This script sets up the Agents Among Us container on UF HiPerGator PubApps.
+# See: https://docs.rc.ufl.edu/services/web_hosting/
 #
-# Before running this script:
+# Prerequisites:
 # 1. Open a support ticket with UF Research Computing
-# 2. Discuss your deployment requirements (access level, resources, port)
-# 3. Get your assigned port number and VM details
+# 2. Get your assigned port number and VM access
+# 3. SSH into your PubApps VM
+# 4. Clone this repository to your home directory
 #
-# Usage: ./container/pubapps-deploy.sh --port <PORT>
+# Usage: ./container/pubapps-deploy.sh --port <PORT> [options]
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-SIF_PATH="${PROJECT_ROOT}/agents-among-us.sif"
+IMAGE_NAME="agents-among-us:latest"
 PORT=""
-MODE="podman"  # or "apptainer"
+ENABLE_GPU=false
+ACTION="setup"
+
+print_help() {
+    echo "HiPerGator PubApps Deployment for Agents Among Us"
+    echo ""
+    echo "Usage: $0 --port <PORT> [options]"
+    echo ""
+    echo "Actions:"
+    echo "  setup       Build image and configure systemd (default)"
+    echo "  start       Start the service"
+    echo "  stop        Stop the service"
+    echo "  restart     Restart the service"
+    echo "  status      Check service status"
+    echo "  logs        View container logs"
+    echo "  uninstall   Remove systemd configuration"
+    echo ""
+    echo "Options:"
+    echo "  --port PORT    Required for setup. The port assigned by RC support."
+    echo "  --gpu          Enable GPU support (if allocated to your VM)"
+    echo "  --help, -h     Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0 --port 12345              # Initial setup on port 12345"
+    echo "  $0 --port 12345 --gpu        # Setup with GPU support"
+    echo "  $0 start                     # Start the service"
+    echo "  $0 logs                      # View logs"
+}
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -26,105 +54,161 @@ while [[ $# -gt 0 ]]; do
             PORT="$2"
             shift 2
             ;;
-        --sif)
-            SIF_PATH="$2"
-            MODE="apptainer"
-            shift 2
-            ;;
-        --podman)
-            MODE="podman"
+        --gpu)
+            ENABLE_GPU=true
             shift
             ;;
-        --apptainer)
-            MODE="apptainer"
+        setup|start|stop|restart|status|logs|uninstall)
+            ACTION="$1"
             shift
             ;;
         --help|-h)
-            echo "HiPerGator PUBAPPS Deployment"
-            echo ""
-            echo "Usage: $0 --port <PORT> [options]"
-            echo ""
-            echo "Options:"
-            echo "  --port PORT      Required. The port assigned by RC support."
-            echo "  --podman         Use Podman (default)"
-            echo "  --apptainer      Use Apptainer/Singularity"
-            echo "  --sif PATH       Path to .sif file (implies --apptainer)"
-            echo ""
+            print_help
             exit 0
             ;;
         *)
             echo "Unknown option: $1"
+            print_help
             exit 1
             ;;
     esac
 done
 
-# Validate port
+# Service management actions
+case $ACTION in
+    start)
+        echo "Starting agents-among-us service..."
+        systemctl --user start agents-among-us
+        systemctl --user status agents-among-us
+        exit 0
+        ;;
+    stop)
+        echo "Stopping agents-among-us service..."
+        systemctl --user stop agents-among-us
+        exit 0
+        ;;
+    restart)
+        echo "Restarting agents-among-us service..."
+        systemctl --user restart agents-among-us
+        systemctl --user status agents-among-us
+        exit 0
+        ;;
+    status)
+        systemctl --user status agents-among-us
+        exit 0
+        ;;
+    logs)
+        podman logs -f agents-among-us
+        exit 0
+        ;;
+    uninstall)
+        echo "Removing systemd configuration..."
+        systemctl --user stop agents-among-us 2>/dev/null || true
+        systemctl --user disable agents-among-us 2>/dev/null || true
+        rm -f ~/.config/containers/systemd/agents-among-us.container
+        systemctl --user daemon-reload
+        echo "Uninstalled. Container image still exists, remove with: podman rmi ${IMAGE_NAME}"
+        exit 0
+        ;;
+esac
+
+# Setup requires port
 if [ -z "$PORT" ]; then
-    echo "Error: --port is required"
-    echo "Run with --help for usage information"
+    echo "Error: --port is required for setup"
+    echo ""
+    print_help
     exit 1
 fi
 
 echo "=============================================="
-echo "HiPerGator PUBAPPS Deployment"
+echo "HiPerGator PubApps Deployment"
 echo "=============================================="
-echo "Mode: ${MODE}"
 echo "Port: ${PORT}"
+echo "GPU: ${ENABLE_GPU}"
 echo "Project: ${PROJECT_ROOT}"
+echo "=============================================="
 echo ""
 
-# Create required directories
-mkdir -p "${PROJECT_ROOT}/logs"
-mkdir -p "${PROJECT_ROOT}/frontend/data"
+# Step 1: Create required directories
+echo "[1/5] Creating directories..."
+mkdir -p "${HOME}/agents-among-us/logs"
+mkdir -p "${HOME}/agents-among-us/frontend/data"
+mkdir -p "${HOME}/.cache/huggingface"
+mkdir -p "${HOME}/.config/containers/systemd"
 
-# Set up HuggingFace cache
-HF_CACHE="${HF_HOME:-$HOME/.cache/huggingface}"
-mkdir -p "$HF_CACHE"
+# Step 2: Build the container image
+echo "[2/5] Building container image..."
+cd "$PROJECT_ROOT"
+podman build -t "$IMAGE_NAME" -f Dockerfile .
 
-if [ "$MODE" = "apptainer" ]; then
-    # Apptainer deployment
-    if [ ! -f "$SIF_PATH" ]; then
-        echo "Building Apptainer container..."
-        "${SCRIPT_DIR}/build-apptainer.sh" "$SIF_PATH"
-    fi
+# Step 3: Configure the Quadlet file
+echo "[3/5] Configuring systemd Quadlet..."
+QUADLET_FILE="${HOME}/.config/containers/systemd/agents-among-us.container"
 
-    if command -v apptainer &> /dev/null; then
-        CONTAINER_CMD="apptainer"
-    elif command -v singularity &> /dev/null; then
-        CONTAINER_CMD="singularity"
-    else
-        echo "Error: Neither apptainer nor singularity found"
-        exit 1
-    fi
+cat > "$QUADLET_FILE" << EOF
+# Podman Quadlet container file for Agents Among Us
+# Auto-generated by pubapps-deploy.sh
 
-    echo "Starting with Apptainer..."
-    exec $CONTAINER_CMD run \
-        --nv \
-        --env PORT="${PORT}" \
-        --bind "${PROJECT_ROOT}/logs:/app/logs" \
-        --bind "${PROJECT_ROOT}/frontend/data:/app/frontend/data" \
-        --bind "${HF_CACHE}:/app/.cache/huggingface" \
-        "$SIF_PATH"
+[Unit]
+Description=Agents Among Us - LLM Social Deduction Game
+After=network-online.target
 
-else
-    # Podman deployment
-    IMAGE_NAME="agents-among-us:latest"
+[Container]
+Image=localhost/${IMAGE_NAME}
+ContainerName=agents-among-us
+PublishPort=${PORT}:${PORT}
 
-    # Check if image exists, build if not
-    if ! podman image exists "$IMAGE_NAME" 2>/dev/null; then
-        echo "Building Podman image..."
-        "${SCRIPT_DIR}/build-podman.sh"
-    fi
+Volume=${HOME}/agents-among-us/logs:/app/logs:Z
+Volume=${HOME}/agents-among-us/frontend/data:/app/frontend/data:Z
+Volume=${HOME}/.cache/huggingface:/app/.cache/huggingface:Z
 
-    echo "Starting with Podman..."
-    exec podman run --rm \
-        --device nvidia.com/gpu=all \
-        -e PORT="${PORT}" \
-        -p "${PORT}:${PORT}" \
-        -v "${PROJECT_ROOT}/logs:/app/logs:z" \
-        -v "${PROJECT_ROOT}/frontend/data:/app/frontend/data:z" \
-        -v "${HF_CACHE}:/app/.cache/huggingface:z" \
-        --name agents-among-us \
-        "$IMAGE_NAME"
+Environment=PORT=${PORT}
+Environment=PYTHONUNBUFFERED=1
+Environment=LLM_MODE=LOCAL
+EOF
+
+# Add GPU support if enabled
+if [ "$ENABLE_GPU" = true ]; then
+    echo "AddDevice=nvidia.com/gpu=all" >> "$QUADLET_FILE"
 fi
+
+cat >> "$QUADLET_FILE" << 'EOF'
+
+[Service]
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=300
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target
+EOF
+
+echo "Created: $QUADLET_FILE"
+
+# Step 4: Enable lingering and reload systemd
+echo "[4/5] Configuring systemd..."
+loginctl enable-linger "$USER"
+systemctl --user daemon-reload
+
+# Step 5: Enable and start the service
+echo "[5/5] Starting service..."
+systemctl --user enable agents-among-us
+systemctl --user start agents-among-us
+
+echo ""
+echo "=============================================="
+echo "Deployment complete!"
+echo "=============================================="
+echo ""
+echo "Service status:"
+systemctl --user status agents-among-us --no-pager
+echo ""
+echo "Your application should be accessible at your PubApps URL."
+echo ""
+echo "Useful commands:"
+echo "  $0 status     - Check service status"
+echo "  $0 logs       - View container logs"
+echo "  $0 restart    - Restart the service"
+echo "  $0 stop       - Stop the service"
+echo "=============================================="
