@@ -3,7 +3,7 @@
 # Requires NVIDIA GPU support for LLM inference
 # Uses uv for Python and package management
 
-FROM nvidia/cuda:12.4.1-devel-ubuntu22.04 AS builder
+FROM nvidia/cuda:12.8.0-devel-ubuntu22.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
@@ -26,12 +26,12 @@ WORKDIR /app
 # Install Python 3.10 via uv and create venv
 RUN uv python install 3.10 && uv venv --python 3.10
 
-# Install PyTorch with CUDA 12.4 support
+# Install PyTorch with CUDA 12.8 support
 RUN uv pip install \
-    torch==2.5.1 \
-    torchvision==0.20.1 \
-    torchaudio==2.5.1 \
-    --index-url https://download.pytorch.org/whl/cu124
+    torch==2.9.1 \
+    torchvision==0.24.1 \
+    torchaudio==2.9.1 \
+    --index-url https://download.pytorch.org/whl/cu128
 
 # Install core ML dependencies
 RUN uv pip install \
@@ -64,7 +64,7 @@ RUN uv pip install \
 RUN uv run python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('punkt_tab')"
 
 # Production image
-FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+FROM nvidia/cuda:12.8.0-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
