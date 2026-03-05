@@ -28,6 +28,17 @@ const ALL_MODELS = [
   "meta-llama/Llama-3.2-3B-Instruct",
   "Qwen/Qwen2.5-1.5B-Instruct",
   "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+  // API Models
+  "navigator:llama-3.3-70b-instruct",
+  "navigator:gemma-3-27b-it",
+  "navigator:mistral-small-3.1",
+  "navigator:claude-4-sonnet",
+  "navigator:gpt-4o",
+  "navigator:gemini-2.0-flash",
+  "anthropic:claude-sonnet-4-20250514",
+  "anthropic:claude-3-5-haiku-20241022",
+  "openai:gpt-4o",
+  "openai:gpt-4o-mini",
 ];
 const DASH = "—";
 
@@ -47,6 +58,13 @@ function abbreviateAgentName(agentName) {
 // Abbreviate model name for display
 function abbreviateModelName(fullName) {
   if (!fullName) return "";
+  if (fullName.indexOf(":") !== -1) {
+    var parts = fullName.split(":");
+    var provider = parts[0];
+    var modelId = parts[1];
+    var tag = provider.charAt(0).toUpperCase() + provider.slice(1);
+    return tag + "/" + modelId;
+  }
   const short = fullName.split("/").pop() || fullName;
   return short.replace(/-Instruct|-Chat-v1\.0/g, "");
 }

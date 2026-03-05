@@ -339,15 +339,17 @@ class GameState:
         self.add_ui_event(f"{agent_name} was EJECTED.", "eject")
     
     def save_json(self):
-        """Exports the current state to a JSON file for the Live Map."""        
+        """Exports the current state to a JSON file for the Live Map."""
         try:
-            # Add suspicion data to export
+            from core.llm import ModelManager
+
             output_data = self.world_data.copy()
             output_data['suspicion'] = {
                 'enabled_classifiers': self.enabled_classifiers,
                 'scores': self.suspicion_scores
             }
-            
+            output_data['token_usage'] = ModelManager.get_instance().get_token_usage()
+
             with open(self.live_state_file, "w", encoding="utf-8") as f:
                 json.dump(output_data, f, indent=4)
         except Exception as e:

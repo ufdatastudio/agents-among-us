@@ -82,7 +82,30 @@
                 </div>
             </div>
 
-           
+            <!-- API Keys (optional) -->
+            <div class="form-section">
+                <h2>API Keys (optional)</h2>
+                <p class="form-hint">Required only if using API models above. Keys from .env file are used as defaults.</p>
+                <div class="form-group">
+                    <label for="navigator_api_key">Navigator (UF)</label>
+                    <input type="password" id="navigator_api_key" name="navigator_api_key"
+                           placeholder="NAVIGATOR_TOOLKIT_API_KEY" autocomplete="off">
+                    <span id="nav_key_status" class="key-status"></span>
+                </div>
+                <div class="form-group">
+                    <label for="anthropic_api_key">Anthropic</label>
+                    <input type="password" id="anthropic_api_key" name="anthropic_api_key"
+                           placeholder="ANTHROPIC_API_KEY" autocomplete="off">
+                    <span id="anth_key_status" class="key-status"></span>
+                </div>
+                <div class="form-group">
+                    <label for="openai_api_key">OpenAI</label>
+                    <input type="password" id="openai_api_key" name="openai_api_key"
+                           placeholder="OPENAI_API_KEY" autocomplete="off">
+                    <span id="oai_key_status" class="key-status"></span>
+                </div>
+            </div>
+
             <div class="form-section">
                 <h2>Observers</h2>
                 <div class="form-group">

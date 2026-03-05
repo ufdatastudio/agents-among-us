@@ -176,6 +176,56 @@ The deployment script will:
 
 Your application will be accessible at `https://<your-project>.rc.ufl.edu` after the reverse proxy is configured by RC support.
 
+## API Model Support
+
+The framework supports external API providers alongside local GPU inference. API models use a `provider:model_id` naming convention (e.g., `navigator:llama-3.3-70b-instruct`). This enables running games on machines without GPUs or comparing proprietary models against open-weight models.
+
+### Supported Providers
+
+| Provider | Prefix | Example Model ID |
+|----------|--------|-----------------|
+| UF Navigator | `navigator:` | `navigator:llama-3.3-70b-instruct` |
+| OpenAI | `openai:` | `openai:gpt-4o-mini` |
+| Anthropic | `anthropic:` | `anthropic:claude-sonnet-4-20250514` |
+
+UF Navigator provides free API credits ($25/month) and routes to models from multiple vendors (Llama, Gemma, Claude, GPT-4o, Gemini).
+
+### Setup
+
+1. Install the API dependencies:
+```bash
+uv sync --extra api
+```
+
+2. Copy the example environment file and add your keys:
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your API keys:
+```
+NAVIGATOR_TOOLKIT_API_KEY=your-navigator-key
+ANTHROPIC_API_KEY=your-anthropic-key
+OPENAI_API_KEY=your-openai-key
+```
+
+Only the keys for providers you plan to use are required. Navigator keys are available at [UF AI Navigator](https://ai.it.ufl.edu).
+
+3. Start the web UI:
+```bash
+uv run python3 frontend/app.py
+```
+
+4. In the configuration page, select API models from the dropdown for any agent. The model list is divided into local models (top) and API models grouped by provider (bottom). If a key is detected from `.env`, a green "(`.env` set)" indicator appears next to the corresponding field.
+
+### Mixed Games
+
+API and local models can coexist in the same game. For example, you could configure Agent 0 as a Byzantine running `navigator:gpt-4o` and Agents 1-3 as Honest running `google/gemma-2-9b-it` locally. The game engine routes each agent's generation call to the appropriate backend.
+
+### Token Usage
+
+API token consumption is tracked per model and displayed in the game UI next to each API agent's model name (e.g., `Navigator/gpt-4o (1532t)`). Token counts are also exported to `stats.csv` as `api_input_tokens` and `api_output_tokens` columns.
+
 ## Configuration & Adding New Models
 
 The framework is model-agnostic and relies on Hugging Face transformers. You can test your own models or community fine-tunes by modifying the backend configurations.
@@ -229,7 +279,7 @@ The preprocessed dataset containing over 10,000 parsed game logs and approximate
 | `agents/` | Contains `honest_agent.py` and `byzantine_agent.py` with role-specific logic. |
 | `config/` | Includes `cache_models.py`, `settings.py`, etc. |
 | `container/` | Podman and Apptainer build scripts, PubApps deployment automation. |
-| `core/` | Includes `game_engine.py`, `state.py`, and `llm.py`. |
+| `core/` | Includes `game_engine.py`, `state.py`, `llm.py`, and `api_clients.py`. |
 | `frontend/` | Flask routes (`app.py`), HTML templates, and live state visualizers. |
 | `results/` | Machine learning pipeline for the offline observers and metric calculation. |
 
@@ -263,6 +313,7 @@ If you use this framework or dataset in your research, please cite:
 - Frontend prompt customization, game ticks
 - Frontend model caching and quantization
 - Agent movement tracing during gameplay
+- Additional API providers
 ## Issues and Contributions
 
 Found a bug or have a feature request?

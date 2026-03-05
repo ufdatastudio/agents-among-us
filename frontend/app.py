@@ -3,17 +3,23 @@ Agents Among Us - Flask Web Application
 Complete backend integration with all API routes + ML Classifiers
 """
 
-from flask import Flask, render_template, jsonify, request, redirect, url_for, session, send_file
-import subprocess
-import os
-import json
-import sys
-import glob
 import csv
-import pandas as pd
-from datetime import datetime
-import signal
+import json
+import os
+import subprocess
+import sys
 import threading
+from datetime import datetime
+
+import glob
+import pandas as pd
+from flask import Flask, jsonify, redirect, render_template, request, send_file, session, url_for
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 app = Flask(__name__)
 app.secret_key = 'agents-among-us-secret-key-change-in-production'
@@ -226,10 +232,23 @@ def start_game():
         print(f"Rounds: {num_rounds}")
         print(f"{'='*60}\n")
         
+        # Pass API keys to subprocess via environment
+        env = os.environ.copy()
+        api_key_fields = {
+            'navigator_api_key': 'NAVIGATOR_TOOLKIT_API_KEY',
+            'anthropic_api_key': 'ANTHROPIC_API_KEY',
+            'openai_api_key': 'OPENAI_API_KEY',
+        }
+        for form_field, env_var in api_key_fields.items():
+            val = request.form.get(form_field, '').strip()
+            if val:
+                env[env_var] = val
+
         # start game process in background
         current_game_process = subprocess.Popen(
             cmd,
             cwd=BACKEND_PATH,
+            env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -522,6 +541,16 @@ def get_game_stats(game_id):
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/check_api_keys')
+def check_api_keys():
+    """Check which API keys are set in the environment."""
+    return jsonify({
+        'navigator': bool(os.environ.get('NAVIGATOR_TOOLKIT_API_KEY')),
+        'anthropic': bool(os.environ.get('ANTHROPIC_API_KEY')),
+        'openai': bool(os.environ.get('OPENAI_API_KEY')),
+    })
 
 
 @app.route('/api/health')

@@ -224,6 +224,13 @@ var DEAD_SPRITES = {
 
 function getModelAbbreviation(modelName) {
     if (!modelName) return "Unknown";
+    if (modelName.indexOf(":") !== -1) {
+        var parts = modelName.split(":");
+        var provider = parts[0];
+        var modelId = parts[1];
+        var tag = provider.charAt(0).toUpperCase() + provider.slice(1);
+        return tag + "/" + modelId.substring(0, 15);
+    }
     if (modelName.includes("TinyLlama")) return "TinyLlama";
     if (modelName.includes("Qwen")) {
         if (modelName.includes("1.5B")) return "Qwen 1.5B";
@@ -240,6 +247,7 @@ let pollingInterval = null;
 let lastPhase = "";
 let lastRound = 0;
 let clearedAgents = new Set();
+let currentTokenUsage = {};
 
 // SUSPICION SCORES 
 let enabledClassifiers = {
@@ -504,7 +512,12 @@ function updateStatusTable(agents) {
         
         const modelCell = document.createElement("td");
         const modelName = agent.stats && agent.stats.model_name ? agent.stats.model_name : agent.model;
-        modelCell.textContent = getModelAbbreviation(modelName);
+        var modelLabel = getModelAbbreviation(modelName);
+        if (modelName && modelName.indexOf(":") !== -1 && currentTokenUsage[modelName]) {
+            var tokens = currentTokenUsage[modelName];
+            modelLabel += " (" + (tokens.input_tokens + tokens.output_tokens) + "t)";
+        }
+        modelCell.textContent = modelLabel;
         row.appendChild(modelCell);
         
         const roleCell = document.createElement("td");
@@ -747,10 +760,14 @@ async function updateGameState() {
             }
         }
         
+        if (data.token_usage) {
+            currentTokenUsage = data.token_usage;
+        }
+
         if (data.agents && Object.keys(data.agents).length > 0) {
             updateAgentPositions(data.agents);
             updateStatusTable(data.agents);
-            
+
             if (data.suspicion && data.suspicion.scores) {
                 updateSuspicionScores(data.suspicion);
             }

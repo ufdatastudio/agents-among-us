@@ -36,7 +36,23 @@ const MODELS = [
     // Sub-7B Class Models
     { value: "meta-llama/Llama-3.2-3B-Instruct", name: "Llama 3.2 3B (meta-llama/Llama-3.2-3B-Instruct)" },
     { value: "Qwen/Qwen2.5-1.5B-Instruct", name: "Qwen 1.5B (Qwen/Qwen2.5-1.5B-Instruct)" },
-    { value: "TinyLlama/TinyLlama-1.1B-Chat-v1.0", name: "TinyLlama 1.1B (TinyLlama/TinyLlama-1.1B-Chat-v1.0)" }
+    { value: "TinyLlama/TinyLlama-1.1B-Chat-v1.0", name: "TinyLlama 1.1B (TinyLlama/TinyLlama-1.1B-Chat-v1.0)" },
+
+    // --- API Models: Navigator (UF) ---
+    { value: "navigator:llama-3.3-70b-instruct", name: "[Navigator] Llama 3.3 70B" },
+    { value: "navigator:gemma-3-27b-it", name: "[Navigator] Gemma 3 27B" },
+    { value: "navigator:mistral-small-3.1", name: "[Navigator] Mistral Small 3.1" },
+    { value: "navigator:claude-4-sonnet", name: "[Navigator] Claude Sonnet 4" },
+    { value: "navigator:gpt-4o", name: "[Navigator] GPT-4o" },
+    { value: "navigator:gemini-2.0-flash", name: "[Navigator] Gemini 2.0 Flash" },
+
+    // --- API Models: Anthropic (Direct) ---
+    { value: "anthropic:claude-sonnet-4-20250514", name: "[Anthropic] Claude Sonnet 4" },
+    { value: "anthropic:claude-3-5-haiku-20241022", name: "[Anthropic] Claude 3.5 Haiku" },
+
+    // --- API Models: OpenAI (Direct) ---
+    { value: "openai:gpt-4o", name: "[OpenAI] GPT-4o" },
+    { value: "openai:gpt-4o-mini", name: "[OpenAI] GPT-4o Mini" }
 ];
 
 // among us agent sprites
@@ -288,7 +304,47 @@ function validateByzantineCount() {
 }
 
 /**
- * Form submit handler: validate rounds and Byzantine count before allowing submit.
+ * Checks which API providers are used in the current agent config
+ * and ensures the corresponding API key field or env key is available.
+ * @returns {boolean} true if all required keys are present
+ */
+function validateApiKeys() {
+    var usedProviders = new Set();
+    document.querySelectorAll('select[name^="agent_"][name$="_model"]').forEach(function (sel) {
+        var val = sel.value;
+        if (val && val.indexOf(":") !== -1) {
+            usedProviders.add(val.split(":")[0]);
+        }
+    });
+
+    var providerToField = {
+        navigator: { field: "navigator_api_key", label: "Navigator (UF)", envId: "nav_key_status" },
+        anthropic: { field: "anthropic_api_key", label: "Anthropic", envId: "anth_key_status" },
+        openai:    { field: "openai_api_key",    label: "OpenAI",    envId: "oai_key_status" }
+    };
+
+    var missing = [];
+    usedProviders.forEach(function (provider) {
+        var info = providerToField[provider];
+        if (!info) return;
+        var fieldEl = document.getElementById(info.field);
+        var fieldVal = fieldEl ? fieldEl.value.trim() : "";
+        var statusEl = document.getElementById(info.envId);
+        var envAvailable = statusEl && statusEl.dataset.envSet === "true";
+        if (!fieldVal && !envAvailable) {
+            missing.push(info.label);
+        }
+    });
+
+    if (missing.length > 0) {
+        alert("Missing API key(s) for: " + missing.join(", ") + ".\nProvide them in the API Keys section or set them in .env.");
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Form submit handler: validate rounds, Byzantine count, and API keys before submit.
  */
 function onConfigSubmit(e) {
     if (!validateRounds()) {
@@ -299,13 +355,42 @@ function onConfigSubmit(e) {
         e.preventDefault();
         return false;
     }
+    if (!validateApiKeys()) {
+        e.preventDefault();
+        return false;
+    }
     return true;
 }
 
+/**
+ * Check which API keys are available in .env and update status indicators.
+ */
+function checkApiKeyStatus() {
+    fetch("/api/check_api_keys")
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            var mapping = {
+                navigator: "nav_key_status",
+                anthropic: "anth_key_status",
+                openai: "oai_key_status"
+            };
+            Object.keys(mapping).forEach(function (provider) {
+                var el = document.getElementById(mapping[provider]);
+                if (el) {
+                    var available = data[provider];
+                    el.textContent = available ? "(.env set)" : "(not set)";
+                    el.style.color = available ? "#4CAF50" : "#999";
+                    el.dataset.envSet = available ? "true" : "false";
+                }
+            });
+        })
+        .catch(function () {});
+}
 
 // Initialize on DOM ready: build default 4-agent table and bind CONFIRM + form
 window.addEventListener("DOMContentLoaded", function () {
     generateAgentTable();
+    checkApiKeyStatus();
 
     var confirmBtn = document.getElementById("confirmAgentsBtn");
     if (confirmBtn) {
