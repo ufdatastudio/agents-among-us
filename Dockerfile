@@ -23,46 +23,14 @@ ENV PATH="/root/.local/bin:$PATH"
 # Set up working directory
 WORKDIR /app
 
-# Install Python 3.10 via uv and create venv
-RUN uv python install 3.10 && uv venv --python 3.10
+# Install Python 3.10 via uv
+RUN uv python install 3.10
 
-# Install PyTorch with CUDA 12.8 support
-RUN uv pip install \
-    torch==2.9.1 \
-    torchvision==0.24.1 \
-    torchaudio==2.9.1 \
-    --index-url https://download.pytorch.org/whl/cu128
-
-# Install core ML dependencies
-RUN uv pip install \
-    transformers==4.47.0 \
-    accelerate==1.2.1 \
-    bitsandbytes==0.45.0 \
-    safetensors==0.4.5 \
-    sentencepiece==0.2.0 \
-    tokenizers==0.21.0 \
-    huggingface-hub==0.27.0 \
-    datasets==3.2.0 \
-    peft==0.14.0
-
-# Install web and data processing dependencies
-RUN uv pip install \
-    flask==3.1.0 \
-    pandas==2.2.3 \
-    numpy==2.0.2 \
-    scikit-learn==1.6.0 \
-    xgboost==2.1.3 \
-    joblib==1.4.2 \
-    nltk==3.9.1 \
-    matplotlib==3.9.3 \
-    pillow==11.0.0 \
-    tqdm==4.67.1 \
-    pyyaml==6.0.2 \
-    loguru==0.7.3
-
-# Install API provider dependencies from pyproject.toml
+# Copy dependency files first (cache layer)
 COPY pyproject.toml uv.lock /app/
-RUN uv sync --extra api --no-install-project
+
+# Install all dependencies via uv sync
+RUN uv sync --extra gpu --extra api --no-install-project
 
 # Download NLTK data
 RUN uv run python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('punkt_tab')"
