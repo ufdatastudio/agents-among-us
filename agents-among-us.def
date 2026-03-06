@@ -30,6 +30,7 @@ From: nvidia/cuda:12.8.0-devel-ubuntu22.04
     export TRANSFORMERS_CACHE=/app/.cache/huggingface
     export LLM_MODE=LOCAL
     export PORT=${PORT:-8080}
+    export NLTK_DATA=/usr/local/share/nltk_data
 
 %post
     # Update and install system dependencies
@@ -56,8 +57,10 @@ From: nvidia/cuda:12.8.0-devel-ubuntu22.04
     # Install all dependencies via uv sync (pyproject.toml copied via %files)
     uv sync --extra gpu --extra api --no-install-project
 
-    # Download NLTK data
-    uv run python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('punkt_tab')"
+    # Download NLTK data to a shared location accessible to all users
+    export NLTK_DATA=/usr/local/share/nltk_data
+    mkdir -p "$NLTK_DATA"
+    uv run python -c "import nltk; nltk.download('all', download_dir='$NLTK_DATA')"
 
     # Create necessary directories
     mkdir -p /app/logs /app/logs/game_configs /app/frontend/data

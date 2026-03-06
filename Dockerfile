@@ -32,8 +32,10 @@ COPY pyproject.toml uv.lock /app/
 # Install all dependencies via uv sync
 RUN uv sync --extra gpu --extra api --no-install-project
 
-# Download NLTK data
-RUN uv run python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('punkt_tab')"
+# Download all NLTK data to a shared location
+ENV NLTK_DATA=/usr/local/share/nltk_data
+RUN mkdir -p $NLTK_DATA && \
+    uv run python -c "import nltk; nltk.download('all', download_dir='$NLTK_DATA')"
 
 # Production image
 FROM nvidia/cuda:12.8.0-runtime-ubuntu22.04
@@ -59,7 +61,8 @@ COPY --from=builder /root/.local/share/uv /root/.local/share/uv
 COPY --from=builder /app/.venv /app/.venv
 
 # Copy NLTK data
-COPY --from=builder /root/nltk_data /root/nltk_data
+COPY --from=builder /usr/local/share/nltk_data /usr/local/share/nltk_data
+ENV NLTK_DATA=/usr/local/share/nltk_data
 
 # Copy application code
 COPY . /app
