@@ -32,6 +32,16 @@ fi
 echo "Using: ${CONTAINER_CMD}"
 echo ""
 
+# Use a tmpdir with enough space for the build (CUDA+PyTorch images are large).
+# Default /tmp on login nodes is often too small or memory-constrained.
+if [ -z "$APPTAINER_TMPDIR" ] && [ -z "$SINGULARITY_TMPDIR" ]; then
+    BUILD_TMPDIR="${PROJECT_ROOT}/tmp_build"
+    mkdir -p "$BUILD_TMPDIR"
+    export APPTAINER_TMPDIR="$BUILD_TMPDIR"
+    export SINGULARITY_TMPDIR="$BUILD_TMPDIR"
+    echo "Using tmpdir: ${BUILD_TMPDIR}"
+fi
+
 # Build with fakeroot if available, otherwise try sudo
 if $CONTAINER_CMD build --help 2>&1 | grep -q -- '--fakeroot'; then
     echo "Building with --fakeroot..."
@@ -41,8 +51,13 @@ else
     sudo $CONTAINER_CMD build "$OUTPUT_PATH" "$DEF_FILE"
 fi
 
+# Clean up build tmpdir
+if [ -d "${PROJECT_ROOT}/tmp_build" ]; then
+    rm -rf "${PROJECT_ROOT}/tmp_build"
+fi
+
 echo ""
 echo "Build complete: ${OUTPUT_PATH}"
 echo ""
 echo "To run on HiPerGator:"
-echo "  apptainer run --nv --bind /blue:/blue ${OUTPUT_PATH}"
+echo "  apptainer run --nv --bind ./logs:/app/logs ${OUTPUT_PATH}"
