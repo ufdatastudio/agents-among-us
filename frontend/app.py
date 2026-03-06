@@ -32,7 +32,7 @@ log.setLevel(logging.ERROR)
 BACKEND_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 MASTER_CSV = os.path.join(DATA_DIR, 'frontend_stats.csv')
-LIVE_STATE_FILE = os.path.join(BACKEND_PATH, 'live_state.json')
+LIVE_STATE_FILE = os.path.join(BACKEND_PATH, 'logs', 'live_state.json')
 
 current_game_process = None
 
@@ -178,10 +178,10 @@ def start_game():
             "enabled_classifiers": enabled_classifiers  # NEW: ML Classifiers
         }
         
-        # save composition to temporary file
-        game_configs_dir = os.path.join(BACKEND_PATH, 'config', 'game_configs')
+        # save composition to logs/ (writable in both local and container environments)
+        game_configs_dir = os.path.join(BACKEND_PATH, 'logs', 'game_configs')
         os.makedirs(game_configs_dir, exist_ok=True)
-        composition_file = os.path.join(BACKEND_PATH, 'config', 'game_configs', f'custom_{game_id}.json')
+        composition_file = os.path.join(game_configs_dir, f'custom_{game_id}.json')
         with open(composition_file, 'w') as f:
             json.dump(composition, f, indent=2)
         

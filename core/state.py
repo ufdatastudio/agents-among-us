@@ -1,5 +1,6 @@
 # Maintains the authoritative game world state and provides per-agent views/observations for decision making.
 import json
+import os
 import random
 from datetime import datetime
 from config.settings import ROOMS, NUM_ROUNDS
@@ -8,7 +9,7 @@ class GameState:
     def __init__(self, agents, log_manager):
         self.agents = agents
         self.logger = log_manager
-        self.live_state_file = "live_state.json"
+        self.live_state_file = os.path.join("logs", "live_state.json")
         
         # Onserver tracking
         self.enabled_classifiers = {}  
