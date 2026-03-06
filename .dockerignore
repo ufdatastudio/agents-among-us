@@ -31,7 +31,6 @@ env
 # Logs and runtime data (will be mounted as volumes)
 logs/*
 !logs/.gitkeep
-live_state.json
 frontend/data/*.csv
 
 # Large data files (mount separately if needed)

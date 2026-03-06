@@ -91,8 +91,12 @@ From: nvidia/cuda:12.8.0-devel-ubuntu22.04
     # Download NLTK data
     uv run python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('punkt_tab')"
 
+    # Install API provider dependencies from pyproject.toml (copied via %files)
+    cd /app
+    uv sync --extra api --no-install-project
+
     # Create necessary directories
-    mkdir -p /app/logs /app/frontend/data /app/config/game_configs
+    mkdir -p /app/logs /app/logs/game_configs /app/frontend/data
 
     # Create startup script that supports configurable port
     cat > /app/start.sh << 'STARTSCRIPT'
@@ -114,6 +118,8 @@ STARTSCRIPT
 %files
     # Copy application code into container
     # These paths are relative to the build context
+    pyproject.toml /app/pyproject.toml
+    uv.lock /app/uv.lock
     agents /app/agents
     config /app/config
     core /app/core

@@ -167,6 +167,13 @@ Environment=PYTHONUNBUFFERED=1
 Environment=LLM_MODE=LOCAL
 EOF
 
+# Add .env passthrough if .env exists
+if [ -f "${PROJECT_ROOT}/.env" ]; then
+    cp "${PROJECT_ROOT}/.env" "${HOME}/agents-among-us/.env"
+    echo "EnvironmentFile=${HOME}/agents-among-us/.env" >> "$QUADLET_FILE"
+    echo "Copied .env to ${HOME}/agents-among-us/.env"
+fi
+
 # Add GPU support if enabled
 if [ "$ENABLE_GPU" = true ]; then
     echo "AddDevice=nvidia.com/gpu=all" >> "$QUADLET_FILE"

@@ -35,6 +35,9 @@ Environment=PORT=8080
 Environment=PYTHONUNBUFFERED=1
 Environment=LLM_MODE=LOCAL
 
+# API keys (load from .env if present)
+# EnvironmentFile=%h/agents-among-us/.env
+
 # GPU access (uncomment if GPU allocated to your VM)
 # AddDevice=nvidia.com/gpu=all
 

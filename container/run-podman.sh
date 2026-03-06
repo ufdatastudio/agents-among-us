@@ -55,9 +55,17 @@ echo "GPU: ${GPU_FLAG:-disabled}"
 
 cd "$PROJECT_ROOT"
 
+# Pass .env file if it exists (API keys for external providers)
+ENV_FLAG=""
+if [ -f "$(pwd)/.env" ]; then
+    ENV_FLAG="--env-file $(pwd)/.env"
+    echo "Loading API keys from .env"
+fi
+
 $CONTAINER_CMD run --rm -it \
     $DETACH_FLAG \
     $GPU_FLAG \
+    $ENV_FLAG \
     -p "${PORT}:8080" \
     -v "$(pwd)/logs:/app/logs:z" \
     -v "$(pwd)/frontend/data:/app/frontend/data:z" \

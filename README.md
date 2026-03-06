@@ -52,6 +52,13 @@ For containerized deployments, use the provided container definitions. Both Podm
 ./container/build-apptainer.sh
 ```
 
+The container writes game configs and live state to `logs/`, which must be writable. The run scripts bind-mount `./logs` to `/app/logs` automatically. For manual Apptainer runs, include the bind:
+```bash
+apptainer run --nv --bind ./logs:/app/logs agents-among-us.sif
+```
+
+To use API models inside the container, place a `.env` file in the project root before running. The run scripts (`run-podman.sh`, `run-apptainer.sh`) load it automatically.
+
 ## Usage
 
 You can run the framework in three primary modes depending on your compute environment.
@@ -261,13 +268,15 @@ The preprocessed dataset containing over 10,000 parsed game logs and approximate
 .
 ├── main.py              # Orchestrates game runs (movement → discussion → voting)
 ├── worker.py            # Async decoupled inference worker (IPC)
+├── pyproject.toml       # Project config with API optional dependencies
+├── .env.example         # Template for API key environment variables
 ├── submit_games.sh      # SLURM job script for cluster execution
 ├── Dockerfile           # Podman/Docker container definition
 ├── agents-among-us.def  # Apptainer/Singularity container definition
 ├── agents/              # Agent behavior definitions and prompts
 ├── config/              # Game settings and model compositions
 ├── container/           # Container build/run scripts and PubApps deployment
-├── core/                # Core simulation logic and state management
+├── core/                # Core simulation logic, state management, and API clients
 ├── frontend/            # Flask application and UI assets
 └── results/             # Data analysis, classifiers, and parsed datasets
 ```

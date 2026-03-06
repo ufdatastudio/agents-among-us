@@ -67,6 +67,20 @@ else
     exit 1
 fi
 
+# Load API keys from .env if it exists
+ENV_FLAGS=""
+if [ -f "${PROJECT_ROOT}/.env" ]; then
+    echo "Loading API keys from .env"
+    while IFS='=' read -r key value; do
+        # Skip comments and empty lines
+        [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
+        # Strip surrounding quotes from value
+        value="${value%\"}"
+        value="${value#\"}"
+        export "$key=$value"
+    done < "${PROJECT_ROOT}/.env"
+fi
+
 # Run with GPU support and bind mounts
 # --nv enables NVIDIA GPU support
 # Standard HiPerGator paths: /blue, /orange, /home

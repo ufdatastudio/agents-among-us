@@ -60,6 +60,10 @@ RUN uv pip install \
     pyyaml==6.0.2 \
     loguru==0.7.3
 
+# Install API provider dependencies from pyproject.toml
+COPY pyproject.toml uv.lock /app/
+RUN uv sync --extra api --no-install-project
+
 # Download NLTK data
 RUN uv run python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('punkt_tab')"
 
@@ -92,8 +96,8 @@ COPY --from=builder /root/nltk_data /root/nltk_data
 # Copy application code
 COPY . /app
 
-# Create necessary directories
-RUN mkdir -p /app/logs /app/frontend/data /app/config/game_configs
+# Create necessary directories (game_configs written to logs/ at runtime)
+RUN mkdir -p /app/logs /app/logs/game_configs /app/frontend/data
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
