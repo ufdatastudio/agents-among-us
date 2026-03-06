@@ -13,7 +13,10 @@ if os.environ.get("LLM_MODE", "LOCAL") != "CONTROLLER":
     import torch
 
     if not IS_MAC:
-        from unsloth import FastLanguageModel
+        try:
+            from unsloth import FastLanguageModel
+        except ImportError:
+            FastLanguageModel = None
     from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, Mxfp4Config
 
 # See Model Specific Documentation   
