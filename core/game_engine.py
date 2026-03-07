@@ -421,16 +421,19 @@ class GameEngine:
     
     def finalize_stats(self, result):
         """Calculates final game stats (won/loss) and exports to CSV."""
+        from core.llm import ModelManager
+
         winning_team_role = "honest" if "Honest" in result else "byzantine"
-        
+        token_usage = ModelManager.get_instance().get_token_usage()
+
         for agent_name, data in self.state.world_data["agents"].items():
             stats = data["stats"]
-            
+
             if data["role"] == winning_team_role:
                 stats["won_game"] = 1
             else:
                 stats["won_game"] = 0
-            
+
             # Add final classifier scores to stats (if any exist)
             if self.state.suspicion_scores and agent_name in self.state.suspicion_scores:
                 agent_scores = self.state.suspicion_scores[agent_name]
@@ -438,13 +441,17 @@ class GameEngine:
                 stats["svm_score"] = agent_scores.get("SVM", None)
                 stats["lr_score"] = agent_scores.get("LogisticRegression", None)
             else:
-                # No scores available - set to None
                 stats["sgd_score"] = None
                 stats["svm_score"] = None
                 stats["lr_score"] = None
 
+            # Add API token usage per agent's model
+            model_tokens = token_usage.get(stats.get("model_name", ""), {})
+            stats["api_input_tokens"] = model_tokens.get("input_tokens", 0)
+            stats["api_output_tokens"] = model_tokens.get("output_tokens", 0)
+
         self.state.update_phase("GAME OVER")
         self.state.add_ui_event(f"{result.upper()}", "info")
         self.state.save_json()
-                        
+
         self.logger.export_stats(self.state.world_data["agents"])

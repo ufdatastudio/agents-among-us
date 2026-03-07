@@ -1,19 +1,23 @@
-import os
 import json
-import time
-import re
-import logging
+import os
 import platform
-import torch
+import re
+import time
 
+from loguru import logger as log
 
 IS_MAC = platform.system() == "Darwin"
 if os.environ.get("LLM_MODE", "LOCAL") != "CONTROLLER":
-    import torch
     import gc
-    if not IS_MAC: 
-        from unsloth import FastLanguageModel
-    from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, Mxfp4Config, AutoConfig
+
+    import torch
+
+    if not IS_MAC:
+        try:
+            from unsloth import FastLanguageModel
+        except ImportError:
+            FastLanguageModel = None
+    from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, Mxfp4Config
 
 # See Model Specific Documentation   
 CONCATENATE = {
@@ -39,25 +43,33 @@ MXFP4_MODELS = {
 
 class ModelManager:
     _instance = None
-    
+
     def __init__(self):
         self.models = {}
         self.tokenizers = {}
-        if IS_MAC:
-            if torch.backends.mps.is_available() and torch.backends.mps.is_built():
-                self._device = "mps"
-                print("Using Apple Silicon GPU (MPS).")
+        self._device = "cpu"
+
+        if os.environ.get("LLM_MODE", "LOCAL") != "CONTROLLER":
+            if IS_MAC:
+                if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+                    self._device = "mps"
+                    log.info("Using Apple Silicon GPU (MPS).")
+                else:
+                    log.info("Using Apple Silicon CPU (MPS unavailable).")
             else:
-                self._device = "cpu"
-                print("Using Apple Silicon CPU (MPS unavailable).")
-        else:
-            if torch.cuda.is_available():
-                self._device = "cuda"
-                print("Using NVIDIA (CUDA) GPU.")
-        
-        self.mode = os.environ.get("LLM_MODE", "LOCAL") # LOCAL, CONTROLLER
+                if torch.cuda.is_available():
+                    self._device = "cuda"
+                    log.info("Using NVIDIA (CUDA) GPU.")
+
+        self.mode = os.environ.get("LLM_MODE", "LOCAL")  # LOCAL, CONTROLLER
         self.game_id = None
         self.base_ipc_path = None
+
+        # API provider support
+        self.api_clients = {}
+        self.api_keys = {}
+        self.token_usage = {}
+        self._load_api_keys_from_env()
 
     @classmethod
     def get_instance(cls):
@@ -71,13 +83,90 @@ class ModelManager:
         self.base_ipc_path = os.path.join("logs", comp_name, f"Game_{game_id}", "ipc")
         os.makedirs(self.base_ipc_path, exist_ok=True)
 
+    def _load_api_keys_from_env(self):
+        """Load API keys from environment variables as defaults."""
+        for env_var in ["NAVIGATOR_TOOLKIT_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"]:
+            val = os.environ.get(env_var, "")
+            if val:
+                self.api_keys[env_var] = val
+
+    def set_api_keys(self, keys_dict):
+        """Merge frontend-provided keys with env var defaults.
+
+        Args:
+            keys_dict: Dict mapping env var names to API key strings.
+                Frontend-provided keys take precedence over env vars.
+        """
+        for key, val in keys_dict.items():
+            if val:
+                self.api_keys[key] = val
+
+    @staticmethod
+    def _is_api_model(model_name):
+        """Check if a model name uses the provider:model_id format."""
+        return ":" in model_name
+
+    @staticmethod
+    def _parse_api_model(model_name):
+        """Split a provider:model_id string into (provider, model_id)."""
+        provider, _, model_id = model_name.partition(":")
+        return provider, model_id
+
+    @staticmethod
+    def _postprocess_response(text):
+        """Shared post-processing for both local and API responses."""
+        if "<think>" in text:
+            text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+        if "assistantfinal" in text:
+            text = text.split("assistantfinal")[-1].strip()
+
+        if text.count('"') % 2 != 0:
+            text += '"'
+        quotes = re.findall(r'"([^"]*)"', text)
+        if quotes:
+            text = quotes[-1]
+
+        return text.strip()
+
+    def _generate_api(self, model_name, system_prompt, user_prompt, temperature):
+        """Generate a response using an external API provider."""
+        from core.api_clients import get_client
+
+        provider, model_id = self._parse_api_model(model_name)
+
+        try:
+            if provider not in self.api_clients:
+                self.api_clients[provider] = get_client(provider, self.api_keys)
+
+            client = self.api_clients[provider]
+            response = client.generate(model_id, system_prompt, user_prompt, temperature)
+
+            if model_name not in self.token_usage:
+                self.token_usage[model_name] = {"input_tokens": 0, "output_tokens": 0}
+            self.token_usage[model_name]["input_tokens"] += response.input_tokens
+            self.token_usage[model_name]["output_tokens"] += response.output_tokens
+
+            return self._postprocess_response(response.text)
+
+        except Exception as e:
+            log.error("[API ERROR on {}]: {}", model_name, e)
+            return "move"
+
+    def get_token_usage(self):
+        """Return accumulated token usage per API model."""
+        return self.token_usage.copy()
+
     def load_model(self, model_name):
         """
         Loads a model if it's not already in memory.
         """
+        if self._is_api_model(model_name):
+            provider, model_id = self._parse_api_model(model_name)
+            log.info("[API] Model '{}:{}' registered for API execution.", provider, model_id)
+            return
 
         if self.mode == "CONTROLLER":
-            print(f"[Controller] Model '{model_name}' marked for remote execution.")
+            log.info("[Controller] Model '{}' marked for remote execution.", model_name)
             return
 
         if model_name in self.models:
@@ -184,13 +273,15 @@ class ModelManager:
     def generate(self, model_name, system_prompt, user_prompt, temperature=0.1):
         """
         Polymorphic generate:
+        - API (provider:model_id): Routes to external API.
         - CONTROLLER: Writes to file, waits for response.
         - LOCAL: Runs torch directly.
         """
+        if self._is_api_model(model_name):
+            return self._generate_api(model_name, system_prompt, user_prompt, temperature)
         if self.mode == "CONTROLLER":
             return self._generate_remote(model_name, system_prompt, user_prompt, temperature)
-        else:
-            return self._generate_local(model_name, system_prompt, user_prompt, temperature)
+        return self._generate_local(model_name, system_prompt, user_prompt, temperature)
 
 
     def _generate_remote(self, model_name, system_prompt, user_prompt, temperature):
@@ -301,21 +392,9 @@ class ModelManager:
             input_len = inputs['input_ids'].shape[1]
             response = outputs[0][input_len:]
             decoded_response = tokenizer.decode(response, skip_special_tokens=True).strip()
-            if "<think>" in decoded_response:
-                decoded_response = re.sub(r'<think>.*?</think>', '', decoded_response, flags=re.DOTALL)
-            if "assistantfinal" in decoded_response:
-                decoded_response = decoded_response.split("assistantfinal")[-1].strip()
 
-            
-            if decoded_response.count('"') % 2 != 0:
-                decoded_response += '"'
-            quotes = re.findall(r'"([^"]*)"', decoded_response)
-
-            if quotes:
-                decoded_response = quotes[-1]
-            
-            return decoded_response
+            return self._postprocess_response(decoded_response)
             
         except Exception as e:
-            print(f"\n[LLM ERROR on {model_name}]: {e}")
+            log.error("[LLM ERROR on {}]: {}", model_name, e)
             return "move"

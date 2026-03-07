@@ -36,8 +36,28 @@ The project uses a Conda environment to manage Python dependencies, PyTorch, and
 ```bash
 conda env create -f environment.yaml
 conda activate amongus
-
 ```
+
+### Container Installation (Podman/Apptainer)
+
+For containerized deployments, use the provided container definitions. Both Podman and Apptainer/Singularity are supported.
+
+**Build with Podman:**
+```bash
+./container/build-podman.sh
+```
+
+**Build with Apptainer:**
+```bash
+./container/build-apptainer.sh
+```
+
+The container writes game configs and live state to `logs/`, which must be writable. The run scripts bind-mount `./logs` to `/app/logs` automatically. For manual Apptainer runs, include the bind:
+```bash
+apptainer run --nv --bind ./logs:/app/logs agents-among-us.sif
+```
+
+To use API models inside the container, place a `.env` file in the project root before running. The run scripts (`run-podman.sh`, `run-apptainer.sh`) load it automatically.
 
 ## Usage
 
@@ -110,8 +130,108 @@ python worker.py --game_id SESSION1 --model_names meta-llama/Llama-3.1-8B-Instru
 # Run the game controller in Terminal 2:
 # Arguments: --composition_name <ConfigName> --job_index <Int> --game_id <SessionIdentifier> --num_rounds <Int>
 python main.py --composition_name MyComp --job_index 0 --game_id SESSION1 --num_rounds 10
-
 ```
+
+### 4. HiPerGator PubApps Deployment
+
+For hosting on UF Research Computing's [PubApps](https://docs.rc.ufl.edu/services/web_hosting/) infrastructure:
+
+**Prerequisites:**
+1. Open a support ticket with UF Research Computing to request a PubApps instance
+2. Specify your resource requirements (CPU, memory, GPU if needed)
+3. Obtain your assigned port number and VM access
+
+**Deployment Steps:**
+
+Once you have SSH access to your PubApps VM:
+
+```bash
+# Clone the repository
+git clone https://github.com/ufdatastudio/agents-among-us.git
+cd agents-among-us
+
+# Run the deployment script with your assigned port
+./container/pubapps-deploy.sh --port <YOUR_PORT>
+
+# For GPU-enabled deployment (if allocated)
+./container/pubapps-deploy.sh --port <YOUR_PORT> --gpu
+```
+
+The deployment script will:
+- Build the Podman container image
+- Configure systemd for automatic startup via Quadlet
+- Start the service
+
+**Service Management:**
+
+```bash
+# Check service status
+./container/pubapps-deploy.sh status
+
+# View container logs
+./container/pubapps-deploy.sh logs
+
+# Restart the service
+./container/pubapps-deploy.sh restart
+
+# Stop the service
+./container/pubapps-deploy.sh stop
+
+# Remove the deployment
+./container/pubapps-deploy.sh uninstall
+```
+
+Your application will be accessible at `https://<your-project>.rc.ufl.edu` after the reverse proxy is configured by RC support.
+
+## API Model Support
+
+The framework supports external API providers alongside local GPU inference. API models use a `provider:model_id` naming convention (e.g., `navigator:llama-3.3-70b-instruct`). This enables running games on machines without GPUs or comparing proprietary models against open-weight models.
+
+### Supported Providers
+
+| Provider | Prefix | Example Model ID |
+|----------|--------|-----------------|
+| UF Navigator | `navigator:` | `navigator:llama-3.3-70b-instruct` |
+| OpenAI | `openai:` | `openai:gpt-4o-mini` |
+| Anthropic | `anthropic:` | `anthropic:claude-sonnet-4-20250514` |
+
+UF Navigator provides free API credits ($25/month) and routes to models from multiple vendors (Llama, Gemma, Claude, GPT-4o, Gemini).
+
+### Setup
+
+1. Install the API dependencies:
+```bash
+uv sync --extra api
+```
+
+2. Copy the example environment file and add your keys:
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your API keys:
+```
+NAVIGATOR_TOOLKIT_API_KEY=your-navigator-key
+ANTHROPIC_API_KEY=your-anthropic-key
+OPENAI_API_KEY=your-openai-key
+```
+
+Only the keys for providers you plan to use are required. Navigator keys are available at [UF AI Navigator](https://ai.it.ufl.edu).
+
+3. Start the web UI:
+```bash
+uv run python3 frontend/app.py
+```
+
+4. In the configuration page, select API models from the dropdown for any agent. The model list is divided into local models (top) and API models grouped by provider (bottom). If a key is detected from `.env`, a green "(`.env` set)" indicator appears next to the corresponding field.
+
+### Mixed Games
+
+API and local models can coexist in the same game. For example, you could configure Agent 0 as a Byzantine running `navigator:gpt-4o` and Agents 1-3 as Honest running `google/gemma-2-9b-it` locally. The game engine routes each agent's generation call to the appropriate backend.
+
+### Token Usage
+
+API token consumption is tracked per model and displayed in the game UI next to each API agent's model name (e.g., `Navigator/gpt-4o (1532t)`). Token counts are also exported to `stats.csv` as `api_input_tokens` and `api_output_tokens` columns.
 
 ## Configuration & Adding New Models
 
@@ -148,13 +268,17 @@ The preprocessed dataset containing over 10,000 parsed game logs and approximate
 .
 ├── main.py              # Orchestrates game runs (movement → discussion → voting)
 ├── worker.py            # Async decoupled inference worker (IPC)
+├── pyproject.toml       # Project config with API optional dependencies
+├── .env.example         # Template for API key environment variables
 ├── submit_games.sh      # SLURM job script for cluster execution
+├── Dockerfile           # Podman/Docker container definition
+├── agents-among-us.def  # Apptainer/Singularity container definition
 ├── agents/              # Agent behavior definitions and prompts
 ├── config/              # Game settings and model compositions
-├── core/                # Core simulation logic and state management
+├── container/           # Container build/run scripts and PubApps deployment
+├── core/                # Core simulation logic, state management, and API clients
 ├── frontend/            # Flask application and UI assets
 └── results/             # Data analysis, classifiers, and parsed datasets
-
 ```
 
 | Module | Description |
@@ -163,7 +287,8 @@ The preprocessed dataset containing over 10,000 parsed game logs and approximate
 | `worker.py` | Loads models, handles local quantization, and processes generation requests. |
 | `agents/` | Contains `honest_agent.py` and `byzantine_agent.py` with role-specific logic. |
 | `config/` | Includes `cache_models.py`, `settings.py`, etc. |
-| `core/` | Includes `game_engine.py`, `state.py`, and `llm.py`. |
+| `container/` | Podman and Apptainer build scripts, PubApps deployment automation. |
+| `core/` | Includes `game_engine.py`, `state.py`, `llm.py`, and `api_clients.py`. |
 | `frontend/` | Flask routes (`app.py`), HTML templates, and live state visualizers. |
 | `results/` | Machine learning pipeline for the offline observers and metric calculation. |
 
@@ -197,6 +322,7 @@ If you use this framework or dataset in your research, please cite:
 - Frontend prompt customization, game ticks
 - Frontend model caching and quantization
 - Agent movement tracing during gameplay
+- Additional API providers
 ## Issues and Contributions
 
 Found a bug or have a feature request?

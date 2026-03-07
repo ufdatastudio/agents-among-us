@@ -1,0 +1,102 @@
+Bootstrap: docker
+From: nvidia/cuda:12.8.0-devel-ubuntu22.04
+
+%labels
+    Author UF Research Computing
+    Application Agents Among Us
+    Version 1.0
+    Description LLM-powered social deduction game simulation
+
+%help
+    Agents Among Us - Interactive web framework for simulating social deduction games using LLMs.
+
+    Usage:
+        # Run the web UI (default)
+        apptainer run --nv --bind ./logs:/app/logs agents-among-us.sif
+
+        # Run with GPU support on HiPerGator
+        apptainer run --nv --bind /blue:/blue --bind ./logs:/app/logs agents-among-us.sif
+
+        # Execute a specific command
+        apptainer exec --nv agents-among-us.sif uv run python main.py --help
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+    export TZ=UTC
+    export PATH="/root/.local/bin:$PATH"
+    export PYTHONUNBUFFERED=1
+    export PYTHONDONTWRITEBYTECODE=1
+    export HF_HOME=/app/.cache/huggingface
+    export TRANSFORMERS_CACHE=/app/.cache/huggingface
+    export LLM_MODE=LOCAL
+    export PORT=${PORT:-8080}
+    export NLTK_DATA=/usr/local/share/nltk_data
+
+%post
+    # Update and install system dependencies
+    apt-get update && apt-get install -y --no-install-recommends \
+        git \
+        curl \
+        build-essential \
+        cmake \
+        libgomp1 \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install uv (set TMPDIR to avoid missing /scratch/local on HiPerGator)
+    export TMPDIR=/tmp
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="/root/.local/bin:$PATH"
+
+    # Create app directory
+    mkdir -p /app
+    cd /app
+
+    # Install Python 3.10 via uv
+    uv python install 3.10
+
+    # Install all dependencies via uv sync (pyproject.toml copied via %files)
+    uv sync --extra gpu --extra api --no-install-project
+
+    # Download NLTK data to a shared location accessible to all users
+    export NLTK_DATA=/usr/local/share/nltk_data
+    mkdir -p "$NLTK_DATA"
+    uv run python -c "import nltk; nltk.download('all', download_dir='$NLTK_DATA')"
+
+    # Create necessary directories
+    mkdir -p /app/logs /app/logs/game_configs /app/frontend/data
+
+    # Create startup script that supports configurable port
+    cat > /app/start.sh << 'STARTSCRIPT'
+#!/bin/bash
+cd /app
+PORT="${PORT:-8080}"
+echo "Starting Agents Among Us on port ${PORT}..."
+exec uv run python -c "
+import sys
+sys.path.insert(0, '/app')
+from frontend.app import app
+import os
+port = int(os.environ.get('PORT', 8080))
+app.run(host='0.0.0.0', port=port, debug=False)
+"
+STARTSCRIPT
+    chmod +x /app/start.sh
+
+%files
+    # Copy dependency files first so uv sync works in %post
+    pyproject.toml /app/pyproject.toml
+    uv.lock /app/uv.lock
+    # Copy application code
+    agents /app/agents
+    config /app/config
+    core /app/core
+    frontend /app/frontend
+    results/classifiers/models /app/results/classifiers/models
+    main.py /app/main.py
+    worker.py /app/worker.py
+
+%runscript
+    exec /app/start.sh "$@"
+
+%startscript
+    exec /app/start.sh "$@"

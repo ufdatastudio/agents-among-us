@@ -1,3 +1,4 @@
+.env
 .venv/
 venv/
 config.py
@@ -20,3 +21,4 @@ global_game_model.json__pycache__/
 live_state*.json
 archived/
 experiments/
+tmp_build/

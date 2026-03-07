@@ -5,6 +5,12 @@ from datetime import datetime
 import os
 import platform
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # sets LLM_MODE to local if on Mac 
 IS_MAC = platform.system() == "Darwin"
 if IS_MAC:
@@ -35,14 +41,20 @@ def main():
 
     selected_composition = next((c for c in COMPOSITION if c["name"] == args.composition_name), None)
 
-    # Check config/game_configs/ folder for custom JSONs
+    # Check game_configs/ folders for custom JSONs (logs/ is writable in containers)
     if selected_composition is None:
         import json
-        game_configs_file = os.path.join(os.path.dirname(__file__), 'config', 'game_configs', f'{args.composition_name}.json')
-        if os.path.exists(game_configs_file):
-            with open(game_configs_file, 'r') as f:
-                selected_composition = json.load(f)
-                print(f"Loaded custom composition from: {game_configs_file}", flush=True)
+        search_dirs = [
+            os.path.join(os.path.dirname(__file__), 'logs', 'game_configs'),
+            os.path.join(os.path.dirname(__file__), 'config', 'game_configs'),
+        ]
+        for search_dir in search_dirs:
+            game_configs_file = os.path.join(search_dir, f'{args.composition_name}.json')
+            if os.path.exists(game_configs_file):
+                with open(game_configs_file, 'r') as f:
+                    selected_composition = json.load(f)
+                    print(f"Loaded custom composition from: {game_configs_file}", flush=True)
+                break
 
     # Fallback: check config/ root folder
     if selected_composition is None:

@@ -1,0 +1,67 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+*.egg
+.eggs
+dist
+build
+*.whl
+
+# Virtual environments
+.venv
+venv
+ENV
+env
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Logs and runtime data (will be mounted as volumes)
+logs/*
+!logs/.gitkeep
+frontend/data/*.csv
+
+# Large data files (mount separately if needed)
+results/classifiers/data/*.pkl
+results/classifiers/data/*.csv
+results/experiments.tar.gz
+results/observer_dataset.csv
+
+# HuggingFace cache (mount separately)
+.cache
+
+# Conda/Mamba
+*.conda
+environment.yaml
+
+# Container files (don't include in build)
+*.sif
+*.def
+Dockerfile
+.dockerignore
+.containerignore
+
+# Documentation
+*.md
+!README.md
+
+# SLURM scripts (not needed in container)
+submit_*.sh
+slurm-*.out
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
