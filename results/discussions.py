@@ -27,7 +27,7 @@ def get_mapped_label(label):
     if val == 'B': return 'I' # Byzantine -> Imposter
     return val
 
-def lime_explanations(models_dict, dataset_path, text_col, reported_col, stmt_col, label_col, output_file="results/lime_visualizations/combined_classifiers_report.html"):
+def lime_explanations(models_dict, dataset_path, text_col, reported_col, stmt_col, label_col, output_file="lime_visualizations/combined_classifiers_report.html"):
     print("\n" + "="*95)
     print(f"{'GENERATING COMBINED LIME REPORT (4 Correct, 1 Incorrect)':^95}")
     print("="*95 + "\n")
@@ -159,11 +159,11 @@ if __name__ == "__main__":
     
     # LIME Visualizations ---
     models = {
-        "SVM": "results/classifiers/models_ngram/svm.joblib",
-        "SGD": "results/classifiers/models_ngram/sgd.joblib"
+        "SVM": "classifiers/models/svm.joblib",
+        "SGD": "classifiers/models/sgd.joblib"
     }
 
-    dataset = "results/classifiers/data/observer_dataset.csv" 
+    dataset = "classifiers/data/observer_dataset.csv" 
     
     text_column_name = 'Text' 
     reported_column_name = 'Reported'
