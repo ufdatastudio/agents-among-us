@@ -215,7 +215,6 @@ def start_game():
             role_label = "Byzantine" if agent['role'] == 'byzantine' else "Honest"
             print(f"  Agent_{agent['agent_num']}: {role_label} | {agent['model']} | {agent['color']}")
 
-        print(f"{'='*60}\n")
         
         # store in session
         session['game_id'] = game_id
@@ -244,7 +243,6 @@ def start_game():
         print(f"LAUNCHING GAME: {game_id}")
         print(f"{'='*60}")
         print(f"Command: {' '.join(cmd)}")
-        print(f"{'='*60}\n")
         
         # Pass API keys to subprocess via environment
         env = os.environ.copy()

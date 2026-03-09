@@ -61,11 +61,7 @@ class Observer:
             columns={'Clean_Text': 'Text', 'S_Num': 'Statement_Num'}
         )
 
-        print("\n" + "="*60)
-        print(f"{'OBSERVER: SUSPICION PROBABILITY':^60}")
-        print("="*60)
-        print(f"{'AGENT':<12} | {'LR %':<8} | {'SGD %':<8} | {'SVM %':<8}")
-        print("-" * 60)
+        print("\nOBSERVER: SUSPICION PROBABILITY")
 
         results = {}
         scores_by_agent = {}  
@@ -89,9 +85,9 @@ class Observer:
                 "SVM": float(svm_p)
             }
             
-            print(f"{agent_name:<12} | {lr_p*100:>6.1f}% | {sgd_p*100:>6.1f}% | {svm_p*100:>6.1f}%")
+            print(f"  {agent_name}: LR {lr_p*100:.1f}%, SGD {sgd_p*100:.1f}%, SVM {svm_p*100:.1f}%")
         
-        print("="*60 + "\n")
+        print()
         
         return scores_by_agent  
 
