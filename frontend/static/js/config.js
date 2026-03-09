@@ -531,6 +531,21 @@ function validateRounds() {
 }
 
 /**
+ * Validates number of ticks: whole number, min 1. Called on form submit.
+ * @returns {boolean} true if valid
+ */
+function validateTicks() {
+    const input = document.getElementById("num_ticks");
+    const num = parseInt(input.value, 10);
+    if (Number.isNaN(num) || num < 1 || num !== parseFloat(input.value)) {
+        alert("Number of ticks must be a whole number starting at 1.");
+        input.focus();
+        return false;
+    }
+    return true;
+}
+
+/**
  * Maximum number of Byzantine agents allowed for a given number of agents.
  * Rule: Byzantines must be fewer than half (byz < size/2).
  * For 6 agents or fewer, also cap at 3.
@@ -619,6 +634,10 @@ function validateApiKeys() {
  */
 function onConfigSubmit(e) {
     if (!validateRounds()) {
+        e.preventDefault();
+        return false;
+    }
+    if (!validateTicks()) {
         e.preventDefault();
         return false;
     }

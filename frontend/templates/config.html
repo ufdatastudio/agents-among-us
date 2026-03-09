@@ -71,6 +71,20 @@
                 </div>
                 
                 <div class="form-group">
+                    <label for="num_ticks">Number of Ticks</label>
+                    <input 
+                        type="number" 
+                        id="num_ticks" 
+                        name="num_ticks" 
+                        min="1" 
+                        step="1"
+                        value="4"
+                        required
+                    >
+                    <small class="form-hint">Movement actions per round (min 1)</small>
+                </div>
+                
+                <div class="form-group">
                     <label for="game_id">Game ID (optional)</label>
                     <input 
                         type="text" 
@@ -161,7 +175,7 @@
                         <!-- Editable instructions -->
                         <div class="prompt-editor-group">
                             <label id="promptEditorLabel" class="prompt-editor-label">
-                                Honest – System Prompt
+                                Honest - System Prompt
                             </label>
                             <textarea id="promptEditorTextarea" rows="14"></textarea>
                             <small class="form-hint">

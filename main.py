@@ -22,7 +22,7 @@ else:
 
 import time
 from uuid import uuid4
-from config.settings import NUM_ROUNDS as DEFAULT_NUM_ROUNDS
+from config.settings import NUM_ROUNDS as DEFAULT_NUM_ROUNDS, MAX_MOVEMENT_PHASES
 from config.model_composition import COMPOSITION
 from core.game_engine import GameEngine
 from core.llm import ModelManager
@@ -34,10 +34,12 @@ def main():
     parser.add_argument("--composition_name", type=str, required=True, help="Name of the composition to run")
     parser.add_argument("--game_id", type=str, required=True, help="Shared Session ID for IPC")
     parser.add_argument("--num_rounds", type=int, default=DEFAULT_NUM_ROUNDS, help="Number of rounds to play")
+    parser.add_argument("--num_ticks", type=int, default=MAX_MOVEMENT_PHASES, help="Movement ticks per round")
     args = parser.parse_args()
 
-    # Use num_rounds from command line argument (passed from frontend)
+    # Use num_rounds and num_ticks from command line (passed from frontend)
     num_rounds = args.num_rounds
+    num_ticks = args.num_ticks
 
     selected_composition = next((c for c in COMPOSITION if c["name"] == args.composition_name), None)
 
@@ -75,7 +77,8 @@ def main():
     engine = GameEngine(
         game_id=unique_run_id, 
         num_agents=selected_composition['honest_count'] + selected_composition['byzantine_count'],
-        num_rounds=num_rounds  # Pass num_rounds to engine
+        num_rounds=num_rounds,
+        num_ticks=num_ticks
     )
    
     engine.setup(composition=selected_composition)

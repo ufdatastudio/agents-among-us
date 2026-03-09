@@ -5,8 +5,9 @@ from agents.base_agent import BaseAgent
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
 class HonestAgent(BaseAgent):
-    def __init__(self, name, color, model_name):
+    def __init__(self, name, color, model_name, max_moves=None):
         super().__init__(name, color, "honest", model_name)
+        self.max_moves = max_moves if max_moves is not None else MAX_MOVEMENT_PHASES
 
     def _substitute_placeholders(self, template, extra_mapping=None):
         """
@@ -15,14 +16,14 @@ class HonestAgent(BaseAgent):
           {self_name}  – this agent's name
           {role}       – 'honest'
           {round_num}  – current round number
-          {max_moves}  – MAX_MOVEMENT_PHASES from config
+          {max_moves}  – movement ticks per round
         """
         if not template:
             return template
         mapping = {
             "self_name": self.name,
             "role": self.role,
-            "max_moves": str(MAX_MOVEMENT_PHASES),
+            "max_moves": str(self.max_moves),
         }
         if extra_mapping:
             mapping.update(extra_mapping)

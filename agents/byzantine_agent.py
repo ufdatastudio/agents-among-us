@@ -5,9 +5,10 @@ from agents.base_agent import BaseAgent
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
 class ByzantineAgent(BaseAgent):
-    def __init__(self, name, color, teammates, model_name):
+    def __init__(self, name, color, teammates, model_name, max_moves=None):
         super().__init__(name, color, "byzantine", model_name)
-        self.teammates = teammates 
+        self.teammates = teammates
+        self.max_moves = max_moves if max_moves is not None else MAX_MOVEMENT_PHASES
 
     def _substitute_placeholders(self, template, extra_mapping=None):
         """
@@ -16,7 +17,7 @@ class ByzantineAgent(BaseAgent):
           {self_name}  – this agent's name
           {role}       – 'byzantine'
           {round_num}  – current round number
-          {max_moves}  – MAX_MOVEMENT_PHASES from config
+          {max_moves}  – movement ticks per round
           {teammates}  – comma-separated teammate names
         """
         if not template:
@@ -24,7 +25,7 @@ class ByzantineAgent(BaseAgent):
         mapping = {
             "self_name": self.name,
             "role": self.role,
-            "max_moves": str(MAX_MOVEMENT_PHASES),
+            "max_moves": str(self.max_moves),
             "teammates": ", ".join(self.teammates) if self.teammates else "",
         }
         if extra_mapping:

@@ -132,6 +132,7 @@ def start_game():
         # get form data
         num_agents = int(request.form.get('num_agents', 4))
         num_rounds = int(request.form.get('num_rounds', 10))
+        num_ticks = int(request.form.get('num_ticks', 4))
         game_id = request.form.get('game_id', '').strip()
         
         # === NEW: Get ML Classifier selections ===
@@ -175,6 +176,7 @@ def start_game():
             "byzantine_count": byzantine_count,
             "agents": agents,  # Full per-agent configuration
             "num_rounds": num_rounds,
+            "num_ticks": num_ticks,
             "enabled_classifiers": enabled_classifiers  # NEW: ML Classifiers
         }
 
@@ -207,6 +209,7 @@ def start_game():
         print(f"Game ID: {game_id}")
         print(f"Agents: {num_agents} ({byzantine_count} Byzantine, {honest_count} Honest)")
         print(f"Rounds: {num_rounds}")
+        print(f"Ticks: {num_ticks}")
         print(f"Observers: {observers_label}")
         print(f"Prompts: {prompts_mode}")
 
@@ -221,6 +224,7 @@ def start_game():
         session['composition'] = f"custom_{game_id}"
         session['num_agents'] = num_agents
         session['num_rounds'] = num_rounds
+        session['num_ticks'] = num_ticks
         
         # reset live state so we don't show a previous game's snapshot
         try:
@@ -236,7 +240,8 @@ def start_game():
             '--composition_name', f'custom_{game_id}',
             '--game_id', game_id,
             '--job_index', '0',
-            '--num_rounds', str(num_rounds)
+            '--num_rounds', str(num_rounds),
+            '--num_ticks', str(num_ticks)
         ]
         
         print(f"{'='*60}")

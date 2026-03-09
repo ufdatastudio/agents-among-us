@@ -92,10 +92,11 @@ class Observer:
         return scores_by_agent  
 
 class GameEngine:
-    def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST, num_rounds=DEFAULT_NUM_ROUNDS):
+    def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST, num_rounds=DEFAULT_NUM_ROUNDS, num_ticks=None):
         self.game_id = game_id
         self.num_agents = num_agents
         self.num_rounds = num_rounds
+        self.num_ticks = num_ticks if num_ticks is not None else MAX_MOVEMENT_PHASES
         self.agents = []
         self.state = None
         self.logger = None
@@ -124,11 +125,11 @@ class GameEngine:
                 if role == 'byzantine':
                     teammates = [name for name in byz_names if name != agent_name]
                     self.agents.append(
-                        ByzantineAgent(agent_name, color, teammates, model)
+                        ByzantineAgent(agent_name, color, teammates, model, max_moves=self.num_ticks)
                     )
                 else:  # honest
                     self.agents.append(
-                        HonestAgent(agent_name, color, model)
+                        HonestAgent(agent_name, color, model, max_moves=self.num_ticks)
                     )
             
             print(f"Created {len(self.agents)} agents with EXACT configuration from frontend")
@@ -147,7 +148,7 @@ class GameEngine:
                 assigned_model = byz_models[i % len(byz_models)]
                 teammates = [b for b in byz_names if b != name]
                 self.agents.append(
-                    ByzantineAgent(name, colors[i], teammates, assigned_model)
+                    ByzantineAgent(name, colors[i], teammates, assigned_model, max_moves=self.num_ticks)
                 )
 
             # Create Honest Agents
@@ -157,7 +158,7 @@ class GameEngine:
                 color = colors[(start_index + i) % len(colors)]
                 assigned_model = honest_models[i % len(honest_models)]
                 self.agents.append(
-                    HonestAgent(name, color, assigned_model)
+                    HonestAgent(name, color, assigned_model, max_moves=self.num_ticks)
                 )
 
         # random.shuffle(self.agents)  # commented out bc we don't want to shuffle agents
@@ -194,7 +195,7 @@ class GameEngine:
         print(f"\n--- Round {round_num} Movement Phase ---")
         self.state.update_round(round_num)
         event_occurred_in_round = False
-        for phase_tick in range(1, MAX_MOVEMENT_PHASES + 1):
+        for phase_tick in range(1, self.num_ticks + 1):
             print(f"Tick {phase_tick}...")
             active_agents = [a for a in self.agents if self.state.world_data["agents"][a.name]["status"] == "active"]
             
