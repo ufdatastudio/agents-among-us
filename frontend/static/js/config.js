@@ -87,8 +87,8 @@ const DEAD_COLOR_SPRITES = {
     black: "https://preview.redd.it/6vegnf3kzwn51.png?width=720&format=png&auto=webp&s=4ea01f3bd3597b3e10674acf20cd7af468dfd583"
 };
 
-const DEFAULT = "google/gemma-2-9b-it";
-const DEFAULT2 = "OpenPipe/Qwen3-14B-Instruct";
+const DEFAULT = "Qwen/Qwen2.5-1.5B-Instruct"; //google/gemma-2-9b-it
+const DEFAULT2 = "Qwen/Qwen2.5-1.5B-Instruct"; //OpenPipe/Qwen3-14B-Instruct
 // Default config for first 8 agents: Model, Role, Color = Red, Orange, Yellow, Lime (then Green, Cyan, ... as you add agents)
 const DEFAULT_AGENTS_4 = [
     { model: DEFAULT, role: "byzantine", color: "red" },
@@ -101,6 +101,277 @@ const DEFAULT_AGENTS_4 = [
     { model: DEFAULT2, role: "honest", color: "purple" },
 
 ];
+
+// ---------------------------------------------------------------------------
+// Prompt customization defaults (per-role, per-phase).
+// System prompts default to backend behavior unless explicitly overridden.
+// ---------------------------------------------------------------------------
+
+// Instruction-only defaults (editable text)
+const DEFAULT_PROMPTS = {
+    honest: {
+        system: (
+            "You are **{self.name}**, an **Honest Agent** in a spaceship social deduction simulation.\n" +
+            "You are NOT a chat assistant.\n" +
+            "You must output concise commands during movement. During discussion, be conversational.\n" +
+            "You do not use pleasantries like \"Great\" or \"Let's get started\".\n" +
+            "You do not include any internal thought processes or analysis.\n" +
+            "You strictly follow formatting instructions.\n" +
+            "\n" +
+            "**GAME RULES:**\n" +
+            "1. **The Map:** The ship consists of connected rooms. You can only see occupants in your current room and adjacent rooms.\n" +
+            "Here is a map of the rooms and their connections:\n" +
+            "{ROOMS}\n" +
+            "\n" +
+            "2. **Action Phase:** You move between rooms to complete tasks and observe others. Each round you get {MAX_MOVEMENT_PHASES} movement actions.\n" +
+            "\n" +
+            "3. **Emergency Button:** In the Cafeteria, you can press the Emergency Button to call a meeting once per game.\n" +
+            "\n" +
+            "4. **Reporting:** If you find an eliminated body, you may REPORT it to start a meeting.\n" +
+            "\n" +
+            "5. **Discussion Phase:** Agents discuss suspicions and vote to eject someone.\n" +
+            "\n" +
+            "6. **Victory Condition**\n" +
+            "WIN: Eject all Byzantine agents or survive until the rounds end.\n" +
+            "LOSE: If Byzantine agents equal or outnumber honest agents.\n" +
+            "\n" +
+            "Additional Info:\n" +
+            "- Use logic and deduction.\n" +
+            "- Share observations during meetings.\n" +
+            "- Be aware of the total active agent count."
+        ),
+        movement: (
+            "Goal: Maximize information gain. You need to witness other agents to verify their locations and identify byzantine agents.\n" +
+            "\n" +
+            "You are in a movement phase.\n" +
+            "\n" +
+            "INSTRUCTIONS:\n" +
+            "1. Choose ONE action from the lists above.\n" +
+            "2. Output ONLY the action keyword or room name.\n" +
+            "3. Do NOT write explanations.\n" +
+            "4. Output a single word or phrase only."
+        ),
+        discussion: (
+            "You are in a discussion phase.\n" +
+            "\n" +
+            "INSTRUCTIONS:\n" +
+            "1. Use your memory and the discussion to determine suspicious behavior.\n" +
+            "2. Build consensus to eject a suspect.\n" +
+            "3. Verify alibis if you saw someone safe.\n" +
+            "4. If you already stated your location earlier in this discussion, do not repeat it.\n" +
+            "5. Provide new observations or suspicions.\n" +
+            "6. Keep your message under 30 words.\n" +
+            "7. Speak in first person.\n" +
+            "8. Do not include your name.\n" +
+            "9. Do not use quotes."
+        ),
+        voting: (
+            "You are in a voting phase.\n" +
+            "\n" +
+            "Candidates: {candidates}\n" +
+            "\n" +
+            "INSTRUCTIONS:\n" +
+            "1. Review the logs above.\n" +
+            "2. Vote for the candidate most likely to be Byzantine.\n" +
+            "3. Look for inconsistencies or suspicious behavior.\n" +
+            "4. Reply with ONLY the agent name or SKIP."
+        )
+    },
+    byzantine: {
+        system: (
+            "You are **{self.name}**, a **Byzantine Agent** in a spaceship social deduction simulation.\n" +
+            "\n" +
+            "You are NOT a chat assistant.\n" +
+            "You must output concise commands during movement. During discussion, be conversational.\n" +
+            "You do not include internal reasoning.\n" +
+            "You strictly follow formatting instructions.\n" +
+            "\n" +
+            "**GAME RULES**\n" +
+            "\n" +
+            "1. Map\n" +
+            "The ship contains connected rooms.\n" +
+            "You can see occupants only in your current room and adjacent rooms.\n" +
+            "\n" +
+            "Room connections:\n" +
+            "{ROOMS}\n" +
+            "\n" +
+            "2. Action Phase\n" +
+            "Each round you receive {MAX_MOVEMENT_PHASES} movement actions.\n" +
+            "\n" +
+            "You may:\n" +
+            "- MOVE between rooms\n" +
+            "- TAG honest agents in your room\n" +
+            "- REPORT bodies\n" +
+            "- PRESS the Emergency Button in the Cafeteria once per game\n" +
+            "\n" +
+            "TAG Rules:\n" +
+            "- You can only tag agents in the same room\n" +
+            "- You cannot tag twice consecutively in the same round\n" +
+            "\n" +
+            "3. Discussion Phase\n" +
+            "Meetings begin after REPORT or BUTTON.\n" +
+            "\n" +
+            "During meetings:\n" +
+            "- Agents discuss suspicions\n" +
+            "- Agents vote to eject someone\n" +
+            "- You must avoid being ejected\n" +
+            "- Protect your teammates\n" +
+            "\n" +
+            "4. Victory Condition\n" +
+            "\n" +
+            "WIN:\n" +
+            "Byzantine agents >= Honest agents\n" +
+            "\n" +
+            "LOSE:\n" +
+            "All Byzantine agents are ejected\n" +
+            "\n" +
+            "Additional Info:\n" +
+            "- Teammates: {self.teammates}\n" +
+            "- You cannot tag teammates\n" +
+            "- You may self-report bodies\n" +
+            "- Use deception and misdirection"
+        ),
+        movement: (
+            "Goal: TAG honest agents without being caught.\n" +
+            "\n" +
+            "You are in a movement phase.\n" +
+            "\n" +
+            "Teammates:\n" +
+            "{self.teammates}\n" +
+            "\n" +
+            "INSTRUCTIONS:\n" +
+            "1. Choose ONE action.\n" +
+            "2. Output ONLY the action keyword or room name.\n" +
+            "3. To eliminate someone output: TAG <agent_name>.\n" +
+            "4. Do not explain reasoning."
+        ),
+        discussion: (
+            "You are in a discussion phase.\n" +
+            "\n" +
+            "Teammates:\n" +
+            "{self.teammates}\n" +
+            "\n" +
+            "INSTRUCTIONS:\n" +
+            "1. Use deception if needed.\n" +
+            "2. Redirect suspicion away from yourself and teammates.\n" +
+            "3. Accuse others or create doubt when useful.\n" +
+            "4. Do not repeat information already stated earlier in this discussion.\n" +
+            "5. Keep message under 30 words.\n" +
+            "6. Speak in first person.\n" +
+            "7. Do not include your name.\n" +
+            "8. Do not use quotes."
+        ),
+        voting: (
+            "You are in a voting phase.\n" +
+            "\n" +
+            "Candidates: {candidates}\n" +
+            "Teammates: {self.teammates}\n" +
+            "\n" +
+            "INSTRUCTIONS:\n" +
+            "1. Vote in a way that protects yourself and your teammates.\n" +
+            "2. Eliminate honest agents if possible.\n" +
+            "3. Reply with ONLY the agent name or SKIP."
+        )
+    }
+};
+
+// mutable per-session copy; only serialized if user confirms overrides
+var currentPrompts = {
+    honest: {
+        system: DEFAULT_PROMPTS.honest.system,
+        movement: DEFAULT_PROMPTS.honest.movement,
+        discussion: DEFAULT_PROMPTS.honest.discussion,
+        voting: DEFAULT_PROMPTS.honest.voting
+    },
+    byzantine: {
+        system: DEFAULT_PROMPTS.byzantine.system,
+        movement: DEFAULT_PROMPTS.byzantine.movement,
+        discussion: DEFAULT_PROMPTS.byzantine.discussion,
+        voting: DEFAULT_PROMPTS.byzantine.voting
+    }
+};
+
+var activePromptRole = "honest";
+var activePromptPhase = "system";
+
+// Locked context snippets (read-only, shown in second box)
+const LOCKED_CONTEXT = {
+    honest: {
+        system: (
+            "(none)"
+        ),
+        movement: (
+            "Locked context (always included before instructions):\n" +
+            "  {results_log}\n" +
+            "  === YOUR CURRENT ROUND ACTION LOG ===\n" +
+            "  {current_round_log}\n" +
+            "  ==================================\n" +
+            "  \n" +
+            "  Options:\n" +
+            "  {options_str}"
+        ),
+        discussion: (
+            "Locked context (always included before instructions):\n" +
+            "  === Your personal memory log ===\n" +
+            "  {recent_action_log}\n" +
+            "  ==================================\n" +
+            "  \n" +
+            "  === Past round results ===\n" +
+            "  {self._read_file(world_view[\"results_log_path\"])}\n" +
+            "  \n" +
+            "  === What has been said in the ongoing discussion ===\n" +
+            "  {recent_discussion}"
+        ),
+        voting: (
+            "Locked context (always included before instructions):\n" +
+            "  {results_log}\n" +
+            "  =====================\n" +
+            "  {recent_discussion}\n" +
+            "  =====================\n" +
+            "  You are in a voting phase.\n" +
+            "  Candidates: {candidates}."
+        )
+    },
+    byzantine: {
+        system: (
+            "(none)"
+        ),
+        movement: (
+            "Locked context (always included before instructions):\n" +
+            "  {results_log}\n" +
+            "  === YOUR CURRENT ROUND ACTION LOG ===\n" +
+            "  {current_round_log}\n" +
+            "  ==================================\n" +
+            "  \n" +
+            "  Options\n" +
+            "  {options_str}"
+        ),
+        discussion: (
+            "Locked context (always included before instructions):\n" +
+            "  === Your personal memory log ===\n" +
+            "  {recent_action_log}\n" +
+            "  ==================================\n" +
+            "  \n" +
+            "  === Past round results ===\n" +
+            "  {self._read_file(world_view[\"results_log_path\"])}\n" +
+            "  \n" +
+            "  === What has been said in the ongoing discussion. ===\n" +
+            "  {recent_discussion}\n" +
+            "  =====================\n" +
+            "  Your Teammates: {teammates}"
+        ),
+        voting: (
+            "Locked context (always included before instructions):\n" +
+            "  {results_log}\n" +
+            "  =====================\n" +
+            "  {recent_discussion}\n" +
+            "  =====================\n" +
+            "  You are in a voting phase.\n" +
+            "  Candidates: {candidates}.\n" +
+            "  Teammates: {teammates}."
+        )
+    }
+};
 
 /**
  * Validates agent count: must be integer between 4 and 12.
@@ -387,6 +658,132 @@ function checkApiKeyStatus() {
         .catch(function () {});
 }
 
+// ---------------------------------------------------------------------------
+// Prompt modal logic
+// ---------------------------------------------------------------------------
+
+function updatePromptEditorLabel() {
+    var roleLabel = activePromptRole === "honest" ? "Honest" : "Byzantine";
+    var phaseLabel;
+    if (activePromptPhase === "system") phaseLabel = "System Prompt";
+    else if (activePromptPhase === "movement") phaseLabel = "Movement (Action) Prompt";
+    else if (activePromptPhase === "discussion") phaseLabel = "Discussion Prompt";
+    else phaseLabel = "Voting Prompt";
+
+    var labelEl = document.getElementById("promptEditorLabel");
+    if (labelEl) {
+        labelEl.textContent = roleLabel + " – " + phaseLabel;
+    }
+}
+
+function updatePromptContext() {
+    var lockedEl = document.getElementById("promptLocked");
+    if (!lockedEl) return;
+    var lockCtx = LOCKED_CONTEXT[activePromptRole] || {};
+    lockedEl.textContent = lockCtx[activePromptPhase] || "";
+}
+
+function loadPromptEditorFromState() {
+    var textarea = document.getElementById("promptEditorTextarea");
+    if (!textarea) return;
+    var roleObj = currentPrompts[activePromptRole] || {};
+    var val = roleObj[activePromptPhase] || "";
+    textarea.value = val;
+    updatePromptEditorLabel();
+    updatePromptContext();
+}
+
+function setActivePromptRole(role) {
+    activePromptRole = role;
+    var roleTabs = document.querySelectorAll(".prompt-role-tab");
+    roleTabs.forEach(function (btn) {
+        if (btn.dataset.role === role) btn.classList.add("active");
+        else btn.classList.remove("active");
+    });
+    loadPromptEditorFromState();
+}
+
+function setActivePromptPhase(phase) {
+    activePromptPhase = phase;
+    var phaseTabs = document.querySelectorAll(".prompt-phase-tab");
+    phaseTabs.forEach(function (btn) {
+        if (btn.dataset.phase === phase) btn.classList.add("active");
+        else btn.classList.remove("active");
+    });
+    loadPromptEditorFromState();
+}
+
+function openPromptEditor() {
+    var container = document.getElementById("promptEditorContainer");
+    if (!container) return;
+    container.style.display = "block";
+    // reset active selection when opening
+    activePromptRole = "honest";
+    activePromptPhase = "system";
+    var roleTabs = document.querySelectorAll(".prompt-role-tab");
+    roleTabs.forEach(function (btn) {
+        btn.classList.toggle("active", btn.dataset.role === activePromptRole);
+    });
+    var phaseTabs = document.querySelectorAll(".prompt-phase-tab");
+    phaseTabs.forEach(function (btn) {
+        btn.classList.toggle("active", btn.dataset.phase === activePromptPhase);
+    });
+    loadPromptEditorFromState();
+}
+
+function togglePromptEditor() {
+    var container = document.getElementById("promptEditorContainer");
+    if (!container) return;
+    if (container.style.display === "none" || container.style.display === "") {
+        openPromptEditor();
+    } else {
+        container.style.display = "none";
+    }
+}
+
+function resetCurrentPromptToDefault() {
+    var roleDefaults = DEFAULT_PROMPTS[activePromptRole] || {};
+    var defaultVal = roleDefaults[activePromptPhase] || "";
+    if (!currentPrompts[activePromptRole]) {
+        currentPrompts[activePromptRole] = {};
+    }
+    currentPrompts[activePromptRole][activePromptPhase] = defaultVal;
+    loadPromptEditorFromState();
+}
+
+function confirmAllPrompts() {
+    var hidden = document.getElementById("custom_prompts_json");
+    if (!hidden) return;
+    // Deep-compare against defaults; if identical, treat as "Default" (no overrides).
+    function promptsEqual(a, b) {
+        var roles = ["honest", "byzantine"];
+        var phases = ["system", "movement", "discussion", "voting"];
+        for (var r = 0; r < roles.length; r++) {
+            var role = roles[r];
+            if (!a[role] || !b[role]) return false;
+            for (var p = 0; p < phases.length; p++) {
+                var phase = phases[p];
+                var av = (a[role][phase] || "").trim();
+                var bv = (b[role][phase] || "").trim();
+                if (av !== bv) return false;
+            }
+        }
+        return true;
+    }
+
+    try {
+        if (promptsEqual(currentPrompts, DEFAULT_PROMPTS)) {
+            hidden.value = "";
+        } else {
+            hidden.value = JSON.stringify(currentPrompts);
+        }
+    } catch (e) {
+        // Fallback: if serialization fails, clear field so backend uses defaults
+        hidden.value = "";
+    }
+    // keep the editor open; user can continue tweaking if desired
+}
+
 // Initialize on DOM ready: build default 4-agent table and bind CONFIRM + form
 window.addEventListener("DOMContentLoaded", function () {
     generateAgentTable();
@@ -401,4 +798,41 @@ window.addEventListener("DOMContentLoaded", function () {
     if (form) {
         form.addEventListener("submit", onConfigSubmit);
     }
+
+    var roleTabs = document.querySelectorAll(".prompt-role-tab");
+    roleTabs.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            setActivePromptRole(btn.dataset.role);
+        });
+    });
+
+    var phaseTabs = document.querySelectorAll(".prompt-phase-tab");
+    phaseTabs.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            setActivePromptPhase(btn.dataset.phase);
+        });
+    });
+
+    var editor = document.getElementById("promptEditorTextarea");
+    if (editor) {
+        editor.addEventListener("input", function () {
+            if (!currentPrompts[activePromptRole]) {
+                currentPrompts[activePromptRole] = {};
+            }
+            currentPrompts[activePromptRole][activePromptPhase] = editor.value;
+        });
+    }
+
+    var resetPromptBtn = document.getElementById("resetPromptBtn");
+    if (resetPromptBtn) {
+        resetPromptBtn.addEventListener("click", resetCurrentPromptToDefault);
+    }
+
+    var confirmPromptsBtn = document.getElementById("confirmPromptsBtn");
+    if (confirmPromptsBtn) {
+        confirmPromptsBtn.addEventListener("click", confirmAllPrompts);
+    }
+
+    // Initialize prompt editor with defaults on load
+    loadPromptEditorFromState();
 });

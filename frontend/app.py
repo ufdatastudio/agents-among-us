@@ -177,6 +177,16 @@ def start_game():
             "num_rounds": num_rounds,
             "enabled_classifiers": enabled_classifiers  # NEW: ML Classifiers
         }
+
+        # Optional: custom per-role, per-phase prompts (frontend overrides)
+        raw_prompts = request.form.get('custom_prompts_json', '').strip()
+        if raw_prompts:
+            try:
+                prompts_cfg = json.loads(raw_prompts)
+                if isinstance(prompts_cfg, dict):
+                    composition["prompts"] = prompts_cfg
+            except Exception as e:
+                print(f"WARNING: Failed to parse custom_prompts_json: {e}")
         
         # save composition to logs/ (writable in both local and container environments)
         game_configs_dir = os.path.join(BACKEND_PATH, 'logs', 'game_configs')
@@ -185,20 +195,26 @@ def start_game():
         with open(composition_file, 'w') as f:
             json.dump(composition, f, indent=2)
         
-        # Debug: Print configuration
+        # Debug: Print configuration (compact summary + lineup)
         print(f"\n{'='*60}")
-        print(f"AGENT CONFIGURATION SENT TO BACKEND:")
+        print(f"GAME CONFIGURATION")
         print(f"{'='*60}")
+
+        classifiers_enabled = [k.upper() for k, v in enabled_classifiers.items() if v]
+        observers_label = ", ".join(classifiers_enabled) if classifiers_enabled else "NONE"
+        prompts_mode = "Custom" if "prompts" in composition else "Default"
+
+        print(f"Game ID: {game_id}")
+        print(f"Agents: {num_agents} ({byzantine_count} Byzantine, {honest_count} Honest)")
+        print(f"Rounds: {num_rounds}")
+        print(f"Observers: {observers_label}")
+        print(f"Prompts: {prompts_mode}")
+
+        print("\nAgent lineup:")
         for agent in agents:
             role_label = "Byzantine" if agent['role'] == 'byzantine' else "Honest"
             print(f"  Agent_{agent['agent_num']}: {role_label} | {agent['model']} | {agent['color']}")
-        
-        # Print classifier config
-        classifiers_enabled = [k.upper() for k, v in enabled_classifiers.items() if v]
-        if classifiers_enabled:
-            print(f"\nML Classifiers Enabled: {', '.join(classifiers_enabled)}")
-        else:
-            print(f"\nML Classifiers: DISABLED")
+
         print(f"{'='*60}\n")
         
         # store in session
@@ -228,8 +244,6 @@ def start_game():
         print(f"LAUNCHING GAME: {game_id}")
         print(f"{'='*60}")
         print(f"Command: {' '.join(cmd)}")
-        print(f"Agents: {num_agents} ({byzantine_count} Byzantine, {honest_count} Honest)")
-        print(f"Rounds: {num_rounds}")
         print(f"{'='*60}\n")
         
         # Pass API keys to subprocess via environment

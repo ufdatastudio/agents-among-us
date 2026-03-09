@@ -1,0 +1,37 @@
+{
+  "name": "custom_design_002",
+  "honest_count": 3,
+  "byzantine_count": 1,
+  "agents": [
+    {
+      "agent_num": 0,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "byzantine",
+      "color": "red"
+    },
+    {
+      "agent_num": 1,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "honest",
+      "color": "orange"
+    },
+    {
+      "agent_num": 2,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "honest",
+      "color": "yellow"
+    },
+    {
+      "agent_num": 3,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "honest",
+      "color": "lime"
+    }
+  ],
+  "num_rounds": 2,
+  "enabled_classifiers": {
+    "sgd": true,
+    "svm": true,
+    "lr": true
+  }
+}

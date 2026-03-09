@@ -1,0 +1,61 @@
+{
+  "name": "custom_game_20260226_120230",
+  "honest_count": 6,
+  "byzantine_count": 2,
+  "agents": [
+    {
+      "agent_num": 0,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "byzantine",
+      "color": "red"
+    },
+    {
+      "agent_num": 1,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "byzantine",
+      "color": "orange"
+    },
+    {
+      "agent_num": 2,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "honest",
+      "color": "yellow"
+    },
+    {
+      "agent_num": 3,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "honest",
+      "color": "lime"
+    },
+    {
+      "agent_num": 4,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "honest",
+      "color": "green"
+    },
+    {
+      "agent_num": 5,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "honest",
+      "color": "cyan"
+    },
+    {
+      "agent_num": 6,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "honest",
+      "color": "blue"
+    },
+    {
+      "agent_num": 7,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "honest",
+      "color": "purple"
+    }
+  ],
+  "num_rounds": 10,
+  "enabled_classifiers": {
+    "sgd": true,
+    "svm": true,
+    "lr": true
+  }
+}

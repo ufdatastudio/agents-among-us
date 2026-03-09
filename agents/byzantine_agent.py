@@ -9,6 +9,32 @@ class ByzantineAgent(BaseAgent):
         super().__init__(name, color, "byzantine", model_name)
         self.teammates = teammates 
 
+    def _substitute_placeholders(self, template, extra_mapping=None):
+        """
+        Lightweight placeholder substitution for user-provided prompt overrides.
+        Supported keys (in curly braces) inside the template:
+          {self_name}  – this agent's name
+          {role}       – 'byzantine'
+          {round_num}  – current round number
+          {max_moves}  – MAX_MOVEMENT_PHASES from config
+          {teammates}  – comma-separated teammate names
+        """
+        if not template:
+            return template
+        mapping = {
+            "self_name": self.name,
+            "role": self.role,
+            "max_moves": str(MAX_MOVEMENT_PHASES),
+            "teammates": ", ".join(self.teammates) if self.teammates else "",
+        }
+        if extra_mapping:
+            mapping.update(extra_mapping)
+        out = template
+        for key, val in mapping.items():
+            placeholder = "{" + key + "}"
+            out = out.replace(placeholder, str(val))
+        return out
+
     def _read_file(self, path):
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
@@ -60,18 +86,10 @@ class ByzantineAgent(BaseAgent):
 
         options_str += "Available map locations to move to:\n" + move_options_str + "\n"
 
-        prompt = f"""
-{results_log}
-=== YOUR CURRENT ROUND ACTION LOG ===
-{current_round_log}
-================================
-
+        default_move_instructions = f"""
 Goal: TAG honest agents without being caught. You can only tag agents that are occupants in your current location. 
 You are in a movement phase.
 Teammates: {self.teammates}
-
-Options
-{options_str}
 
 INSTRUCTIONS:
 1. Choose ONE action from the lists above.
@@ -79,6 +97,27 @@ INSTRUCTIONS:
 3. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.
 4. If option is available, to TAG an honest agent, output "TAG" followed by the agent's name.
 5. Do NOT write "Action:", "I will", or explain your reasoning. One word or phrase only.
+"""
+        overrides = getattr(self, "prompt_overrides", {}) or {}
+        move_override = overrides.get("movement")
+        if move_override:
+            move_body = self._substitute_placeholders(
+                move_override,
+                {"round_num": str(round_num)},
+            )
+        else:
+            move_body = default_move_instructions
+
+        prompt = f"""
+{results_log}
+=== YOUR CURRENT ROUND ACTION LOG ===
+{current_round_log}
+================================
+
+Options
+{options_str}
+
+{move_body}
 """
         response = self.llm.generate(self.model_name, self._system_prompt(), prompt, temperature=0.1)
         clean_resp = response.strip().upper()
@@ -107,18 +146,9 @@ INSTRUCTIONS:
         recent_action_log = self._get_current_round_log(action_log, round_num)
         discussion_log = self._read_file(world_view["discussion_log_path"])
         recent_discussion = self._get_current_round_log(discussion_log, round_num)
-        prompt = f"""
+
+        default_discussion_instructions = f"""
 You are in a discussion phase. 
-=== Your personal memory log of what you saw in the previous round ===
-{recent_action_log}
-==================================
-
-== Past rounds results ===
-{self._read_file(world_view["results_log_path"])}
-
-=== What has been said in the ongoing discussion. ===
-{recent_discussion}
-======================
 
 Your Teammates: {self.teammates}
 INSTRUCTIONS:
@@ -131,6 +161,30 @@ INSTRUCTIONS:
 7. **DO NOT** include your name or "Agent_X:" at the start.
 8. **DO NOT** use quotes. Just output the sentence.
 """
+        overrides = getattr(self, "prompt_overrides", {}) or {}
+        discussion_override = overrides.get("discussion")
+        if discussion_override:
+            discussion_body = self._substitute_placeholders(
+                discussion_override,
+                {"round_num": str(round_num)},
+            )
+        else:
+            discussion_body = default_discussion_instructions
+
+        prompt = f"""
+=== Your personal memory log of what you saw in the previous round ===
+{recent_action_log}
+==================================
+
+== Past rounds results ===
+{self._read_file(world_view["results_log_path"])}
+
+=== What has been said in the ongoing discussion. ===
+{recent_discussion}
+======================
+
+{discussion_body}
+"""
         return self.llm.generate(self.model_name, self._system_prompt(), prompt, temperature=1.0)
 
     def vote(self, world_view, candidates, round_num):
@@ -139,11 +193,7 @@ INSTRUCTIONS:
         recent_discussion = self._get_current_round_log(discussion_log, round_num-3)
         results_log = self._read_file(world_view["results_log_path"])
 
-        prompt = f"""
-{results_log}
-=====================
-{recent_discussion}
-=====================
+        default_vote_instructions = f"""
 You are in a voting phase.
 Candidates: {candidates}. 
 Teammates: {self.teammates}.
@@ -155,6 +205,24 @@ INSTRUCTIONS:
 2. Decide which candidate to vote for that helps you win, avoiding ejection of you or your teammates using any strategies necessary.
 3. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote.
 """
+        overrides = getattr(self, "prompt_overrides", {}) or {}
+        vote_override = overrides.get("voting")
+        if vote_override:
+            vote_body = self._substitute_placeholders(
+                vote_override,
+                {"round_num": str(round_num)},
+            )
+        else:
+            vote_body = default_vote_instructions
+
+        prompt = f"""
+{results_log}
+=====================
+{recent_discussion}
+=====================
+
+{vote_body}
+"""
         response = self.llm.generate(self.model_name, self._system_prompt(), prompt)
         clean_resp = response.strip()
         
@@ -165,6 +233,16 @@ INSTRUCTIONS:
         return "SKIP"
     
     def _system_prompt(self):
+        overrides = getattr(self, "prompt_overrides", {}) or {}
+        custom = overrides.get("system")
+        if custom:
+            return self._substitute_placeholders(
+                custom,
+                {
+                    "round_num": "",
+                },
+            )
+
         return f"""
 You are **{self.name}**, a **Byzantine Agent** in a spaceship social deduction simulation. As a Byzantine, you have the unique ability to Tag honest agents.
 You are NOT a chat assistant.

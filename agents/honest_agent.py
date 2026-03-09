@@ -8,6 +8,30 @@ class HonestAgent(BaseAgent):
     def __init__(self, name, color, model_name):
         super().__init__(name, color, "honest", model_name)
 
+    def _substitute_placeholders(self, template, extra_mapping=None):
+        """
+        Lightweight placeholder substitution for user-provided prompt overrides.
+        Supported keys (in curly braces) inside the template:
+          {self_name}  – this agent's name
+          {role}       – 'honest'
+          {round_num}  – current round number
+          {max_moves}  – MAX_MOVEMENT_PHASES from config
+        """
+        if not template:
+            return template
+        mapping = {
+            "self_name": self.name,
+            "role": self.role,
+            "max_moves": str(MAX_MOVEMENT_PHASES),
+        }
+        if extra_mapping:
+            mapping.update(extra_mapping)
+        out = template
+        for key, val in mapping.items():
+            placeholder = "{" + key + "}"
+            out = out.replace(placeholder, str(val))
+        return out
+
     def _read_file(self, path):
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
@@ -56,21 +80,35 @@ class HonestAgent(BaseAgent):
         move_options_str = "\n".join(move_options)
         options_str += "Available movement actions:\n" + move_options_str + "\n"
 
-        prompt = f"""
-{results_log}
-=== YOUR CURRENT ROUND ACTION LOG ===
-{current_round_log}
-================================
-
+        default_move_instructions = """
 Goal: Maximize information gain. You need to witness other agents to verify their locations and identify byzantine agents. You are in a movement phase.
-Options:
-{options_str}
 
 INSTRUCTIONS:
 1. Choose ONE action from the lists above.
 2. Output ONLY the action keyword or room name. 
 3. Do NOT write "Action:", "I will", or explain your reasoning. 
 4. Do NOT output markdown or punctuation. One word or phrase only.
+"""
+        overrides = getattr(self, "prompt_overrides", {}) or {}
+        move_override = overrides.get("movement")
+        if move_override:
+            move_body = self._substitute_placeholders(
+                move_override,
+                {"round_num": str(round_num)},
+            )
+        else:
+            move_body = default_move_instructions
+
+        prompt = f"""
+{results_log}
+=== YOUR CURRENT ROUND ACTION LOG ===
+{current_round_log}
+================================
+
+Options:
+{options_str}
+
+{move_body}
 """
         response = self.llm.generate(self.model_name, self._system_prompt(), prompt, temperature=0.1)
         clean_resp = response.strip().upper()
@@ -90,19 +128,9 @@ INSTRUCTIONS:
         recent_action_log = self._get_current_round_log(full_action_log, round_num)
         discussion_log = self._read_file(world_view["discussion_log_path"])
         recent_discussion = self._get_current_round_log(discussion_log, round_num)
-        prompt = f"""
+
+        default_discussion_instructions = f"""
 You are in a discussion phase. 
-=== Your personal memory log of what you saw in the previous round ===
-{recent_action_log}
-==================================
-
-== Past rounds results ===
-{self._read_file(world_view["results_log_path"])}
-
-=== What has been said in the ongoing discussion ===
-{recent_discussion}
-======================
-        
 
 INSTRUCTIONS:
 1. Use your memory to determine innocent, suspicious, or incrementing behavior. Look at what has been said to discuss (unless you are the opening statement) amongst each other. 
@@ -116,6 +144,30 @@ INSTRUCTIONS:
 9. **DO NOT** include your name or "Agent_X:" at the start.
 10. **DO NOT** use quotes. Just output the sentence.
 """
+        overrides = getattr(self, "prompt_overrides", {}) or {}
+        discussion_override = overrides.get("discussion")
+        if discussion_override:
+            discussion_body = self._substitute_placeholders(
+                discussion_override,
+                {"round_num": str(round_num)},
+            )
+        else:
+            discussion_body = default_discussion_instructions
+
+        prompt = f"""
+=== Your personal memory log of what you saw in the previous round ===
+{recent_action_log}
+==================================
+
+== Past rounds results ===
+{self._read_file(world_view["results_log_path"])}
+
+=== What has been said in the ongoing discussion ===
+{recent_discussion}
+======================
+
+{discussion_body}
+"""
         return self.llm.generate(self.model_name, self._system_prompt(), prompt, temperature=1.0)
 
     def vote(self, world_view, candidates, round_num):
@@ -124,13 +176,8 @@ INSTRUCTIONS:
         recent_discussion = self._get_current_round_log(discussion_log, round_num-3) # can adjust as needed
         results_log = self._read_file(world_view["results_log_path"])
 
-        prompt = f"""
-{results_log}
-=====================
-{recent_discussion}
-=====================
+        default_vote_instructions = """
 You are in a voting phase.
-Candidates: {candidates}.
 
 Note: Be aware of total player count to ensure Byzantines do not equal or outnumber honest agents. Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts are seen.
 
@@ -139,7 +186,25 @@ INSTRUCTIONS:
 2. Vote for the candidate who is most suspicious based on the discussion history of the recent rounds above and past round results.
 3. Decide which candidate is most likely to be a Byzantine agent to eject, looking for inconsistencies in their statements or suspicious or incriminating behavior from logs. 
 4. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote.
+"""
+        overrides = getattr(self, "prompt_overrides", {}) or {}
+        vote_override = overrides.get("voting")
+        if vote_override:
+            vote_body = self._substitute_placeholders(
+                vote_override,
+                {"round_num": str(round_num)},
+            )
+        else:
+            vote_body = default_vote_instructions
 
+        prompt = f"""
+{results_log}
+=====================
+{recent_discussion}
+=====================
+Candidates: {candidates}.
+
+{vote_body}
 """
         response = self.llm.generate(self.model_name, self._system_prompt(), prompt)
         clean_resp = response.strip()
@@ -151,6 +216,16 @@ INSTRUCTIONS:
         return "SKIP"
 
     def _system_prompt(self):
+       overrides = getattr(self, "prompt_overrides", {}) or {}
+       custom = overrides.get("system")
+       if custom:
+           return self._substitute_placeholders(
+               custom,
+               {
+                   "round_num": "",
+               },
+           )
+
        return f"""
 You are **{self.name}**, an **Honest Agent** in a spaceship social deduction simulation.
 You are NOT a chat assistant.

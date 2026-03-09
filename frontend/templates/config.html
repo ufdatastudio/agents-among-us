@@ -107,9 +107,9 @@
             </div>
 
             <div class="form-section">
-                <h2>Observers</h2>
+                <h2>Observers (optional)</h2>
                 <div class="form-group">
-                    <label>Select classifiers to display suspicion scores (optional):</label>
+                    <label>Select classifiers to display suspicion scores:</label>
                     <div style="display: flex; gap: 20px; margin-top: 10px;">
                         <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
                             <input type="checkbox" name="classifier_sgd" value="true">
@@ -126,6 +126,61 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Agent Prompts (optional, per-run overrides) -->
+            <div class="form-section">
+                <h2>Agent Prompts (optional)</h2>
+                <p class="form-hint">
+                    Use default prompts, or temporarily override them for this simulation run only.
+                    Defaults will be restored next time.
+                </p>
+                <!-- Hidden field: populated only if user confirms rewritten prompts -->
+                <input type="hidden" id="custom_prompts_json" name="custom_prompts_json" value="">
+                
+                <!-- Inline prompt editor (always visible) -->
+                <div id="promptEditorContainer" class="prompt-editor-container">
+                    <div class="prompt-editor-inner">
+                        <!-- Role tabs -->
+                        <div class="prompt-role-tabs">
+                            <button type="button" class="prompt-role-tab active" data-role="honest">Honest</button>
+                            <button type="button" class="prompt-role-tab" data-role="byzantine">Byzantine</button>
+                        </div>
+
+                        <!-- Phase tabs -->
+                        <div class="prompt-phase-tabs">
+                            <button type="button" class="prompt-phase-tab active" data-phase="system">System</button>
+                            <button type="button" class="prompt-phase-tab" data-phase="movement">Movement</button>
+                            <button type="button" class="prompt-phase-tab" data-phase="discussion">Discussion</button>
+                            <button type="button" class="prompt-phase-tab" data-phase="voting">Voting</button>
+                        </div>
+
+                        <!-- Locked context (read-only, shows dynamic parts managed by backend) -->
+                        <label class="prompt-editor-label">Locked context (always included before instructions)</label>
+                        <pre id="promptLocked" class="prompt-context prompt-context-locked"></pre>
+
+                        <!-- Editable instructions -->
+                        <div class="prompt-editor-group">
+                            <label id="promptEditorLabel" class="prompt-editor-label">
+                                Honest – System Prompt
+                            </label>
+                            <textarea id="promptEditorTextarea" rows="14"></textarea>
+                            <small class="form-hint">
+                                These overrides apply only to this single game run. Don't edit or click [Reset This Prompt to Default] to fall back to the default prompt text.
+                            </small>
+                        </div>
+
+                        <div class="prompt-editor-footer">
+                            <button type="button" id="resetPromptBtn">
+                                Reset This Prompt to Default
+                            </button>
+                            <div class="prompt-modal-footer-spacer"></div>
+                            <button type="button" id="confirmPromptsBtn">
+                                Confirm All Prompts
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
             <!-- Buttons -->
             <div class="button-group">
@@ -134,7 +189,6 @@
             </div>
         </form>
     </div>
-    
     <script src="{{ url_for('static', filename='js/config.js') }}"></script>
 </body>
 </html>

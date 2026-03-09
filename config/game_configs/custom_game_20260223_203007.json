@@ -1,0 +1,73 @@
+{
+  "name": "custom_game_20260223_203007",
+  "honest_count": 8,
+  "byzantine_count": 2,
+  "agents": [
+    {
+      "agent_num": 0,
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "role": "byzantine",
+      "color": "red"
+    },
+    {
+      "agent_num": 1,
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "role": "byzantine",
+      "color": "orange"
+    },
+    {
+      "agent_num": 2,
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "role": "honest",
+      "color": "yellow"
+    },
+    {
+      "agent_num": 3,
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "role": "honest",
+      "color": "lime"
+    },
+    {
+      "agent_num": 4,
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "role": "honest",
+      "color": "green"
+    },
+    {
+      "agent_num": 5,
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "role": "honest",
+      "color": "cyan"
+    },
+    {
+      "agent_num": 6,
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "role": "honest",
+      "color": "blue"
+    },
+    {
+      "agent_num": 7,
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "role": "honest",
+      "color": "purple"
+    },
+    {
+      "agent_num": 8,
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "role": "honest",
+      "color": "brown"
+    },
+    {
+      "agent_num": 9,
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "role": "honest",
+      "color": "pink"
+    }
+  ],
+  "num_rounds": 10,
+  "enabled_classifiers": {
+    "sgd": true,
+    "svm": true,
+    "lr": true
+  }
+}

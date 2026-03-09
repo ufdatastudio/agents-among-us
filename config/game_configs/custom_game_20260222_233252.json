@@ -1,0 +1,38 @@
+{
+  "name": "custom_game_20260222_233252",
+  "honest_count": 3,
+  "byzantine_count": 2,
+  "agents": [
+    {
+      "agent_num": 0,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "byzantine",
+      "color": "red"
+    },
+    {
+      "agent_num": 1,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "byzantine",
+      "color": "orange"
+    },
+    {
+      "agent_num": 2,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "honest",
+      "color": "yellow"
+    },
+    {
+      "agent_num": 3,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "honest",
+      "color": "lime"
+    },
+    {
+      "agent_num": 4,
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "role": "honest",
+      "color": "green"
+    }
+  ],
+  "num_rounds": 10
+}

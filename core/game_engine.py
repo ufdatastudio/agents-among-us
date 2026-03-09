@@ -166,6 +166,19 @@ class GameEngine:
 
         # random.shuffle(self.agents)  # commented out bc we don't want to shuffle agents
 
+        # Optional per-role, per-phase prompt overrides from composition
+        prompts_cfg = composition.get("prompts")
+        if isinstance(prompts_cfg, dict):
+            for agent in self.agents:
+                try:
+                    role_key = "honest" if getattr(agent, "role", "") == "honest" else "byzantine"
+                    role_prompts = prompts_cfg.get(role_key)
+                    if isinstance(role_prompts, dict):
+                        setattr(agent, "prompt_overrides", role_prompts)
+                except Exception:
+                    # Fail silently; fallback to default prompts for that agent
+                    pass
+
         self.logger = LogManager(self.game_id, self.agents, scen_name)
         self.state = GameState(self.agents, self.logger)
         
@@ -179,13 +192,6 @@ class GameEngine:
         
         self.state.save_json()
         print(f"--- Game Setup Complete. Logs at: {self.logger.base_dir} ---")
-        
-        # Print agent configuration for verification
-        print("\n📋 AGENT CONFIGURATION:")
-        for agent in self.agents:
-            role_label = "Byzantine" if agent.role == "byzantine" else "Honest"
-            print(f"  {agent.name}: {role_label} | Model: {agent.model_name} | Color: {agent.color}")
-        print()
         
     def run_movement_phase(self, round_num):
         self.logger.write_log("results", None, f"\n=== Round {round_num} ===")

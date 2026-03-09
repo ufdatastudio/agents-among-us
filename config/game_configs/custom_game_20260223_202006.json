@@ -1,0 +1,32 @@
+{
+  "name": "custom_game_20260223_202006",
+  "honest_count": 3,
+  "byzantine_count": 1,
+  "agents": [
+    {
+      "agent_num": 0,
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "role": "byzantine",
+      "color": "red"
+    },
+    {
+      "agent_num": 1,
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "role": "honest",
+      "color": "orange"
+    },
+    {
+      "agent_num": 2,
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "role": "honest",
+      "color": "yellow"
+    },
+    {
+      "agent_num": 3,
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "role": "honest",
+      "color": "lime"
+    }
+  ],
+  "num_rounds": 10
+}
