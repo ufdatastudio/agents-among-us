@@ -618,7 +618,7 @@ select[name*="_color"] {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.2s ease;
+    transition: left 0.8s linear, top 0.8s linear, transform 0.2s ease;
     transform: translate(-50%, -50%);
     cursor: pointer;
     pointer-events: auto;

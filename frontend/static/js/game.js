@@ -243,6 +243,7 @@ function getModelAbbreviation(modelName) {
 
 let lastEventCount = 0;
 let agentMarkers = {};
+let agentPositions = {};
 let pollingInterval = null;
 let lastPhase = "";
 let lastRound = 0;
@@ -353,10 +354,10 @@ function updateAgentPositions(agents) {
     if (!mapImage) return;
     const dims = getImageDimensions();
     if (!dims) return;
-    
-    markersContainer.innerHTML = "";
-    agentMarkers = {};
-    
+
+    // Track which agents are still present this tick
+    const seenAgents = new Set();
+
     const agentsByRoom = {};
     Object.keys(agents).forEach(function(agentKey) {
         const agent = agents[agentKey];
@@ -428,24 +429,61 @@ function updateAgentPositions(agents) {
             const spriteUrl = isAlive
                 ? (LIVING_SPRITES[colorSlug] || LIVING_SPRITES.red)
                 : (DEAD_SPRITES[colorSlug] || DEAD_SPRITES.red);
-            
-            const marker = document.createElement("div");
-            marker.className = "agent-marker";
-            marker.id = "marker-" + agentNumRaw;
-            marker.style.left = x + "px";
-            marker.style.top = y + "px";
+
+            let marker = agentMarkers[agentKey];
+
+            // Create marker if it doesn't exist yet
+            if (!marker) {
+                marker = document.createElement("div");
+                marker.className = "agent-marker";
+                marker.id = "marker-" + agentNumRaw;
+                const img = document.createElement("img");
+                img.className = "agent-marker-sprite";
+                img.alt = "Agent " + displayNum;
+                marker.appendChild(img);
+                markersContainer.appendChild(marker);
+                agentMarkers[agentKey] = marker;
+            }
+
+            // Update sprite and title / alive-dead styling
+            const imgEl = marker.querySelector(".agent-marker-sprite");
+            if (imgEl && imgEl.src !== spriteUrl) {
+                imgEl.src = spriteUrl;
+            }
             marker.title = "Agent " + displayNum + " - " + roomName + (isAlive ? " (Alive)" : " (Dead Body)");
             if (!isAlive) {
                 marker.classList.add("agent-marker-dead");
+            } else {
+                marker.classList.remove("agent-marker-dead");
             }
-            const img = document.createElement("img");
-            img.className = "agent-marker-sprite";
-            img.src = spriteUrl;
-            img.alt = "Agent " + displayNum;
-            marker.appendChild(img);
-            markersContainer.appendChild(marker);
-            agentMarkers[agentKey] = marker;
+
+            // Animate: move from previous position (if any) to new one
+            const prevPos = agentPositions[agentKey];
+            marker.style.left = (prevPos ? prevPos.x : x) + "px";
+            marker.style.top = (prevPos ? prevPos.y : y) + "px";
+
+            // Force layout so the browser picks up the starting position before transitioning
+            // eslint-disable-next-line no-unused-expressions
+            marker.offsetHeight;
+
+            marker.style.left = x + "px";
+            marker.style.top = y + "px";
+
+            agentPositions[agentKey] = { x: x, y: y };
+            seenAgents.add(agentKey);
         });
+    });
+
+    // Remove markers for agents that disappeared this tick
+    Object.keys(agentMarkers).forEach(function(key) {
+        if (!seenAgents.has(key)) {
+            const marker = agentMarkers[key];
+            if (marker && marker.parentElement === markersContainer) {
+                markersContainer.removeChild(marker);
+            }
+            delete agentMarkers[key];
+            delete agentPositions[key];
+        }
     });
 }
 
