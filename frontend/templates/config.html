@@ -8,8 +8,14 @@
 </head>
 <body>
     <div class="container">
-        <h1>Game Configuration</h1>
-        
+        <!-- Header with navigation (matches stats page layout) -->
+        <div class="stats-header">
+            <h1>Game Configuration</h1>
+            <div class="header-buttons">
+                <a href="/" class="btn">Back to Menu</a>
+            </div>
+        </div>
+
         <form id="configForm" action="/start_game" method="POST">
             
             <!-- Number of Agents -->
@@ -199,7 +205,6 @@
             <!-- Buttons -->
             <div class="button-group">
                 <button type="submit">Start Simulation</button>
-                <a href="/" class="btn">Back to Menu</a>
             </div>
         </form>
     </div>
