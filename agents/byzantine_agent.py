@@ -14,19 +14,20 @@ class ByzantineAgent(BaseAgent):
         """
         Lightweight placeholder substitution for user-provided prompt overrides.
         Supported keys (in curly braces) inside the template:
-          {self_name}  – this agent's name
-          {role}       – 'byzantine'
-          {round_num}  – current round number
-          {max_moves}  – movement ticks per round
-          {teammates}  – comma-separated teammate names
+          {self.name}       – this agent's name
+          {self.teammates}  – comma-separated teammate names
+          {role}            – 'byzantine'
+          {round_num}       – current round number
+          {max_moves}       – movement ticks per round
+          {candidates}      – comma-separated candidate names (when passed in extra_mapping)
         """
         if not template:
             return template
         mapping = {
-            "self_name": self.name,
+            "self.name": self.name,
+            "self.teammates": ", ".join(self.teammates) if self.teammates else "",
             "role": self.role,
             "max_moves": str(self.max_moves),
-            "teammates": ", ".join(self.teammates) if self.teammates else "",
         }
         if extra_mapping:
             mapping.update(extra_mapping)
@@ -87,14 +88,10 @@ class ByzantineAgent(BaseAgent):
 
         options_str += "Available map locations to move to:\n" + move_options_str + "\n"
 
-        default_move_instructions = f"""
-Goal: TAG honest agents without being caught. You can only tag agents that are occupants in your current location. 
-You are in a movement phase.
-Teammates: {self.teammates}
-
+        default_move_instructions = """
 INSTRUCTIONS:
 1. Choose ONE action from the lists above.
-2. Output ONLY the action keyword or room name. 
+2. Output ONLY the action keyword or room name.
 3. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.
 4. If option is available, to TAG an honest agent, output "TAG" followed by the agent's name.
 5. Do NOT write "Action:", "I will", or explain your reasoning. One word or phrase only.
@@ -109,11 +106,16 @@ INSTRUCTIONS:
         else:
             move_body = default_move_instructions
 
+        teammates_str = ", ".join(self.teammates) if self.teammates else ""
         prompt = f"""
 {results_log}
 === YOUR CURRENT ROUND ACTION LOG ===
 {current_round_log}
 ================================
+
+Goal: TAG honest agents without being caught. You can only tag agents that are occupants in your current location.
+You are in a movement phase.
+Teammates: {teammates_str}
 
 Options
 {options_str}
@@ -148,13 +150,10 @@ Options
         discussion_log = self._read_file(world_view["discussion_log_path"])
         recent_discussion = self._get_current_round_log(discussion_log, round_num)
 
-        default_discussion_instructions = f"""
-You are in a discussion phase. 
-
-Your Teammates: {self.teammates}
+        default_discussion_instructions = """
 INSTRUCTIONS:
 1. Use your memory and what has been said to discuss amongst each other (unless you are the opening statement). Provide useful, unique observations.
-2. Check the discussion log above.  If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.
+2. Check the discussion log above. If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.
 3. Discuss amongst each other. Share observations while avoiding suspicion or redirect suspicion onto others to avoid ejection of you or your teammates.
 4. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.
 5. Keep it short (< 30 words).
@@ -170,9 +169,14 @@ INSTRUCTIONS:
                 {"round_num": str(round_num)},
             )
         else:
-            discussion_body = default_discussion_instructions
+            discussion_body = self._substitute_placeholders(
+                default_discussion_instructions,
+                {"round_num": str(round_num)},
+            )
 
+        teammates_str = ", ".join(self.teammates) if self.teammates else ""
         prompt = f"""
+You are in a discussion phase.
 === Your personal memory log of what you saw in the previous round ===
 {recent_action_log}
 ==================================
@@ -184,6 +188,8 @@ INSTRUCTIONS:
 {recent_discussion}
 ======================
 
+Your Teammates: {teammates_str}
+
 {discussion_body}
 """
         return self.llm.generate(self.model_name, self._system_prompt(), prompt, temperature=1.0)
@@ -194,33 +200,36 @@ INSTRUCTIONS:
         recent_discussion = self._get_current_round_log(discussion_log, round_num-3)
         results_log = self._read_file(world_view["results_log_path"])
 
-        default_vote_instructions = f"""
-You are in a voting phase.
-Candidates: {candidates}. 
-Teammates: {self.teammates}.
-
-Note: Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts are seen.
-
+        default_vote_instructions = """
 INSTRUCTIONS:
 1. Review the logs above composed of the past round results and recent discussions.
 2. Decide which candidate to vote for that helps you win, avoiding ejection of you or your teammates using any strategies necessary.
 3. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote.
 """
+        teammates_str = ", ".join(self.teammates) if self.teammates else ""
+        candidates_str = ", ".join(candidates) if isinstance(candidates, list) else str(candidates)
         overrides = getattr(self, "prompt_overrides", {}) or {}
         vote_override = overrides.get("voting")
         if vote_override:
             vote_body = self._substitute_placeholders(
                 vote_override,
-                {"round_num": str(round_num)},
+                {"round_num": str(round_num), "candidates": candidates_str},
             )
         else:
-            vote_body = default_vote_instructions
-
+            vote_body = self._substitute_placeholders(
+                default_vote_instructions,
+                {"round_num": str(round_num), "candidates": candidates_str},
+            )
         prompt = f"""
 {results_log}
 =====================
 {recent_discussion}
 =====================
+You are in a voting phase.
+Candidates: {candidates_str}.
+Teammates: {teammates_str}.
+
+Note: Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts are seen.
 
 {vote_body}
 """

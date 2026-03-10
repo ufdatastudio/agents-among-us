@@ -1,16 +1,15 @@
 /**
  * Game Simulation 
- * Press D for debug overlay
+ * Press D for debug overlay. Grey = old room-to-room lines (obsolete). Orange = road nodes and edges (agents move on these).
  */
 
-// motherboard map + skeld naming
-
+// origional room coords
 const ROOM_COORDINATES = {
     "Reactor": { x: 12.4, y: 54.0 },
     "UpperEngine": { x: 17.4, y: 22.3 },
     "LowerEngine": { x: 25.3, y: 85.3 },
     "Security": { x: 36.3, y: 42.2 },
-    "MedBay": { x: 30.3, y: 9.8},
+    "MedBay": { x: 30.3, y: 9.8 },
     "Electrical": { x: 36.2, y: 60.1 },
     "Cafeteria": { x: 49.3, y: 20.3 },
     "Admin": { x: 60.2, y: 53.0 },
@@ -22,6 +21,7 @@ const ROOM_COORDINATES = {
     "Communications": { x: 79.0, y: 91.9 }
 };
 
+// box where sprites will be held in each room
 const ROOM_HOUSING = {
     "Reactor": { width: 10, height: 20 },
     "UpperEngine": { width: 10, height: 20 },
@@ -39,6 +39,7 @@ const ROOM_HOUSING = {
     "Communications": { width: 6, height: 12 }
 };
 
+// connections of rooms
 const ROOM_CONNECTIONS = [
     ["Reactor", "Security"], ["Reactor", "UpperEngine"], ["Reactor", "LowerEngine"],
     ["Security", "UpperEngine"], ["Security", "LowerEngine"],
@@ -51,9 +52,78 @@ const ROOM_CONNECTIONS = [
     ["Storage", "Shields"], ["Storage", "Communications"], ["Shields", "Communications"]
 ];
 
+// map nodes for roads (25 total nodes)
+const ROAD_NODES = {
+    "1":  { x: 30.2, y: 22.1 },
+    "2":  { x: ROOM_COORDINATES["MedBay"].x,         y: ROOM_COORDINATES["MedBay"].y },
+    "3":  { x: 27.2, y: 22.1 },
+    "4":  { x: ROOM_COORDINATES["UpperEngine"].x,    y: ROOM_COORDINATES["UpperEngine"].y },
+    "5":  { x: 27.2, y: 41.0 },
+    "6":  { x: ROOM_COORDINATES["Security"].x,       y: ROOM_COORDINATES["Security"].y },
+    "7":  { x: 27.2, y: 54.0 },
+    "8":  { x: ROOM_COORDINATES["Reactor"].x,        y: ROOM_COORDINATES["Reactor"].y },
+    "9":  { x: 27.2, y: 69.4 },  // corridor between 7 and 10 (same x as 7, a little below)
+    "10": { x: ROOM_COORDINATES["LowerEngine"].x,    y: ROOM_COORDINATES["LowerEngine"].y },
+    "11": { x: 36.2, y: 82.5 },
+    "12": { x: ROOM_COORDINATES["Electrical"].x,     y: ROOM_COORDINATES["Electrical"].y },
+    "13": { x: ROOM_COORDINATES["Storage"].x,        y: ROOM_COORDINATES["Storage"].y },
+    "14": { x: 78.9, y: 82.4 },
+    "15": { x: ROOM_COORDINATES["Communications"].x, y: ROOM_COORDINATES["Communications"].y },
+    "16": { x: ROOM_COORDINATES["Shields"].x,        y: ROOM_COORDINATES["Shields"].y },
+    "17": { x: 78.9, y: 43.1 },
+    "18": { x: ROOM_COORDINATES["Navigation"].x,     y: ROOM_COORDINATES["Navigation"].y },
+    "19": { x: 78.9, y: 33.0 },
+    "20": { x: ROOM_COORDINATES["O2"].x,             y: ROOM_COORDINATES["O2"].y },
+    "21": { x: ROOM_COORDINATES["Weapons"].x,        y: ROOM_COORDINATES["Weapons"].y },
+    "22": { x: 60.9, y: 14.8 },
+    "23": { x: ROOM_COORDINATES["Cafeteria"].x,      y: ROOM_COORDINATES["Cafeteria"].y },
+    "24": { x: 49.3, y: 53 },
+    "25": { x: ROOM_COORDINATES["Admin"].x,          y: ROOM_COORDINATES["Admin"].y }
+};
+
+// connections of nodes
+const ROAD_EDGES = [
+    ["1","2"], ["1","3"], ["1","23"],
+    ["2","1"],
+    ["3","1"], ["3","4"], ["3","5"],
+    ["4","3"],
+    ["5","3"], ["5","6"], ["5","7"],
+    ["6","5"],
+    ["7","5"], ["7","8"], ["7","9"],
+    ["8","7"],
+    ["9","7"], ["9","10"],
+    ["10","9"], ["10","11"], ["10","13"],
+    ["11","10"], ["11","12"], ["11","13"],
+    ["12","11"],
+    ["13","11"], ["13","14"], ["13","24"],
+    ["14","13"], ["14","15"], ["14","16"],
+    ["15","14"],
+    ["16","14"], ["16","17"],
+    ["17","16"], ["17","18"], ["17","19"],
+    ["18","17"],
+    ["19","17"], ["19","20"], ["19","21"],
+    ["20","19"],
+    ["21","19"], ["21","22"],
+    ["22","21"], ["22","23"],
+    ["23","1"], ["23","22"], ["23","24"],  
+    ["24","13"], ["24","23"], ["24","25"],
+    ["25","24"]
+];
+
+// room nodes to room names
+const ROOM_TO_NODE = {
+    "MedBay": "2", "UpperEngine": "4", "Security": "6", "Reactor": "8", "LowerEngine": "10",
+    "Electrical": "12", "Storage": "13", "Communications": "15", "Shields": "16",
+    "Navigation": "18", "O2": "20", "Weapons": "21", "Cafeteria": "23", "Admin": "25"
+};
+
+const NODE_LABELS = {};
+for (let i = 1; i <= 25; i++) NODE_LABELS[String(i)] = i;
+
 let debugOverlayVisible = false;
 let debugCanvas = null;
 
+// debug overlay (press D during simulation)
 function createDebugCanvas() {
     if (debugCanvas) return debugCanvas;
     const mapWrapper = document.querySelector(".map-wrapper");
@@ -89,6 +159,114 @@ function getImageDimensions() {
     };
 }
 
+// Convert a node (percent coords) to pixels using current map dimensions
+function nodeToPixels(nodePercent) {
+    if (!nodePercent) return null;
+    const dims = getImageDimensions();
+    if (!dims) return null;
+    return {
+        x: dims.imgLeft + (nodePercent.x / 100) * dims.imgWidth,
+        y: dims.imgTop + (nodePercent.y / 100) * dims.imgHeight
+    };
+}
+
+// Build adjacency list from ROAD_EDGES with distances (for Dijkstra)
+function buildRoadGraph() {
+    const adj = {};
+    function addEdge(a, b, dist) {
+        if (!adj[a]) adj[a] = [];
+        adj[a].push({ id: b, dist: dist });
+    }
+    ROAD_EDGES.forEach(([a, b]) => {
+        const na = ROAD_NODES[a];
+        const nb = ROAD_NODES[b];
+        if (!na || !nb) return;
+        const dx = na.x - nb.x;
+        const dy = na.y - nb.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        addEdge(a, b, dist);
+        addEdge(b, a, dist);
+    });
+    return adj;
+}
+
+function dijkstraShortestPath(adj, startId, endId) {
+    const dist = {};
+    const prev = {};
+    const q = new Set(Object.keys(adj));
+    Object.keys(adj).forEach(id => { dist[id] = id === startId ? 0 : Infinity; prev[id] = null; });
+    while (q.size > 0) {
+        let u = null;
+        let best = Infinity;
+        q.forEach(id => {
+            if (dist[id] < best) { best = dist[id]; u = id; }
+        });
+        if (u === null || u === endId) break;
+        q.delete(u);
+        (adj[u] || []).forEach(({ id: v, dist: w }) => {
+            const alt = dist[u] + w;
+            if (alt < dist[v]) { dist[v] = alt; prev[v] = u; }
+        });
+    }
+    const path = [];
+    for (let cur = endId; cur != null; cur = prev[cur]) path.unshift(cur);
+    return path.length > 0 && path[0] === startId ? path : null;
+}
+
+// Returns array of { x, y } in pixels for the road path from roomA to roomB, or null
+function getRoadPathForRooms(roomA, roomB) {
+    const startId = ROOM_TO_NODE[roomA];
+    const endId = ROOM_TO_NODE[roomB];
+    if (!startId || !endId || startId === endId) return null;
+    const adj = buildRoadGraph();
+    const pathIds = dijkstraShortestPath(adj, startId, endId);
+    if (!pathIds || pathIds.length < 2) return null;
+    const dims = getImageDimensions();
+    if (!dims) return null;
+    return pathIds.map(id => {
+        const n = ROAD_NODES[id];
+        return n ? nodeToPixels(n) : null;
+    }).filter(Boolean);
+}
+
+const MOVE_DURATION_MS = 1500;
+const STAGGER_MS = 220;  // delay between agents on same path so they move in a line instead of overlapping
+let agentPreviousRoom = {};
+let animatingAgents = new Set();
+let agentPathKey = {};   // also for stagger
+
+function animateAlongPath(agentKey, marker, waypointsPx, durationMs, onDone) {
+    if (!marker || !waypointsPx || waypointsPx.length < 2) {
+        if (onDone) onDone();
+        return;
+    }
+    animatingAgents.add(agentKey);
+    const segmentCount = waypointsPx.length - 1;
+    const durationPerSegment = durationMs / segmentCount;
+    let i = 0;
+    function runSegment() {
+        if (i >= segmentCount) {
+            animatingAgents.delete(agentKey);
+            const last = waypointsPx[waypointsPx.length - 1];
+            if (last && agentPositions) agentPositions[agentKey] = { x: last.x, y: last.y };
+            if (onDone) onDone();
+            return;
+        }
+        const from = waypointsPx[i];
+        const to = waypointsPx[i + 1];
+        i++;
+        marker.style.transition = "none";
+        marker.style.left = from.x + "px";
+        marker.style.top = from.y + "px";
+        marker.offsetHeight;
+        marker.style.transition = "left " + durationPerSegment + "ms linear, top " + durationPerSegment + "ms linear, transform 0.2s ease";
+        marker.style.left = to.x + "px";
+        marker.style.top = to.y + "px";
+        setTimeout(runSegment, durationPerSegment);
+    }
+    runSegment();
+}
+
 function drawDebugOverlay() {
     const canvas = createDebugCanvas();
     if (!canvas) return;
@@ -112,7 +290,8 @@ function drawDebugOverlay() {
         };
     });
     
-    ctx.strokeStyle = "#00FFFF";
+    // orignal direct room-to-room lines (greyed out) 
+    ctx.strokeStyle = "#888888";
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
     ROOM_CONNECTIONS.forEach(([r1, r2]) => {
@@ -124,7 +303,8 @@ function drawDebugOverlay() {
         }
     });
     ctx.setLineDash([]);
-    
+
+    // room boxes and magenta centers for each room (room nodes overlay the magenta dots now)
     Object.keys(ROOM_COORDINATES).forEach(room => {
         const coord = ROOM_COORDINATES[room];
         const housing = ROOM_HOUSING[room];
@@ -150,17 +330,55 @@ function drawDebugOverlay() {
         ctx.strokeText(text, x + 10, y + 5);
         ctx.fillText(text, x + 10, y + 5);
     });
+
+    // Road graph: edges (orange) – agents move only on these
+    ctx.strokeStyle = "#FF8C00";
+    ctx.lineWidth = 2;
+    ROAD_EDGES.forEach(([id1, id2]) => {
+        const n1 = ROAD_NODES[id1];
+        const n2 = ROAD_NODES[id2];
+        if (!n1 || !n2) return;
+        const p1 = { x: dims.imgLeft + (n1.x / 100) * dims.imgWidth, y: dims.imgTop + (n1.y / 100) * dims.imgHeight };
+        const p2 = { x: dims.imgLeft + (n2.x / 100) * dims.imgWidth, y: dims.imgTop + (n2.y / 100) * dims.imgHeight };
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+    });
+
+    // Road nodes: circles and numbers (orange) – drawn last so room nodes overlay the purple dots
+    Object.keys(ROAD_NODES).forEach(nodeId => {
+        const n = ROAD_NODES[nodeId];
+        const px = dims.imgLeft + (n.x / 100) * dims.imgWidth;
+        const py = dims.imgTop + (n.y / 100) * dims.imgHeight;
+        const label = (typeof NODE_LABELS !== "undefined" && NODE_LABELS[nodeId]) ? String(NODE_LABELS[nodeId]) : "?";
+        ctx.fillStyle = "#FF8C00";
+        ctx.strokeStyle = "#CC6600";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(px, py, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.font = "bold 11px monospace";
+        ctx.fillStyle = "#000000";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, px, py);
+    });
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
     
     ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-    ctx.fillRect(10, 10, 280, 140);
+    ctx.fillRect(10, 10, 280, 160);
     ctx.font = "14px Arial";
     ctx.fillStyle = "#FFFFFF";
     ctx.fillText("DEBUG (Press 'D')", 20, 30);
     ctx.font = "12px Arial";
-    ctx.fillStyle = "#FF0000"; ctx.fillText("■ Red: Map boundary", 20, 55);
-    ctx.fillStyle = "#00FFFF"; ctx.fillText("■ Cyan: Pathways", 20, 75);
-    ctx.fillStyle = "#FFFF00"; ctx.fillText("■ Yellow: Housing boxes", 20, 95);
-    ctx.fillStyle = "#FF00FF"; ctx.fillText("■ Magenta: Room centers", 20, 115);
+    ctx.fillStyle = "#FF0000"; ctx.fillText("Red: Map boundary", 20, 55);
+    ctx.fillStyle = "#888888"; ctx.fillText("Grey: Obsolete room lines", 20, 75);
+    ctx.fillStyle = "#FF8C00"; ctx.fillText("Orange: Road nodes & edges (agent paths)", 20, 95);
+    ctx.fillStyle = "#FFFF00"; ctx.fillText("Yellow: Housing boxes", 20, 115);
+    ctx.fillStyle = "#FF00FF"; ctx.fillText("Magenta: Room centers", 20, 135);
 }
 
 function toggleDebug() {
@@ -457,13 +675,47 @@ function updateAgentPositions(agents) {
                 marker.classList.remove("agent-marker-dead");
             }
 
-            // Animate: move from previous position (if any) to new one
+            const prevRoom = agentPreviousRoom[agentKey];
+            const roomChanged = prevRoom != null && prevRoom !== roomName;
+
+            if (animatingAgents.has(agentKey)) {
+                seenAgents.add(agentKey);
+                return;
+            }
+
+            if (roomChanged && isAlive && typeof getRoadPathForRooms === "function") {
+                const waypointsPx = getRoadPathForRooms(prevRoom, roomName);
+                if (waypointsPx && waypointsPx.length >= 2) {
+                    const pathKey = prevRoom + "|" + roomName;
+                    let samePathCount = 0;
+                    Object.keys(agentPathKey).forEach(function(k) {
+                        if (agentPathKey[k] === pathKey) samePathCount++;
+                    });
+                    const delayMs = samePathCount * STAGGER_MS;
+                    agentPreviousRoom[agentKey] = roomName;
+                    animatingAgents.add(agentKey);
+                    function startMove() {
+                        agentPathKey[agentKey] = pathKey;
+                        animateAlongPath(agentKey, marker, waypointsPx, MOVE_DURATION_MS, function() {
+                            delete agentPathKey[agentKey];
+                        });
+                    }
+                    if (delayMs > 0) {
+                        setTimeout(startMove, delayMs);
+                    } else {
+                        startMove();
+                    }
+                    seenAgents.add(agentKey);
+                    return;
+                }
+            }
+
+            agentPreviousRoom[agentKey] = roomName;
+
             const prevPos = agentPositions[agentKey];
             marker.style.left = (prevPos ? prevPos.x : x) + "px";
             marker.style.top = (prevPos ? prevPos.y : y) + "px";
 
-            // Force layout so the browser picks up the starting position before transitioning
-            // eslint-disable-next-line no-unused-expressions
             marker.offsetHeight;
 
             marker.style.left = x + "px";
@@ -483,6 +735,9 @@ function updateAgentPositions(agents) {
             }
             delete agentMarkers[key];
             delete agentPositions[key];
+            delete agentPreviousRoom[key];
+            delete agentPathKey[key];
+            animatingAgents.delete(key);
         }
     });
 }

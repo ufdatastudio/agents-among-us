@@ -13,7 +13,7 @@ class HonestAgent(BaseAgent):
         """
         Lightweight placeholder substitution for user-provided prompt overrides.
         Supported keys (in curly braces) inside the template:
-          {self_name}  – this agent's name
+          {self.name}  – this agent's name
           {role}       – 'honest'
           {round_num}  – current round number
           {max_moves}  – movement ticks per round
@@ -21,7 +21,7 @@ class HonestAgent(BaseAgent):
         if not template:
             return template
         mapping = {
-            "self_name": self.name,
+            "self.name": self.name,
             "role": self.role,
             "max_moves": str(self.max_moves),
         }
@@ -82,12 +82,10 @@ class HonestAgent(BaseAgent):
         options_str += "Available movement actions:\n" + move_options_str + "\n"
 
         default_move_instructions = """
-Goal: Maximize information gain. You need to witness other agents to verify their locations and identify byzantine agents. You are in a movement phase.
-
 INSTRUCTIONS:
 1. Choose ONE action from the lists above.
-2. Output ONLY the action keyword or room name. 
-3. Do NOT write "Action:", "I will", or explain your reasoning. 
+2. Output ONLY the action keyword or room name.
+3. Do NOT write "Action:", "I will", or explain your reasoning.
 4. Do NOT output markdown or punctuation. One word or phrase only.
 """
         overrides = getattr(self, "prompt_overrides", {}) or {}
@@ -106,6 +104,7 @@ INSTRUCTIONS:
 {current_round_log}
 ================================
 
+Goal: Maximize information gain. You need to witness other agents to verify their locations and identify byzantine agents. You are in a movement phase.
 Options:
 {options_str}
 
@@ -130,15 +129,13 @@ Options:
         discussion_log = self._read_file(world_view["discussion_log_path"])
         recent_discussion = self._get_current_round_log(discussion_log, round_num)
 
-        default_discussion_instructions = f"""
-You are in a discussion phase. 
-
+        default_discussion_instructions = """
 INSTRUCTIONS:
-1. Use your memory to determine innocent, suspicious, or incrementing behavior. Look at what has been said to discuss (unless you are the opening statement) amongst each other. 
+1. Use your memory to determine innocent, suspicious, or incrementing behavior. Look at what has been said to discuss (unless you are the opening statement) amongst each other.
 2. Build a consensus to eject a suspect.
-3. If you ({self.name}) saw someone safe, verify their alibi. If you saw something suspicious or incriminating, state it clearly. If you have no new info, state your location to help others build the timeline
-4. Check the discussion log above.  If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.
-5. Share observations and deduce who you suspect, if anyone, to be Byzantine agents in order to eject them. Look at strong correlations between agents' locations and bodies seen to deduce who could be responsible for eliminations. 
+3. If you ({self.name}) saw someone safe, verify their alibi. If you saw something suspicious or incriminating, state it clearly. If you have no new info, state your location to help others build the timeline.
+4. Check the discussion log above. If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.
+5. Share observations and deduce who you suspect, if anyone, to be Byzantine agents in order to eject them. Look at strong correlations between agents' locations and bodies seen to deduce who could be responsible for eliminations.
 6. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.
 7. Keep it short (< 30 words).
 8. Speak in first person as if you are the agent yourself.
@@ -153,9 +150,13 @@ INSTRUCTIONS:
                 {"round_num": str(round_num)},
             )
         else:
-            discussion_body = default_discussion_instructions
+            discussion_body = self._substitute_placeholders(
+                default_discussion_instructions,
+                {"round_num": str(round_num)},
+            )
 
         prompt = f"""
+You are in a discussion phase.
 === Your personal memory log of what you saw in the previous round ===
 {recent_action_log}
 ==================================
@@ -178,14 +179,10 @@ INSTRUCTIONS:
         results_log = self._read_file(world_view["results_log_path"])
 
         default_vote_instructions = """
-You are in a voting phase.
-
-Note: Be aware of total player count to ensure Byzantines do not equal or outnumber honest agents. Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts are seen.
-
 INSTRUCTIONS:
 1. Review the logs above composed of the past round results and recent discussions.
 2. Vote for the candidate who is most suspicious based on the discussion history of the recent rounds above and past round results.
-3. Decide which candidate is most likely to be a Byzantine agent to eject, looking for inconsistencies in their statements or suspicious or incriminating behavior from logs. 
+3. Decide which candidate is most likely to be a Byzantine agent to eject, looking for inconsistencies in their statements or suspicious or incriminating behavior from logs.
 4. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote.
 """
         overrides = getattr(self, "prompt_overrides", {}) or {}
@@ -193,17 +190,23 @@ INSTRUCTIONS:
         if vote_override:
             vote_body = self._substitute_placeholders(
                 vote_override,
-                {"round_num": str(round_num)},
+                {"round_num": str(round_num), "candidates": candidates},
             )
         else:
-            vote_body = default_vote_instructions
+            vote_body = self._substitute_placeholders(
+                default_vote_instructions,
+                {"round_num": str(round_num), "candidates": candidates},
+            )
 
         prompt = f"""
 {results_log}
 =====================
 {recent_discussion}
 =====================
+You are in a voting phase.
 Candidates: {candidates}.
+
+Note: Be aware of total player count to ensure Byzantines do not equal or outnumber honest agents. Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts are seen.
 
 {vote_body}
 """

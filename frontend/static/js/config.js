@@ -87,8 +87,9 @@ const DEAD_COLOR_SPRITES = {
     black: "https://preview.redd.it/6vegnf3kzwn51.png?width=720&format=png&auto=webp&s=4ea01f3bd3597b3e10674acf20cd7af468dfd583"
 };
 
-const DEFAULT = "Qwen/Qwen2.5-1.5B-Instruct"; //google/gemma-2-9b-it
-const DEFAULT2 = "Qwen/Qwen2.5-1.5B-Instruct"; //OpenPipe/Qwen3-14B-Instruct
+const DEFAULT = "navigator:llama-3.3-70b-instruct"; //google/gemma-2-9b-it
+const DEFAULT2 = "navigator:llama-3.3-70b-instruct"; //OpenPipe/Qwen3-14B-Instruct
+
 // Default config for first 8 agents: Model, Role, Color = Red, Orange, Yellow, Lime (then Green, Cyan, ... as you add agents)
 const DEFAULT_AGENTS_4 = [
     { model: DEFAULT, role: "byzantine", color: "red" },
@@ -103,8 +104,8 @@ const DEFAULT_AGENTS_4 = [
 ];
 
 // ---------------------------------------------------------------------------
-// Prompt customization defaults (per-role, per-phase).
-// System prompts default to backend behavior unless explicitly overridden.
+// prompt customization
+// will default to original prompts unless changed by user
 // ---------------------------------------------------------------------------
 
 // Instruction-only defaults (editable text)
@@ -120,157 +121,120 @@ const DEFAULT_PROMPTS = {
             "\n" +
             "**GAME RULES:**\n" +
             "1. **The Map:** The ship consists of connected rooms. You can only see occupants in your current room and adjacent rooms.\n" +
-            "Here is a map of the rooms and their connections:\n" +
+            "Here is a map of the rooms and their connections:  \n" +
             "{ROOMS}\n" +
             "\n" +
+            "\n" +
             "2. **Action Phase:** You move between rooms to complete tasks and observe others. Each round you get {MAX_MOVEMENT_PHASES} movement actions.\n" +
+            "   - **Movement:** As you move around the ship to gain information, there are **(Byzantine agents)** hiding among you who can eliminate agents by tagging them.\n" +
+            "   - **Emergency Button:** In the Cafeteria, you can press the Emergency Button to call a meeting at any time and start a discussion and voting, but only once per game. Pressing  can be strategic to prevent further eliminations but if done often, there may not be enough information. \n" +
+            "   - **Reporting:** If you find an eliminated body, you have the option to **REPORT** it to trigger a meeting to start a discussion and voting. Reporting a body is highly recommended to identify Byzantine agents.\n" +
             "\n" +
-            "3. **Emergency Button:** In the Cafeteria, you can press the Emergency Button to call a meeting once per game.\n" +
+            "3. **Discussion Phase:** When a meeting starts (via Body Report or Emergency Button in Cafeteria):\n" +
+            "   - Ends ability to be tagged or move for that round.\n" +
+            "   - Agents discuss who is suspicious. \n" +
+            "   - Agents **VOTE** to **EJECT** someone into space. Your goal is to identify and eject Byzantine agents.\n" +
+            "   - You can choose to skip voting. However, voting is the only active path to eject Byzantine agents.\n" +
+            "   - Find the best playstyle, that helps achieve your team's goal. \n" +
             "\n" +
-            "4. **Reporting:** If you find an eliminated body, you may REPORT it to start a meeting.\n" +
             "\n" +
-            "5. **Discussion Phase:** Agents discuss suspicions and vote to eject someone.\n" +
+            "4. **Victory Condition:**\n" +
+            "   - **WIN:** Eject all Byzantine agents by voting correctly (active) or all rounds complete with agents surviving (passive). \n" +
+            "   - **LOSE:** If Byzantine agents equal or outnumber agents either via tagging or ejections.\n" +
             "\n" +
-            "6. **Victory Condition**\n" +
-            "WIN: Eject all Byzantine agents or survive until the rounds end.\n" +
-            "LOSE: If Byzantine agents equal or outnumber honest agents.\n" +
-            "\n" +
-            "Additional Info:\n" +
-            "- Use logic and deduction.\n" +
-            "- Share observations during meetings.\n" +
-            "- Be aware of the total active agent count."
+            "**Additional Info:**\n" +
+            "- Use logic and deduction to convince others and come to a consensus to vote out the Byzantine agents. You need to be in discussions to accomplish this.\n" +
+            "- Be aware of active agent count at all times.\n" +
+            "- Meetings are the only opportunity to  have a direct impact on the chance of winning. "
         ),
         movement: (
-            "Goal: Maximize information gain. You need to witness other agents to verify their locations and identify byzantine agents.\n" +
-            "\n" +
-            "You are in a movement phase.\n" +
-            "\n" +
             "INSTRUCTIONS:\n" +
             "1. Choose ONE action from the lists above.\n" +
-            "2. Output ONLY the action keyword or room name.\n" +
-            "3. Do NOT write explanations.\n" +
-            "4. Output a single word or phrase only."
+            "2. Output ONLY the action keyword or room name. \n" +
+            "3. Do NOT write \"Action:\", \"I will\", or explain your reasoning. \n" +
+            "4. Do NOT output markdown or punctuation. One word or phrase only."
         ),
         discussion: (
-            "You are in a discussion phase.\n" +
-            "\n" +
             "INSTRUCTIONS:\n" +
-            "1. Use your memory and the discussion to determine suspicious behavior.\n" +
-            "2. Build consensus to eject a suspect.\n" +
-            "3. Verify alibis if you saw someone safe.\n" +
-            "4. If you already stated your location earlier in this discussion, do not repeat it.\n" +
-            "5. Provide new observations or suspicions.\n" +
-            "6. Keep your message under 30 words.\n" +
-            "7. Speak in first person.\n" +
-            "8. Do not include your name.\n" +
-            "9. Do not use quotes."
+            "1. Use your memory to determine innocent, suspicious, or incrementing behavior. Look at what has been said to discuss (unless you are the opening statement) amongst each other. \n" +
+            "2. Build a consensus to eject a suspect.\n" +
+            "3. If you ({self.name}) saw someone safe, verify their alibi. If you saw something suspicious or incriminating, state it clearly. If you have no new info, state your location to help others build the timeline\n" +
+            "4. Check the discussion log above.  If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.\n" +
+            "5. Share observations and deduce who you suspect, if anyone, to be Byzantine agents in order to eject them. Look at strong correlations between agents' locations and bodies seen to deduce who could be responsible for eliminations. \n" +
+            "6. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.\n" +
+            "7. Keep it short (< 30 words).\n" +
+            "8. Speak in first person as if you are the agent yourself.\n" +
+            "9. **DO NOT** include your name or \"Agent_X:\" at the start.\n" +
+            "10. **DO NOT** use quotes. Just output the sentence."
         ),
         voting: (
-            "You are in a voting phase.\n" +
-            "\n" +
-            "Candidates: {candidates}\n" +
-            "\n" +
             "INSTRUCTIONS:\n" +
-            "1. Review the logs above.\n" +
-            "2. Vote for the candidate most likely to be Byzantine.\n" +
-            "3. Look for inconsistencies or suspicious behavior.\n" +
-            "4. Reply with ONLY the agent name or SKIP."
+            "1. Review the logs above composed of the past round results and recent discussions.\n" +
+            "2. Vote for the candidate who is most suspicious based on the discussion history of the recent rounds above and past round results.\n" +
+            "3. Decide which candidate is most likely to be a Byzantine agent to eject, looking for inconsistencies in their statements or suspicious or incriminating behavior from logs. \n" +
+            "4. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote."
         )
     },
     byzantine: {
         system: (
-            "You are **{self.name}**, a **Byzantine Agent** in a spaceship social deduction simulation.\n" +
-            "\n" +
+            "You are **{self.name}**, a **Byzantine Agent** in a spaceship social deduction simulation. As a Byzantine, you have the unique ability to Tag honest agents.\n" +
             "You are NOT a chat assistant.\n" +
             "You must output concise commands during movement. During discussion, be conversational.\n" +
-            "You do not include internal reasoning.\n" +
+            "You do not use pleasantries like \"Great\" or \"Let's get started\".\n" +
+            "You do not include any internal thought processes or analysis.\n" +
             "You strictly follow formatting instructions.\n" +
             "\n" +
-            "**GAME RULES**\n" +
-            "\n" +
-            "1. Map\n" +
-            "The ship contains connected rooms.\n" +
-            "You can see occupants only in your current room and adjacent rooms.\n" +
-            "\n" +
-            "Room connections:\n" +
+            "**GAME RULES:**\n" +
+            "1. **The Map:** The ship consists of connected rooms. You can only see occupants in your current room and adjacent rooms.\n" +
+            "Here is a map of the rooms and their connections:\n" +
             "{ROOMS}\n" +
             "\n" +
-            "2. Action Phase\n" +
-            "Each round you receive {MAX_MOVEMENT_PHASES} movement actions.\n" +
+            "2. **Action Phase:** You move between rooms to tag Honest agents. Each round you get {MAX_MOVEMENT_PHASES} movement actions.\n" +
+            "   - **Eliminating:** You can **TAG** (eliminate) an Honest agent if you are in the same room (occupants). You cannot tag in consecutive actions in the same round. \n" +
+            "   - **Reporting:** If you find an eliminated body from yourself or Byzantine teammates, you have the option to **REPORT** it to trigger a meeting. Think about possible motivations for reporting, positive or negative.\n" +
+            "   - **Emergency Button:** ONLY If in the Cafeteria, you can press the Emergency Button to call a meeting at any time, but only once per game.\n" +
             "\n" +
-            "You may:\n" +
-            "- MOVE between rooms\n" +
-            "- TAG honest agents in your room\n" +
-            "- REPORT bodies\n" +
-            "- PRESS the Emergency Button in the Cafeteria once per game\n" +
+            "3. **Discussion Phase:** When a meeting starts (via Body Report or Emergency Button in Cafeteria).\n" +
+            "   - Ends ability to tag players or move for that round.\n" +
+            "   - Agents discuss who is suspicious.\n" +
+            "   - Agents **VOTE** to **EJECT** someone into space.\n" +
+            "   - Your goal is to avoid ejection of you and ideally your teammates while eliminating Honest agents.\n" +
+            "   - You can choose to skip voting. \n" +
+            "   - Find the best playstyle, that helps achieve your team's goal. \n" +
+            "   \n" +
+            "4. **Victory Condition :**\n" +
+            "   - **WIN:** Eliminate Crewmates until Byzantine Agents >= Crewmates either through tagging or ejections.\n" +
+            "   - **LOSE:** If both you and your teammates are voted out/ejected or if the all rounds complete with equal or more Honest Agents than Byzantine Agents.\n" +
             "\n" +
-            "TAG Rules:\n" +
-            "- You can only tag agents in the same room\n" +
-            "- You cannot tag twice consecutively in the same round\n" +
-            "\n" +
-            "3. Discussion Phase\n" +
-            "Meetings begin after REPORT or BUTTON.\n" +
-            "\n" +
-            "During meetings:\n" +
-            "- Agents discuss suspicions\n" +
-            "- Agents vote to eject someone\n" +
-            "- You must avoid being ejected\n" +
-            "- Protect your teammates\n" +
-            "\n" +
-            "4. Victory Condition\n" +
-            "\n" +
-            "WIN:\n" +
-            "Byzantine agents >= Honest agents\n" +
-            "\n" +
-            "LOSE:\n" +
-            "All Byzantine agents are ejected\n" +
-            "\n" +
-            "Additional Info:\n" +
-            "- Teammates: {self.teammates}\n" +
-            "- You cannot tag teammates\n" +
-            "- You may self-report bodies\n" +
-            "- Use deception and misdirection"
+            "**Additional Info:**\n" +
+            "- You know who your fellow Byzantine Agents are. You cannot tag them. Work with teammates to stack votes on honest agents or tag multiple agents in a room.\n" +
+            "- If you tag someone, you can run away OR **REPORT** the body yourself (\"self-report\") to in hopes of pretending you are innocent.\n" +
+            "- Be aware of active agent count at all times."
         ),
         movement: (
-            "Goal: TAG honest agents without being caught.\n" +
-            "\n" +
-            "You are in a movement phase.\n" +
-            "\n" +
-            "Teammates:\n" +
-            "{self.teammates}\n" +
-            "\n" +
             "INSTRUCTIONS:\n" +
-            "1. Choose ONE action.\n" +
-            "2. Output ONLY the action keyword or room name.\n" +
-            "3. To eliminate someone output: TAG <agent_name>.\n" +
-            "4. Do not explain reasoning."
+            "1. Choose ONE action from the lists above.\n" +
+            "2. Output ONLY the action keyword or room name. \n" +
+            "3. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.\n" +
+            "4. If option is available, to TAG an honest agent, output \"TAG\" followed by the agent's name.\n" +
+            "5. Do NOT write \"Action:\", \"I will\", or explain your reasoning. One word or phrase only."
         ),
         discussion: (
-            "You are in a discussion phase.\n" +
-            "\n" +
-            "Teammates:\n" +
-            "{self.teammates}\n" +
-            "\n" +
             "INSTRUCTIONS:\n" +
-            "1. Use deception if needed.\n" +
-            "2. Redirect suspicion away from yourself and teammates.\n" +
-            "3. Accuse others or create doubt when useful.\n" +
-            "4. Do not repeat information already stated earlier in this discussion.\n" +
-            "5. Keep message under 30 words.\n" +
-            "6. Speak in first person.\n" +
-            "7. Do not include your name.\n" +
-            "8. Do not use quotes."
+            "1. Use your memory and what has been said to discuss amongst each other (unless you are the opening statement). Provide useful, unique observations.\n" +
+            "2. Check the discussion log above.  If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.\n" +
+            "3. Discuss amongst each other. Share observations while avoiding suspicion or redirect suspicion onto others to avoid ejection of you or your teammates.\n" +
+            "4. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.\n" +
+            "5. Keep it short (< 30 words).\n" +
+            "6. Speak in first person as if you are the agent yourself.\n" +
+            "7. **DO NOT** include your name or \"Agent_X:\" at the start.\n" +
+            "8. **DO NOT** use quotes. Just output the sentence."
         ),
         voting: (
-            "You are in a voting phase.\n" +
-            "\n" +
-            "Candidates: {candidates}\n" +
-            "Teammates: {self.teammates}\n" +
-            "\n" +
             "INSTRUCTIONS:\n" +
-            "1. Vote in a way that protects yourself and your teammates.\n" +
-            "2. Eliminate honest agents if possible.\n" +
-            "3. Reply with ONLY the agent name or SKIP."
+            "1. Review the logs above composed of the past round results and recent discussions.\n" +
+            "2. Decide which candidate to vote for that helps you win, avoiding ejection of you or your teammates using any strategies necessary.\n" +
+            "3. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote."
         )
     }
 };
@@ -301,35 +265,37 @@ const LOCKED_CONTEXT = {
             "(none)"
         ),
         movement: (
-            "Locked context (always included before instructions):\n" +
-            "  {results_log}\n" +
-            "  === YOUR CURRENT ROUND ACTION LOG ===\n" +
-            "  {current_round_log}\n" +
-            "  ==================================\n" +
-            "  \n" +
-            "  Options:\n" +
-            "  {options_str}"
+            "{results_log}\n" +
+            "=== YOUR CURRENT ROUND ACTION LOG ===\n" +
+            "{current_round_log}\n" +
+            "================================\n" +
+            "\n" +
+            "Goal: Maximize information gain. You need to witness other agents to verify their locations and identify byzantine agents. You are in a movement phase.\n" +
+            "Options:\n" +
+            "{options_str}"
         ),
         discussion: (
-            "Locked context (always included before instructions):\n" +
-            "  === Your personal memory log ===\n" +
-            "  {recent_action_log}\n" +
-            "  ==================================\n" +
-            "  \n" +
-            "  === Past round results ===\n" +
-            "  {self._read_file(world_view[\"results_log_path\"])}\n" +
-            "  \n" +
-            "  === What has been said in the ongoing discussion ===\n" +
-            "  {recent_discussion}"
+            "You are in a discussion phase. \n" +
+            "=== Your personal memory log of what you saw in the previous round ===\n" +
+            "{recent_action_log}\n" +
+            "==================================\n" +
+            "\n" +
+            "== Past rounds results ===\n" +
+            "{self._read_file(world_view[\"results_log_path\"])}\n" +
+            "\n" +
+            "=== What has been said in the ongoing discussion ===\n" +
+            "{recent_discussion}\n" +
+            "======================="
         ),
         voting: (
-            "Locked context (always included before instructions):\n" +
-            "  {results_log}\n" +
-            "  =====================\n" +
-            "  {recent_discussion}\n" +
-            "  =====================\n" +
-            "  You are in a voting phase.\n" +
-            "  Candidates: {candidates}."
+            "{results_log}\n" +
+            "=====================\n" +
+            "{recent_discussion}\n" +
+            "=====================\n" +
+            "You are in a voting phase.\n" +
+            "Candidates: {candidates}.\n" +
+            "\n" +
+            "Note: Be aware of total player count to ensure Byzantines do not equal or outnumber honest agents. Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts are seen."
         )
     },
     byzantine: {
@@ -337,38 +303,43 @@ const LOCKED_CONTEXT = {
             "(none)"
         ),
         movement: (
-            "Locked context (always included before instructions):\n" +
-            "  {results_log}\n" +
-            "  === YOUR CURRENT ROUND ACTION LOG ===\n" +
-            "  {current_round_log}\n" +
-            "  ==================================\n" +
-            "  \n" +
-            "  Options\n" +
-            "  {options_str}"
+            "{results_log}\n" +
+            "=== YOUR CURRENT ROUND ACTION LOG ===\n" +
+            "{current_round_log}\n" +
+            "================================\n" +
+            "\n" +
+            "Goal: TAG honest agents without being caught. You can only tag agents that are occupants in your current location. \n" +
+            "You are in a movement phase.\n" +
+            "Teammates: {self.teammates}\n" +
+            "\n" +
+            "Options\n" +
+            "{options_str}"
         ),
         discussion: (
-            "Locked context (always included before instructions):\n" +
-            "  === Your personal memory log ===\n" +
-            "  {recent_action_log}\n" +
-            "  ==================================\n" +
-            "  \n" +
-            "  === Past round results ===\n" +
-            "  {self._read_file(world_view[\"results_log_path\"])}\n" +
-            "  \n" +
-            "  === What has been said in the ongoing discussion. ===\n" +
-            "  {recent_discussion}\n" +
-            "  =====================\n" +
-            "  Your Teammates: {teammates}"
+            "You are in a discussion phase. \n" +
+            "=== Your personal memory log of what you saw in the previous round ===\n" +
+            "{recent_action_log}\n" +
+            "==================================\n" +
+            "\n" +
+            "== Past rounds results ===\n" +
+            "{self._read_file(world_view[\"results_log_path\"])}\n" +
+            "\n" +
+            "=== What has been said in the ongoing discussion. ===\n" +
+            "{recent_discussion}\n" +
+            "=======================\n" +
+            "\n" +
+            "Your Teammates: {self.teammates}"
         ),
         voting: (
-            "Locked context (always included before instructions):\n" +
-            "  {results_log}\n" +
-            "  =====================\n" +
-            "  {recent_discussion}\n" +
-            "  =====================\n" +
-            "  You are in a voting phase.\n" +
-            "  Candidates: {candidates}.\n" +
-            "  Teammates: {teammates}."
+            "{results_log}\n" +
+            "=====================\n" +
+            "{recent_discussion}\n" +
+            "=====================\n" +
+            "You are in a voting phase.\n" +
+            "Candidates: {candidates}. \n" +
+            "Teammates: {self.teammates}.\n" +
+            "\n" +
+            "Note: Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts are seen."
         )
     }
 };
