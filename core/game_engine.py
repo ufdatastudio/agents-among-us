@@ -92,11 +92,12 @@ class Observer:
         return scores_by_agent  
 
 class GameEngine:
-    def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST, num_rounds=DEFAULT_NUM_ROUNDS, num_ticks=None):
+    def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST, num_rounds=DEFAULT_NUM_ROUNDS, num_ticks=None, num_discussion_messages=2):
         self.game_id = game_id
         self.num_agents = num_agents
         self.num_rounds = num_rounds
         self.num_ticks = num_ticks if num_ticks is not None else MAX_MOVEMENT_PHASES
+        self.num_discussion_messages = num_discussion_messages
         self.agents = []
         self.state = None
         self.logger = None
@@ -125,11 +126,11 @@ class GameEngine:
                 if role == 'byzantine':
                     teammates = [name for name in byz_names if name != agent_name]
                     self.agents.append(
-                        ByzantineAgent(agent_name, color, teammates, model, max_moves=self.num_ticks)
+                        ByzantineAgent(agent_name, color, teammates, model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages)
                     )
-                else:  # honest
+                else:
                     self.agents.append(
-                        HonestAgent(agent_name, color, model, max_moves=self.num_ticks)
+                        HonestAgent(agent_name, color, model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages)
                     )
             
             print(f"Created {len(self.agents)} agents with EXACT configuration from frontend")
@@ -148,17 +149,16 @@ class GameEngine:
                 assigned_model = byz_models[i % len(byz_models)]
                 teammates = [b for b in byz_names if b != name]
                 self.agents.append(
-                    ByzantineAgent(name, colors[i], teammates, assigned_model, max_moves=self.num_ticks)
+                    ByzantineAgent(name, colors[i], teammates, assigned_model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages)
                 )
 
-            # Create Honest Agents
-            start_index = n_byz 
+            start_index = n_byz
             for i in range(n_honest):
                 name = f"Agent_{start_index + i}"
                 color = colors[(start_index + i) % len(colors)]
                 assigned_model = honest_models[i % len(honest_models)]
                 self.agents.append(
-                    HonestAgent(name, color, assigned_model, max_moves=self.num_ticks)
+                    HonestAgent(name, color, assigned_model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages)
                 )
 
         # random.shuffle(self.agents)  # commented out bc we don't want to shuffle agents
@@ -297,10 +297,9 @@ class GameEngine:
             if agent.name != caller_name:
                 discussion_order.append(agent)
 
-        # 3. Conversation (2 Rounds)
         round_statements = []
         statement_counts = {a.name: 0 for a in active_agents}
-        for discussion_round in range(2):            
+        for discussion_round in range(self.num_discussion_messages):            
             for agent in discussion_order:
                 view = self.state.get_agent_view(agent.name, round_num, log_to_file=False) 
                 msg = agent.participate_in_discussion("", view, round_num)
@@ -316,7 +315,7 @@ class GameEngine:
                     'Agent': agent.name,
                     'Text': clean_msg,
                     'Reported': is_reporter,
-                    'S_Num': min(statement_counts[agent.name], 2)
+                    'S_Num': min(statement_counts[agent.name], self.num_discussion_messages)
                 })
 
                 formatted_msg = f"{agent.name}: {clean_msg}"

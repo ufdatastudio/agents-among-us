@@ -100,6 +100,20 @@
                     >
                     <small class="form-hint">Leave empty for auto-generated ID</small>
                 </div>
+
+                <div class="form-group">
+                    <label for="num_discussion_messages">Number of Messages per Discussion</label>
+                    <input 
+                        type="number" 
+                        id="num_discussion_messages" 
+                        name="num_discussion_messages" 
+                        min="1" 
+                        step="1"
+                        value="2"
+                        required
+                    >
+                    <small class="form-hint">How many times each agent may speak per discussion (min 1)</small>
+                </div>
             </div>
 
             <!-- API Keys (optional) -->
@@ -194,9 +208,12 @@
                                 Reset This Prompt to Default
                             </button>
                             <div class="prompt-modal-footer-spacer"></div>
-                            <button type="button" id="confirmPromptsBtn">
-                                Confirm All Prompts
-                            </button>
+                            <div class="confirm-prompts-wrap">
+                                <button type="button" id="confirmPromptsBtn">
+                                    Confirm All Prompts
+                                </button>
+                                <span id="confirmPromptsStatus" class="confirm-prompts-status" aria-live="polite"></span>
+                            </div>
                         </div>
                     </div>
                 </div>

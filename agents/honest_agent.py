@@ -5,9 +5,10 @@ from agents.base_agent import BaseAgent
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
 class HonestAgent(BaseAgent):
-    def __init__(self, name, color, model_name, max_moves=None):
+    def __init__(self, name, color, model_name, max_moves=None, max_discussion_messages=2):
         super().__init__(name, color, "honest", model_name)
         self.max_moves = max_moves if max_moves is not None else MAX_MOVEMENT_PHASES
+        self.max_discussion_messages = max_discussion_messages
 
     def _substitute_placeholders(self, template, extra_mapping=None):
         """
@@ -17,6 +18,7 @@ class HonestAgent(BaseAgent):
           {role}       – 'honest'
           {round_num}  – current round number
           {max_moves}  – movement ticks per round
+          {max_discussion_messages}  – messages per discussion
         """
         if not template:
             return template
@@ -129,6 +131,15 @@ Options:
         discussion_log = self._read_file(world_view["discussion_log_path"])
         recent_discussion = self._get_current_round_log(discussion_log, round_num)
 
+        n = self.max_discussion_messages
+        if n < 3:
+            if n == 1:
+                chances_line = "6. You get 1 chance to speak. Give your initial thought."
+            else:
+                chances_line = "6. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak."
+        else:
+            chances_line = f"6. You get {n} chances to speak: your first message is your opening statement, the middle messages are for interactive discussion (follow-ups, questions, answers), and your last message is your final stance."
+
         default_discussion_instructions = """
 INSTRUCTIONS:
 1. Use your memory to determine innocent, suspicious, or incrementing behavior. Look at what has been said to discuss (unless you are the opening statement) amongst each other.
@@ -136,7 +147,7 @@ INSTRUCTIONS:
 3. If you ({self.name}) saw someone safe, verify their alibi. If you saw something suspicious or incriminating, state it clearly. If you have no new info, state your location to help others build the timeline.
 4. Check the discussion log above. If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.
 5. Share observations and deduce who you suspect, if anyone, to be Byzantine agents in order to eject them. Look at strong correlations between agents' locations and bodies seen to deduce who could be responsible for eliminations.
-6. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.
+""" + chances_line + """
 7. Keep it short (< 30 words).
 8. Speak in first person as if you are the agent yourself.
 9. **DO NOT** include your name or "Agent_X:" at the start.
@@ -144,16 +155,11 @@ INSTRUCTIONS:
 """
         overrides = getattr(self, "prompt_overrides", {}) or {}
         discussion_override = overrides.get("discussion")
+        extra = {"round_num": str(round_num), "max_discussion_messages": str(self.max_discussion_messages)}
         if discussion_override:
-            discussion_body = self._substitute_placeholders(
-                discussion_override,
-                {"round_num": str(round_num)},
-            )
+            discussion_body = self._substitute_placeholders(discussion_override, extra)
         else:
-            discussion_body = self._substitute_placeholders(
-                default_discussion_instructions,
-                {"round_num": str(round_num)},
-            )
+            discussion_body = self._substitute_placeholders(default_discussion_instructions, extra)
 
         prompt = f"""
 You are in a discussion phase.

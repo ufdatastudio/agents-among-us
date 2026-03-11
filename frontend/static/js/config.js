@@ -87,8 +87,14 @@ const DEAD_COLOR_SPRITES = {
     black: "https://preview.redd.it/6vegnf3kzwn51.png?width=720&format=png&auto=webp&s=4ea01f3bd3597b3e10674acf20cd7af468dfd583"
 };
 
-const DEFAULT = "navigator:llama-3.3-70b-instruct"; //google/gemma-2-9b-it
-const DEFAULT2 = "navigator:llama-3.3-70b-instruct"; //OpenPipe/Qwen3-14B-Instruct
+const DEFAULT = "Qwen/Qwen2.5-1.5B-Instruct";
+const DEFAULT2 = "Qwen/Qwen2.5-1.5B-Instruct";
+
+// const DEFAULT = "navigator:llama-3.3-70b-instruct"; 
+// const DEFAULT2 = "navigator:llama-3.3-70b-instruct";
+
+// const DEFAULT = "google/gemma-2-9b-it";
+// const DEFAULT2 = "OpenPipe/Qwen3-14B-Instruct";
 
 // Default config for first 8 agents: Model, Role, Color = Red, Orange, Yellow, Lime (then Green, Cyan, ... as you add agents)
 const DEFAULT_AGENTS_4 = [
@@ -161,7 +167,7 @@ const DEFAULT_PROMPTS = {
             "3. If you ({self.name}) saw someone safe, verify their alibi. If you saw something suspicious or incriminating, state it clearly. If you have no new info, state your location to help others build the timeline\n" +
             "4. Check the discussion log above.  If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.\n" +
             "5. Share observations and deduce who you suspect, if anyone, to be Byzantine agents in order to eject them. Look at strong correlations between agents' locations and bodies seen to deduce who could be responsible for eliminations. \n" +
-            "6. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.\n" +
+            "6. You get {max_discussion_messages} chances to speak. First is your initial thought, second is your follow-up after others speak.\n" +
             "7. Keep it short (< 30 words).\n" +
             "8. Speak in first person as if you are the agent yourself.\n" +
             "9. **DO NOT** include your name or \"Agent_X:\" at the start.\n" +
@@ -224,7 +230,7 @@ const DEFAULT_PROMPTS = {
             "1. Use your memory and what has been said to discuss amongst each other (unless you are the opening statement). Provide useful, unique observations.\n" +
             "2. Check the discussion log above.  If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.\n" +
             "3. Discuss amongst each other. Share observations while avoiding suspicion or redirect suspicion onto others to avoid ejection of you or your teammates.\n" +
-            "4. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.\n" +
+            "4. You get {max_discussion_messages} chances to speak. First is your initial thought, second is your follow-up after others speak.\n" +
             "5. Keep it short (< 30 words).\n" +
             "6. Speak in first person as if you are the agent yourself.\n" +
             "7. **DO NOT** include your name or \"Agent_X:\" at the start.\n" +
@@ -516,6 +522,17 @@ function validateTicks() {
     return true;
 }
 
+function validateNumDiscussionMessages() {
+    const input = document.getElementById("num_discussion_messages");
+    const num = parseInt(input.value, 10);
+    if (Number.isNaN(num) || num < 1 || num !== parseFloat(input.value)) {
+        alert("Number of messages per discussion must be a whole number starting at 1.");
+        input.focus();
+        return false;
+    }
+    return true;
+}
+
 /**
  * Maximum number of Byzantine agents allowed for a given number of agents.
  * Rule: Byzantines must be fewer than half (byz < size/2).
@@ -609,6 +626,10 @@ function onConfigSubmit(e) {
         return false;
     }
     if (!validateTicks()) {
+        e.preventDefault();
+        return false;
+    }
+    if (!validateNumDiscussionMessages()) {
         e.preventDefault();
         return false;
     }
@@ -739,12 +760,21 @@ function resetCurrentPromptToDefault() {
     }
     currentPrompts[activePromptRole][activePromptPhase] = defaultVal;
     loadPromptEditorFromState();
+    setConfirmPromptsStatus("");
+}
+
+function setConfirmPromptsStatus(message, isError) {
+    var el = document.getElementById("confirmPromptsStatus");
+    if (!el) return;
+    el.textContent = message || "";
+    el.className = "confirm-prompts-status" + (message ? (isError ? " confirm-prompts-status--error" : " confirm-prompts-status--ok") : "");
 }
 
 function confirmAllPrompts() {
     var hidden = document.getElementById("custom_prompts_json");
     if (!hidden) return;
-    // Deep-compare against defaults; if identical, treat as "Default" (no overrides).
+    setConfirmPromptsStatus("");
+
     function promptsEqual(a, b) {
         var roles = ["honest", "byzantine"];
         var phases = ["system", "movement", "discussion", "voting"];
@@ -764,14 +794,21 @@ function confirmAllPrompts() {
     try {
         if (promptsEqual(currentPrompts, DEFAULT_PROMPTS)) {
             hidden.value = "";
+            setConfirmPromptsStatus("Using default prompts.");
         } else {
-            hidden.value = JSON.stringify(currentPrompts);
+            var serialized = JSON.stringify(currentPrompts);
+            hidden.value = serialized;
+            var parsed = JSON.parse(serialized);
+            if (parsed && typeof parsed === "object" && (parsed.honest || parsed.byzantine)) {
+                setConfirmPromptsStatus("Confirmed! Your prompts will be sent when you launch.");
+            } else {
+                setConfirmPromptsStatus("Prompts saved but structure invalid.", true);
+            }
         }
     } catch (e) {
-        // Fallback: if serialization fails, clear field so backend uses defaults
         hidden.value = "";
+        setConfirmPromptsStatus("Could not save prompts.", true);
     }
-    // keep the editor open; user can continue tweaking if desired
 }
 
 // Initialize on DOM ready: build default 4-agent table and bind CONFIRM + form
@@ -810,6 +847,7 @@ window.addEventListener("DOMContentLoaded", function () {
                 currentPrompts[activePromptRole] = {};
             }
             currentPrompts[activePromptRole][activePromptPhase] = editor.value;
+            setConfirmPromptsStatus("");
         });
     }
 

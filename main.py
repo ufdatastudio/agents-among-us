@@ -35,11 +35,12 @@ def main():
     parser.add_argument("--game_id", type=str, required=True, help="Shared Session ID for IPC")
     parser.add_argument("--num_rounds", type=int, default=DEFAULT_NUM_ROUNDS, help="Number of rounds to play")
     parser.add_argument("--num_ticks", type=int, default=MAX_MOVEMENT_PHASES, help="Movement ticks per round")
+    parser.add_argument("--num_discussion_messages", type=int, default=2, help="Messages per agent per discussion")
     args = parser.parse_args()
 
-    # Use num_rounds and num_ticks from command line (passed from frontend)
     num_rounds = args.num_rounds
     num_ticks = args.num_ticks
+    num_discussion_messages = args.num_discussion_messages
 
     selected_composition = next((c for c in COMPOSITION if c["name"] == args.composition_name), None)
 
@@ -70,15 +71,19 @@ def main():
     if selected_composition is None:
         raise ValueError(f"Composition '{args.composition_name}' not found in COMPOSITION list or config directory.")
 
+    if isinstance(selected_composition, dict) and 'num_discussion_messages' in selected_composition:
+        num_discussion_messages = selected_composition['num_discussion_messages']
+
     manager = ModelManager.get_instance()
     manager.set_game_context(args.game_id, args.composition_name)
     unique_run_id = f"{args.game_id}_Run{args.job_index}"
 
     engine = GameEngine(
-        game_id=unique_run_id, 
+        game_id=unique_run_id,
         num_agents=selected_composition['honest_count'] + selected_composition['byzantine_count'],
         num_rounds=num_rounds,
-        num_ticks=num_ticks
+        num_ticks=num_ticks,
+        num_discussion_messages=num_discussion_messages
     )
    
     engine.setup(composition=selected_composition)

@@ -133,6 +133,7 @@ def start_game():
         num_agents = int(request.form.get('num_agents', 4))
         num_rounds = int(request.form.get('num_rounds', 10))
         num_ticks = int(request.form.get('num_ticks', 4))
+        num_discussion_messages = int(request.form.get('num_discussion_messages', 2))
         game_id = request.form.get('game_id', '').strip()
         
         # === NEW: Get ML Classifier selections ===
@@ -177,7 +178,8 @@ def start_game():
             "agents": agents,  # Full per-agent configuration
             "num_rounds": num_rounds,
             "num_ticks": num_ticks,
-            "enabled_classifiers": enabled_classifiers  # NEW: ML Classifiers
+            "num_discussion_messages": num_discussion_messages,
+            "enabled_classifiers": enabled_classifiers
         }
 
         # Optional: custom per-role, per-phase prompts (frontend overrides)
@@ -210,6 +212,7 @@ def start_game():
         print(f"Agents: {num_agents} ({byzantine_count} Byzantine, {honest_count} Honest)")
         print(f"Rounds: {num_rounds}")
         print(f"Ticks: {num_ticks}")
+        print(f"Discussion messages: {num_discussion_messages}")
         print(f"Observers: {observers_label}")
         print(f"Prompts: {prompts_mode}")
 
@@ -225,7 +228,8 @@ def start_game():
         session['num_agents'] = num_agents
         session['num_rounds'] = num_rounds
         session['num_ticks'] = num_ticks
-        
+        session['num_discussion_messages'] = num_discussion_messages
+
         # reset live state so we don't show a previous game's snapshot
         try:
             if os.path.exists(LIVE_STATE_FILE):
@@ -241,7 +245,8 @@ def start_game():
             '--game_id', game_id,
             '--job_index', '0',
             '--num_rounds', str(num_rounds),
-            '--num_ticks', str(num_ticks)
+            '--num_ticks', str(num_ticks),
+            '--num_discussion_messages', str(num_discussion_messages)
         ]
         
         print(f"{'='*60}")
