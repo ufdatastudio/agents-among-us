@@ -84,14 +84,21 @@
 
             <!-- API Keys (optional) -->
             <div class="form-section">
-                <h2>API Keys (optional)</h2>
+                <h2>API Keys{% if app_mode == 'navigator' %} (Navigator){% else %} (optional){% endif %}</h2>
+                {% if app_mode == 'navigator' %}
+                <p class="form-hint">Running in Navigator-only mode. Only the UF Navigator API key is required.</p>
+                {% elif app_mode == 'api' %}
+                <p class="form-hint">Running in API-only mode. Provide keys for whichever API provider you select above.</p>
+                {% else %}
                 <p class="form-hint">Required only if using API models above. Keys from .env file are used as defaults.</p>
+                {% endif %}
                 <div class="form-group">
                     <label for="navigator_api_key">Navigator (UF)</label>
                     <input type="password" id="navigator_api_key" name="navigator_api_key"
                            placeholder="NAVIGATOR_TOOLKIT_API_KEY" autocomplete="off">
                     <span id="nav_key_status" class="key-status"></span>
                 </div>
+                {% if app_mode != 'navigator' %}
                 <div class="form-group">
                     <label for="anthropic_api_key">Anthropic</label>
                     <input type="password" id="anthropic_api_key" name="anthropic_api_key"
@@ -104,6 +111,7 @@
                            placeholder="OPENAI_API_KEY" autocomplete="off">
                     <span id="oai_key_status" class="key-status"></span>
                 </div>
+                {% endif %}
             </div>
 
             <div class="form-section">

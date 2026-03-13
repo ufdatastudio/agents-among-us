@@ -15,14 +15,6 @@ dependencies = [
     "tqdm>=4.67.1",
     "pyyaml>=6.0.2",
     "loguru>=0.7.3",
-    "transformers>=4.47.0",
-    "accelerate>=1.2.1",
-    "safetensors>=0.4.5",
-    "sentencepiece>=0.2.0",
-    "tokenizers>=0.21.0",
-    "huggingface-hub>=0.27.0",
-    "datasets>=3.2.0",
-    "peft>=0.14.0",
 ]
 
 [project.optional-dependencies]
@@ -36,6 +28,14 @@ gpu = [
     "torchvision>=0.24.1; sys_platform == 'linux'",
     "torchaudio>=2.9.1; sys_platform == 'linux'",
     "bitsandbytes>=0.45.0; sys_platform == 'linux'",
+    "transformers>=4.47.0",
+    "accelerate>=1.2.1",
+    "safetensors>=0.4.5",
+    "sentencepiece>=0.2.0",
+    "tokenizers>=0.21.0",
+    "huggingface-hub>=0.27.0",
+    "datasets>=3.2.0",
+    "peft>=0.14.0",
 ]
 
 [tool.uv]

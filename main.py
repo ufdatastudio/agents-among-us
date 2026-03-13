@@ -5,11 +5,14 @@ from datetime import datetime
 import os
 import platform
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+from config.app_mode import should_load_dotenv
+
+if should_load_dotenv():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
 
 # sets LLM_MODE to local if on Mac 
 IS_MAC = platform.system() == "Darwin"

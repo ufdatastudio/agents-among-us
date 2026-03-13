@@ -4,10 +4,18 @@ import platform
 import re
 import time
 
+from config.app_mode import get_allowed_providers, should_load_gpu
 from loguru import logger as log
 
 IS_MAC = platform.system() == "Darwin"
-if os.environ.get("LLM_MODE", "LOCAL") != "CONTROLLER":
+
+# Only import torch/transformers when GPU mode is enabled and not in controller mode
+_LOAD_LOCAL_MODELS = (
+    should_load_gpu()
+    and os.environ.get("LLM_MODE", "LOCAL") != "CONTROLLER"
+)
+
+if _LOAD_LOCAL_MODELS:
     import gc
 
     import torch
@@ -49,7 +57,7 @@ class ModelManager:
         self.tokenizers = {}
         self._device = "cpu"
 
-        if os.environ.get("LLM_MODE", "LOCAL") != "CONTROLLER":
+        if _LOAD_LOCAL_MODELS:
             if IS_MAC:
                 if torch.backends.mps.is_available() and torch.backends.mps.is_built():
                     self._device = "mps"
@@ -157,13 +165,23 @@ class ModelManager:
         return self.token_usage.copy()
 
     def load_model(self, model_name):
-        """
-        Loads a model if it's not already in memory.
+        """Loads a model if it's not already in memory.
+
+        Raises:
+            RuntimeError: If a local model is requested but APP_MODE
+                does not support GPU inference.
         """
         if self._is_api_model(model_name):
             provider, model_id = self._parse_api_model(model_name)
             log.info("[API] Model '{}:{}' registered for API execution.", provider, model_id)
             return
+
+        if not _LOAD_LOCAL_MODELS:
+            from config.app_mode import get_app_mode
+            raise RuntimeError(
+                f"Local model '{model_name}' requested, but APP_MODE='{get_app_mode()}' "
+                "does not support GPU inference. Use an API model instead."
+            )
 
         if self.mode == "CONTROLLER":
             log.info("[Controller] Model '{}' marked for remote execution.", model_name)
@@ -259,11 +277,14 @@ class ModelManager:
     def unload_all_models(self):
         self.models.clear()
         self.tokenizers.clear()
+
+        if not _LOAD_LOCAL_MODELS:
+            return
+
         gc.collect()
-        
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-            torch.cuda.synchronize() 
+            torch.cuda.synchronize()
         elif self._device == "mps":
             try:
                 torch.mps.empty_cache()

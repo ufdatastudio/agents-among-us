@@ -15,11 +15,14 @@ import glob
 import pandas as pd
 from flask import Flask, jsonify, redirect, render_template, request, send_file, session, url_for
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+from config.app_mode import get_allowed_providers, get_app_mode, should_load_dotenv
+
+if should_load_dotenv():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
 
 app = Flask(__name__)
 app.secret_key = 'agents-among-us-secret-key-change-in-production'
@@ -82,7 +85,7 @@ def index():
 
 @app.route('/config')
 def config():
-    return render_template('config.html')
+    return render_template('config.html', app_mode=get_app_mode())
 
 
 @app.route('/game')
@@ -550,6 +553,17 @@ def check_api_keys():
         'navigator': bool(os.environ.get('NAVIGATOR_TOOLKIT_API_KEY')),
         'anthropic': bool(os.environ.get('ANTHROPIC_API_KEY')),
         'openai': bool(os.environ.get('OPENAI_API_KEY')),
+    })
+
+
+@app.route('/api/app_mode')
+def app_mode_info():
+    """Return the current APP_MODE and allowed providers."""
+    mode = get_app_mode()
+    allowed = get_allowed_providers()
+    return jsonify({
+        'mode': mode,
+        'allowed_providers': sorted(allowed) if allowed else None,
     })
 
 
