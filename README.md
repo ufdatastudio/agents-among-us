@@ -24,7 +24,7 @@ Despite their impressive capabilities, LLMs struggle to effectively utilize text
 ## Features
 
 - **Interactive Simulation:** Flask-based UI with a live map, discussion chats, and real-time observer suspicion scores.
-- **Distributed Architecture:** Decoupled asynchronous worker scripts supporting multi-GPU and multi-node execution via SLURM.
+- **Distributed Architecture:** Decoupled asynchronous worker scripts supporting multi-GPU and multi-node execution via SLURM or Globus Compute.
 - **Customizable Crews:** Configure homogeneous or heterogeneous crews of open-weight LLMs with specific roles (Honest or Byzantine).
 - **Observer Pipeline:** Built-in classical ML classifier suite to calculate the "observer-player gap" on generated datasets.
 - **Phase-Dependent Memory:** Automated state management that filters context windows based on movement, discussion, and voting phases.
@@ -92,7 +92,7 @@ uv run python -m frontend.app
 
 ## Usage
 
-You can run the framework in three primary modes depending on your compute environment.
+You can run the framework in four primary modes depending on your compute environment.
 
 ### 1. Interactive Web UI (Local/Hosted)
 
@@ -148,7 +148,44 @@ bash submit_all.sh
 
 
 
-### 3. Manual Headless Execution
+### 3. Globus Compute (Remote Endpoint)
+
+[Globus Compute](https://globus-compute.readthedocs.io/) provides a managed alternative to the SLURM file-based IPC approach. The game controller submits inference tasks to a Globus Compute endpoint, which provisions GPU workers automatically. This removes the need for `worker.py`, signal files, and manual SLURM coordination.
+
+**Step 1: Install and configure the endpoint**
+
+On the compute system (e.g., HiPerGator login node):
+
+```bash
+python3 -m pipx install globus-compute-endpoint
+globus-compute-endpoint configure agents-among-us
+```
+
+Edit `~/.globus_compute/agents-among-us/config.yaml` to match your cluster. The repository includes a configuration targeting HiPerGator's `hpg-b200` partition with one GPU per worker.
+
+**Step 2: Start the endpoint**
+
+```bash
+globus-compute-endpoint start agents-among-us
+```
+
+Authenticate via the browser URL on first run. Once running, `globus-compute-endpoint list` shows the endpoint UUID.
+
+**Step 3: Run games**
+
+```bash
+# Direct execution
+COMP_NAME="Llama3_Gemma" \
+GLOBUS_COMPUTE_ENDPOINT="<your-endpoint-uuid>" \
+bash submit_globus.sh
+
+# Or via SLURM (CPU-only orchestration node)
+sbatch --export=ALL,COMP_NAME="Llama3_Gemma",GLOBUS_COMPUTE_ENDPOINT="<uuid>" submit_globus.sh
+```
+
+The `submit_globus.sh` script sets `LLM_MODE=GLOBUS` and requests only CPU resources (2 CPUs, 8 GB RAM) since the endpoint handles GPU provisioning. Each `generate()` call in the game engine submits a task to the endpoint and blocks until the result is returned.
+
+### 4. Manual Headless Execution
 
 For local debugging or running specific configurations without the UI or SLURM:
 
@@ -162,7 +199,7 @@ uv run python main.py --composition_name MyComp \
     --job_index 0 --game_id SESSION1 --num_rounds 10
 ```
 
-### 4. HiPerGator PubApps Deployment
+### 5. HiPerGator PubApps Deployment
 
 For hosting on UF Research Computing's [PubApps](https://docs.rc.ufl.edu/services/web_hosting/) infrastructure. PubApps VMs do not have GPUs, so use the lightweight navigator container.
 
@@ -283,10 +320,11 @@ The preprocessed dataset containing over 10,000 parsed game logs and approximate
 ```text
 .
 ├── main.py                        # Orchestrates game runs (movement → discussion → voting)
-├── worker.py                      # Async decoupled inference worker (IPC)
+├── worker.py                      # Async decoupled inference worker (SLURM IPC)
 ├── pyproject.toml                 # Project config with api/gpu optional dependencies
 ├── .env.example                   # Template for API key environment variables
 ├── submit_games.sh                # SLURM job script for cluster execution
+├── submit_globus.sh               # Globus Compute launcher (CPU-only orchestration)
 ├── Dockerfile                     # Podman/Docker container definition
 ├── agents-among-us.def            # Apptainer container definition (full, GPU)
 ├── agents-among-us-navigator.def  # Apptainer container definition (navigator, no GPU)
@@ -301,11 +339,12 @@ The preprocessed dataset containing over 10,000 parsed game logs and approximate
 | Module | Description |
 | --- | --- |
 | `main.py` | Controller that manages phase transitions and evaluates win conditions. |
-| `worker.py` | Loads models, handles local quantization, and processes generation requests. |
+| `worker.py` | Loads models, handles local quantization, and processes generation requests via SLURM IPC. |
+| `submit_globus.sh` | Launcher for Globus Compute mode (CPU-only orchestration, endpoint handles GPU). |
 | `agents/` | Contains `honest_agent.py` and `byzantine_agent.py` with role-specific logic. |
 | `config/` | Includes `app_mode.py`, `cache_models.py`, `settings.py`, etc. |
 | `container/` | Podman and Apptainer build scripts, PubApps deployment automation. |
-| `core/` | Includes `game_engine.py`, `state.py`, `llm.py`, and `api_clients.py`. |
+| `core/` | Includes `game_engine.py`, `state.py`, `llm.py`, `api_clients.py`, and `globus_compute.py`. |
 | `frontend/` | Flask routes (`app.py`), HTML templates, and live state visualizers. |
 | `results/` | Machine learning pipeline for the offline observers and metric calculation. |
 

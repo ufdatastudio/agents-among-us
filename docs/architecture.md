@@ -37,7 +37,7 @@ flowchart TB
             end
 
             subgraph LLMRouter["LLM Request Router"]
-                MM["ModelManager\nRoutes generate() calls\nto configured API provider"]
+                MM["ModelManager\nRoutes generate() calls\nto API, SLURM IPC, or Globus Compute"]
             end
 
             subgraph LocalFS["Local Filesystem (bind mount)"]
@@ -50,6 +50,10 @@ flowchart TB
         NAV["UF Navigator API\nhttps://api.ai.it.ufl.edu/v1\nPort 443 (HTTPS)"]
         OAI["OpenAI API\nhttps://api.openai.com/v1\nPort 443 (HTTPS)"]
         ANT["Anthropic API\nhttps://api.anthropic.com\nPort 443 (HTTPS)"]
+    end
+
+    subgraph GlobusCompute["Globus Compute (HPC Only)"]
+        GCE["Globus Compute Endpoint\nProvisioned GPU workers\nvia SLURM on HiPerGator"]
     end
 
     USER["User Browser\nHTTPS via PubApps\nreverse proxy"] -->|"Inbound: assigned port"| UI
@@ -66,11 +70,13 @@ flowchart TB
     MM -->|"HTTPS POST\n(chat completions)"| NAV
     MM -->|"HTTPS POST\n(chat completions)"| OAI
     MM -->|"HTTPS POST\n(messages)"| ANT
+    MM -.->|"HTTPS\n(Globus Compute tasks,\nHPC mode only)"| GCE
 
     STATE -->|"Writes live_state.json"| LOGS
     ENGINE -->|"Writes stats.csv,\ndiscussion logs"| LOGS
 
     style ExternalAPIs fill:#fff3e0,stroke:#e65100
+    style GlobusCompute fill:#f3e5f5,stroke:#6a1b9a
     style PubApps fill:#e3f2fd,stroke:#1565c0
     style Container fill:#e8f5e9,stroke:#2e7d32
 ```
@@ -93,8 +99,11 @@ flowchart TB
 | Container | UF Navigator | `api.ai.it.ufl.edu` | 443 | HTTPS | LLM inference requests |
 | Container | OpenAI | `api.openai.com` | 443 | HTTPS | LLM inference requests |
 | Container | Anthropic | `api.anthropic.com` | 443 | HTTPS | LLM inference requests |
+| Controller | Globus Compute | `compute.api.globus.org` | 443 | HTTPS | Task submission and result retrieval (GLOBUS mode only) |
+| Controller | Globus Auth | `auth.globus.org` | 443 | HTTPS | Endpoint authentication (GLOBUS mode only) |
+| Endpoint | RabbitMQ | `*.compute.globus.org` | 5671 | AMQPS | Task/result transport for endpoint workers (GLOBUS mode only) |
 
-**No other network connections are made.** The application does not connect to databases, message queues, object storage, or any other external services. All data is stored on local filesystem within the bind-mounted `logs/` directory.
+**PubApps note:** The PubApps deployment uses API mode only and does not connect to Globus Compute. The Globus connections above apply only to HPC/SLURM deployments using the `GLOBUS` LLM mode. All data is stored on local filesystem within the bind-mounted `logs/` directory.
 
 ### Data Sent to External APIs
 
@@ -289,7 +298,10 @@ Orchestrates game phases. Each game runs 10 rounds by default. Each round has 4 
 Two agent types (honest and byzantine) inherit from a base class. Each agent produces prompts based on its role and current observations, sends them to the LLM via ModelManager, and parses the response into a game action.
 
 ### ModelManager (`core/llm.py`)
-Singleton that routes LLM requests. For PubApps deployment, all requests go through the API path: constructs an HTTP request, sends it to the configured provider, and returns the response text. Tracks token usage per model for cost analysis.
+Singleton that routes LLM requests across four backends. In `LOCAL` mode, models run on the same GPU via torch. In `CONTROLLER` mode, requests are dispatched to SLURM workers through file-based IPC. In `GLOBUS` mode, tasks are submitted to a Globus Compute endpoint that provisions GPU workers automatically. In `API` mode (PubApps), requests go through external HTTPS providers. Tracks token usage per API model for cost analysis.
+
+### Globus Compute Integration (`core/globus_compute.py`)
+Provides an alternative to SLURM file-based IPC for distributed GPU inference. A `remote_inference` function is registered with the Globus Compute service and executed on endpoint workers. The `GlobusInferenceExecutor` wraps the Globus Compute SDK's `Executor` to submit tasks and retrieve results as futures. The endpoint is configured separately via `globus-compute-endpoint` and runs on the HPC login node, provisioning SLURM jobs for GPU workers as needed.
 
 ### Observer (`core/game_engine.py`)
 ML classifier ensemble (Logistic Regression, SGD, SVM) that analyzes discussion text for deceptive language. Uses pretrained scikit-learn models bundled in the container image. No external calls; runs entirely in-process.
