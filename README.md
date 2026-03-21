@@ -140,7 +140,7 @@ bash submit_all.sh
 **Bash Scripts:**
 
 * **`submit_all.sh`**: Iterates through defined `compositions`. For each entry, it submits a SLURM job via `sbatch`, passing the composition name as an environment variable (`--export=ALL,COMP_NAME="$comp"`).
-* **`submit_games.sh`**: The core distributed job script.
+* **`submit_games.sh`**: The core distributed job script. Uses `uv` for Python execution (provided by the `conda` module on HiPerGator).
 * **Allocation:** Requests SLURM resources (e.g., `--nodes=1`, `--gpus-per-node=1`, `--mem=120gb`).
 * **Worker Spawning:** Calls `config/generate_batch_list.py` to determine which models are required for the `COMP_NAME`. It then uses `srun` to asynchronously launch `worker.py` instances pinned to the allocated GPUs (can be specified in submit_games.sh)
 * **Synchronization:** Genearates and polls the `logs/<COMP_NAME>/.../ipc` directory for `ready_*.signal` files. LLMs are fully loaded into VRAM before the game engine starts.
@@ -331,7 +331,7 @@ The preprocessed dataset containing over 10,000 parsed game logs and approximate
 ├── agents/                        # Agent behavior definitions and prompts
 ├── config/                        # Game settings, model compositions, and APP_MODE config
 ├── container/                     # Container build/run scripts and PubApps deployment
-├── core/                          # Core simulation logic, state management, and API clients
+├── core/                          # Core simulation logic, state management, API clients, and stopwords
 ├── frontend/                      # Flask application and UI assets
 └── results/                       # Data analysis, classifiers, and parsed datasets
 ```
@@ -344,7 +344,7 @@ The preprocessed dataset containing over 10,000 parsed game logs and approximate
 | `agents/` | Contains `honest_agent.py` and `byzantine_agent.py` with role-specific logic. |
 | `config/` | Includes `app_mode.py`, `cache_models.py`, `settings.py`, etc. |
 | `container/` | Podman and Apptainer build scripts, PubApps deployment automation. |
-| `core/` | Includes `game_engine.py`, `state.py`, `llm.py`, `api_clients.py`, and `globus_compute.py`. |
+| `core/` | Includes `game_engine.py`, `state.py`, `llm.py`, `api_clients.py`, `globus_compute.py`, and `stopwords.py`. |
 | `frontend/` | Flask routes (`app.py`), HTML templates, and live state visualizers. |
 | `results/` | Machine learning pipeline for the offline observers and metric calculation. |
 
