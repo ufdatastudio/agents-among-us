@@ -301,7 +301,79 @@ Two agent types (honest and byzantine) inherit from a base class. Each agent pro
 Singleton that routes LLM requests across four backends. In `LOCAL` mode, models run on the same GPU via torch. In `CONTROLLER` mode, requests are dispatched to SLURM workers through file-based IPC. In `GLOBUS` mode, tasks are submitted to a Globus Compute endpoint that provisions GPU workers automatically. In `API` mode (PubApps), requests go through external HTTPS providers. Tracks token usage per API model for cost analysis.
 
 ### Globus Compute Integration (`core/globus_compute.py`)
-Provides an alternative to SLURM file-based IPC for distributed GPU inference. A `remote_inference` function is registered with the Globus Compute service and executed on endpoint workers. The `GlobusInferenceExecutor` wraps the Globus Compute SDK's `Executor` to submit tasks and retrieve results as futures. The endpoint is configured separately via `globus-compute-endpoint` and runs on the HPC login node, provisioning SLURM jobs for GPU workers as needed.
+
+Globus Compute provides a managed alternative to the SLURM file-based IPC approach for distributed GPU inference.
+The game controller (running on a CPU-only node) submits inference tasks over HTTPS to a Globus Compute endpoint, which provisions GPU workers via SLURM automatically.
+This removes the need for `worker.py`, signal files, and manual multi-node coordination.
+
+#### Call chain
+
+The game engine requests text generation through a single call chain:
+
+1. `GameEngine` calls an agent's decision method (move, discuss, or vote).
+2. The agent calls `ModelManager.generate()` in `core/llm.py`.
+3. `generate()` detects `LLM_MODE=GLOBUS` and dispatches to `_generate_globus()` (llm.py:375).
+4. `_generate_globus()` calls `GlobusInferenceExecutor.submit()`, which passes the function and its arguments to the Globus Compute SDK `Executor`.
+5. The SDK serializes the `remote_inference` function and its four arguments (`model_name`, `system_prompt`, `user_prompt`, `temperature`) and sends them to the Globus Compute cloud service over HTTPS.
+6. The cloud service routes the task to the configured endpoint, which provisions a SLURM worker with GPU access.
+7. `remote_inference()` executes on the worker: it loads the HuggingFace model (cached across calls within the same worker process), runs inference, post-processes the output, and returns the decoded text.
+8. The result travels back through the SDK as a resolved `Future`. `_generate_globus()` blocks on `future.result(timeout=300)` and returns the text to the game engine.
+
+#### Registered function
+
+Only one function is registered with Globus Compute: `remote_inference()` (globus_compute.py:14).
+It is a self-contained, stateless function that imports all dependencies (`torch`, `transformers`, `bitsandbytes`) inside the function body so they are available on the remote worker without requiring matching imports on the submitting node.
+
+Models are cached on function-level attributes (`remote_inference._models` and `remote_inference._tokenizers`) so that repeated calls within the same worker process reuse loaded weights instead of reloading from disk each time.
+
+#### Quantization
+
+`remote_inference` handles three quantization paths based on the model name:
+
+| Category | Models | Method |
+|----------|--------|--------|
+| `QUANTIZE` | Llama-3.3-70B, Hermes-4-70B, Qwen2.5-72B, and others | 4-bit NF4 via bitsandbytes |
+| `MXFP4_MODELS` | HyperNova-60B, gpt-oss-20b | MXFP4 dtype |
+| Default | All other models | bfloat16, no quantization |
+
+#### Key classes
+
+- **`GlobusInferenceExecutor`** (globus_compute.py:167): Wraps the Globus Compute `Client` and `Executor`. On initialization it registers `remote_inference` with the service and connects to the endpoint UUID from the `GLOBUS_COMPUTE_ENDPOINT` environment variable. The `submit()` method returns a `Future` for each inference task.
+- **`create_executor()`** (globus_compute.py:198): Factory that reads `GLOBUS_COMPUTE_ENDPOINT` from the environment and returns a configured `GlobusInferenceExecutor`.
+
+#### Execution flow
+
+```
+submit_globus.sh
+  │
+  ├─ sets LLM_MODE=GLOBUS
+  ├─ loads conda module (provides uv on HiPerGator)
+  └─ runs: uv run -m main --composition_name ... --game_id ...
+       │
+       main.py
+         ├─ ModelManager.init_globus_executor()
+         │    └─ create_executor() → GlobusInferenceExecutor(endpoint_id)
+         │         ├─ Client()                    # authenticates with Globus
+         │         ├─ register_function()          # registers remote_inference
+         │         └─ Executor(endpoint_id)        # connects to endpoint
+         │
+         └─ GameEngine loop (per round)
+              └─ agent.decide() → ModelManager.generate()
+                   └─ _generate_globus()
+                        ├─ executor.submit(model, sys, user, temp)
+                        │    └─ Executor.submit(remote_inference, ...)
+                        │         → Globus cloud → endpoint worker (GPU)
+                        │              └─ remote_inference() runs on GPU
+                        │                   ├─ loads/caches model
+                        │                   ├─ generates tokens
+                        │                   └─ returns decoded text
+                        └─ future.result(timeout=300)
+                             → returns text to game engine
+```
+
+#### Error handling
+
+If a Globus task fails or times out (300 seconds), `_generate_globus()` logs the error and returns `"move"` as a safe fallback action. This prevents a single failed inference from crashing the game.
 
 ### Observer (`core/game_engine.py`)
 ML classifier ensemble (Logistic Regression, SGD, SVM) that analyzes discussion text for deceptive language. Uses pretrained scikit-learn models bundled in the container image. No external calls; runs entirely in-process.
