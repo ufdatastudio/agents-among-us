@@ -38,11 +38,9 @@ JOB_ID=${SLURM_ARRAY_JOB_ID:-$$}
 TASK_ID=${SLURM_ARRAY_TASK_ID:-0}
 SESSION_ID="Session_${JOB_ID}_${TASK_ID}_${COMP_NAME}"
 
-module purge
+# uv is bundled with the conda module on HiPerGator
 module load conda
-conda activate amongus
 
-PYTHON_EXE=$(which python)
 GAMES_PER_JOB=2
 
 echo "Running Composition: $COMP_NAME via Globus Compute"
@@ -55,7 +53,7 @@ for (( j=0; j<GAMES_PER_JOB; j++ )); do
 
     echo ">>> Starting Game $j (Global Index $CURRENT_GAME_IDX)"
 
-    $PYTHON_EXE main.py \
+    uv run -m main \
         --composition_name "$COMP_NAME" \
         --job_index $CURRENT_GAME_IDX \
         --game_id "$SESSION_ID"

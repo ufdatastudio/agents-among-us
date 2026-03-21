@@ -20,15 +20,12 @@ fi
 
 mkdir -p "$IPC_DIR"
 
-module purge
+# uv is bundled with the conda module on HiPerGator
 module load conda
-conda activate amongus
-sleep 5
-PYTHON_EXE=$(which python)
 
 MODELS_PER_GPU=10
 GAMES_PER_JOB=2
-MODEL_LIST=$(python config/generate_batch_list.py "$COMP_NAME")
+MODEL_LIST=$(uv run -m config.generate_batch_list "$COMP_NAME")
 if [ $? -ne 0 ]; then
     echo "Error: Could not determine models for composition '$COMP_NAME'"
     exit 1
@@ -56,7 +53,7 @@ for (( i=0; i<TOTAL_MODELS; i+=MODELS_PER_GPU )); do
          --gpus-per-task=1 \
          --nodelist=$CURRENT_NODE \
          --cpu-bind=none \
-         $PYTHON_EXE worker.py \
+         uv run -m worker \
              --game_id "$SESSION_ID" \
              --model_names "$MODELS_TO_PASS" \
              --comp_name "$COMP_NAME" &
@@ -95,7 +92,7 @@ for (( j=0; j<GAMES_PER_JOB; j++ )); do
     
     echo ">>> Starting Game $j (Global Index $CURRENT_GAME_IDX)"
     
-    $PYTHON_EXE main.py \
+    uv run -m main \
         --composition_name "$COMP_NAME" \
         --job_index $CURRENT_GAME_IDX \
         --game_id "$SESSION_ID" 
