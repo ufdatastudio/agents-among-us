@@ -229,6 +229,20 @@ For GPU-enabled deployments on allocated nodes, the full container and `--gpu` f
 ./container/pubapps-deploy.sh --port <YOUR_PORT> --gpu
 ```
 
+**With Globus Compute (recommended for GPU inference without a local GPU):**
+
+PubApps VMs typically lack GPUs. The `--globus` flag lets the web UI route local-model inference to a Globus Compute endpoint on HiPerGator, which provisions GPU workers via SLURM automatically. API models (Navigator, OpenAI, Anthropic) continue to work alongside Globus in the same game.
+
+Prerequisites:
+1. Configure and start a Globus Compute endpoint on HiPerGator (see [Section 3: Globus Compute](#3-globus-compute-remote-endpoint))
+2. Authenticate with `globus-compute-endpoint start` at least once to populate `~/.globus_compute/`
+
+```bash
+./container/pubapps-deploy.sh --port <YOUR_PORT> --globus <endpoint-uuid>
+```
+
+The deploy script bind-mounts `~/.globus_compute/` into the container for authentication tokens and sets `LLM_MODE=GLOBUS` with the endpoint UUID.
+
 **Service Management:**
 
 ```bash

@@ -103,7 +103,7 @@ flowchart TB
 | Controller | Globus Auth | `auth.globus.org` | 443 | HTTPS | Endpoint authentication (GLOBUS mode only) |
 | Endpoint | RabbitMQ | `*.compute.globus.org` | 5671 | AMQPS | Task/result transport for endpoint workers (GLOBUS mode only) |
 
-**PubApps note:** The PubApps deployment uses API mode only and does not connect to Globus Compute. The Globus connections above apply only to HPC/SLURM deployments using the `GLOBUS` LLM mode. All data is stored on local filesystem within the bind-mounted `logs/` directory.
+**PubApps note:** PubApps deployments can optionally use Globus Compute for GPU inference by deploying with `--globus <endpoint-uuid>`. In this configuration the container sets `LLM_MODE=GLOBUS` and bind-mounts `~/.globus_compute/` for authentication tokens, routing local-model inference to the Globus Compute endpoint on HiPerGator. API models (Navigator, OpenAI, Anthropic) continue to work alongside Globus Compute in the same game. All data is stored on local filesystem within the bind-mounted `logs/` directory.
 
 ### Data Sent to External APIs
 
@@ -249,10 +249,11 @@ sequenceDiagram
 | **Exposed port** | Assigned PubApps port (configurable via `PORT` env var) |
 | **Bind mounts** | `~/agents-among-us/logs` → `/app/logs` (game data, writable) |
 | | `~/agents-among-us/frontend/data` → `/app/frontend/data` (stats CSV) |
+| | `~/.globus_compute` → `/app/.globus_compute` (Globus auth tokens, only with `--globus`) |
 | **Health check** | `curl -f http://localhost:${PORT}/api/health` every 30s |
 | **Restart policy** | `on-failure`, 15s delay |
 | **Python version** | 3.10 (managed by `uv`) |
-| **GPU required** | No (API-only mode for PubApps) |
+| **GPU required** | No (API-only mode for PubApps; optional via Globus Compute `--globus`) |
 
 ---
 
@@ -277,6 +278,8 @@ sequenceDiagram
 | Outbound | TCP | 443 | `api.ai.it.ufl.edu` | Yes (primary) |
 | Outbound | TCP | 443 | `api.openai.com` | Optional |
 | Outbound | TCP | 443 | `api.anthropic.com` | Optional |
+| Outbound | TCP | 443 | `compute.api.globus.org` | Optional (with `--globus`) |
+| Outbound | TCP | 443 | `auth.globus.org` | Optional (with `--globus`) |
 
 ### Software Dependencies
 
