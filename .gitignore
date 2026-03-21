@@ -16,8 +16,7 @@ xclusive
 environment.yml
 preliminary_experiments/
 full_experiments_game_level.csv
-global_game_model.json__pycache__/
-*.pyc
+global_game_model.json
 live_state*.json
 archived/
 experiments/
