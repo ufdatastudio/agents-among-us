@@ -5,19 +5,22 @@ from datetime import datetime
 import os
 import platform
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+from config.app_mode import should_load_dotenv
 
-# sets LLM_MODE to local if on Mac 
+if should_load_dotenv():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
+
+# Set LLM_MODE default if not already set (e.g. by submit_globus.sh)
 IS_MAC = platform.system() == "Darwin"
 if IS_MAC:
-    os.environ["LLM_MODE"] = "LOCAL"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "" 
+    os.environ.setdefault("LLM_MODE", "LOCAL")
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
 else:
-    os.environ["LLM_MODE"] = "LOCAL"
+    os.environ.setdefault("LLM_MODE", "LOCAL")
     #os.environ["CUDA_VISIBLE_DEVICES"] = "-1" # Enable this for distributed GPU runs
 
 import time
@@ -76,6 +79,10 @@ def main():
 
     manager = ModelManager.get_instance()
     manager.set_game_context(args.game_id, args.composition_name)
+
+    if manager.mode == "GLOBUS":
+        manager.init_globus_executor()
+
     unique_run_id = f"{args.game_id}_Run{args.job_index}"
 
     engine = GameEngine(

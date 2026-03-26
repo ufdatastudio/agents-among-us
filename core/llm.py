@@ -4,10 +4,18 @@ import platform
 import re
 import time
 
+from config.app_mode import get_allowed_providers, should_load_gpu
 from loguru import logger as log
 
 IS_MAC = platform.system() == "Darwin"
-if os.environ.get("LLM_MODE", "LOCAL") != "CONTROLLER":
+
+# Only import torch/transformers when GPU mode is enabled and not in controller/globus mode
+_LOAD_LOCAL_MODELS = (
+    should_load_gpu()
+    and os.environ.get("LLM_MODE", "LOCAL") not in ("CONTROLLER", "GLOBUS")
+)
+
+if _LOAD_LOCAL_MODELS:
     import gc
 
     import torch
@@ -49,7 +57,7 @@ class ModelManager:
         self.tokenizers = {}
         self._device = "cpu"
 
-        if os.environ.get("LLM_MODE", "LOCAL") != "CONTROLLER":
+        if _LOAD_LOCAL_MODELS:
             if IS_MAC:
                 if torch.backends.mps.is_available() and torch.backends.mps.is_built():
                     self._device = "mps"
@@ -61,9 +69,12 @@ class ModelManager:
                     self._device = "cuda"
                     log.info("Using NVIDIA (CUDA) GPU.")
 
-        self.mode = os.environ.get("LLM_MODE", "LOCAL")  # LOCAL, CONTROLLER
+        self.mode = os.environ.get("LLM_MODE", "LOCAL")  # LOCAL, CONTROLLER, GLOBUS
         self.game_id = None
         self.base_ipc_path = None
+
+        # Globus Compute executor (initialized lazily when mode is GLOBUS)
+        self._globus_executor = None
 
         # API provider support
         self.api_clients = {}
@@ -82,6 +93,13 @@ class ModelManager:
         self.game_id = game_id
         self.base_ipc_path = os.path.join("logs", comp_name, f"Game_{game_id}", "ipc")
         os.makedirs(self.base_ipc_path, exist_ok=True)
+
+    def init_globus_executor(self):
+        """Initialize the Globus Compute executor for remote inference."""
+        from core.globus_compute import create_executor
+
+        self._globus_executor = create_executor()
+        log.info("Globus Compute executor initialized.")
 
     def _load_api_keys_from_env(self):
         """Load API keys from environment variables as defaults."""
@@ -157,8 +175,11 @@ class ModelManager:
         return self.token_usage.copy()
 
     def load_model(self, model_name):
-        """
-        Loads a model if it's not already in memory.
+        """Loads a model if it's not already in memory.
+
+        Raises:
+            RuntimeError: If a local model is requested but APP_MODE
+                does not support GPU inference.
         """
         if self._is_api_model(model_name):
             provider, model_id = self._parse_api_model(model_name)
@@ -168,6 +189,17 @@ class ModelManager:
         if self.mode == "CONTROLLER":
             log.info("[Controller] Model '{}' marked for remote execution.", model_name)
             return
+
+        if self.mode == "GLOBUS":
+            log.info("[Globus] Model '{}' marked for Globus Compute execution.", model_name)
+            return
+
+        if not _LOAD_LOCAL_MODELS:
+            from config.app_mode import get_app_mode
+            raise RuntimeError(
+                f"Local model '{model_name}' requested, but APP_MODE='{get_app_mode()}' "
+                "does not support GPU inference. Use an API model instead."
+            )
 
         if model_name in self.models:
             return
@@ -259,11 +291,14 @@ class ModelManager:
     def unload_all_models(self):
         self.models.clear()
         self.tokenizers.clear()
+
+        if not _LOAD_LOCAL_MODELS:
+            return
+
         gc.collect()
-        
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-            torch.cuda.synchronize() 
+            torch.cuda.synchronize()
         elif self._device == "mps":
             try:
                 torch.mps.empty_cache()
@@ -271,14 +306,18 @@ class ModelManager:
                 pass
 
     def generate(self, model_name, system_prompt, user_prompt, temperature=0.1):
-        """
-        Polymorphic generate:
-        - API (provider:model_id): Routes to external API.
-        - CONTROLLER: Writes to file, waits for response.
-        - LOCAL: Runs torch directly.
+        """Polymorphic generate dispatching to the active backend.
+
+        Modes:
+            API (provider:model_id): Routes to external API.
+            GLOBUS: Submits task to Globus Compute endpoint.
+            CONTROLLER: Writes to file, waits for response (SLURM IPC).
+            LOCAL: Runs torch directly.
         """
         if self._is_api_model(model_name):
             return self._generate_api(model_name, system_prompt, user_prompt, temperature)
+        if self.mode == "GLOBUS":
+            return self._generate_globus(model_name, system_prompt, user_prompt, temperature)
         if self.mode == "CONTROLLER":
             return self._generate_remote(model_name, system_prompt, user_prompt, temperature)
         return self._generate_local(model_name, system_prompt, user_prompt, temperature)
@@ -332,7 +371,24 @@ class ModelManager:
             pass
 
         return response_text
-  
+
+    def _generate_globus(self, model_name, system_prompt, user_prompt, temperature):
+        """Submit inference to the Globus Compute endpoint and wait for result."""
+        if not self._globus_executor:
+            raise RuntimeError(
+                "Globus executor not initialized. Call init_globus_executor() first."
+            )
+
+        try:
+            future = self._globus_executor.submit(
+                model_name, system_prompt, user_prompt, temperature
+            )
+            result = future.result(timeout=300)
+            return result
+        except Exception as e:
+            log.error("[Globus Compute ERROR on {}]: {}", model_name, e)
+            return "move"
+
     def _generate_local(self, model_name, system_prompt, user_prompt, temperature=0.1):
         """
         Generates response using the specified model.

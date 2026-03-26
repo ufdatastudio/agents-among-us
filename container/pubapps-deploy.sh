@@ -19,6 +19,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 IMAGE_NAME="agents-among-us:latest"
 PORT=""
 ENABLE_GPU=false
+ENABLE_GLOBUS=false
 ACTION="setup"
 
 print_help() {
@@ -38,11 +39,13 @@ print_help() {
     echo "Options:"
     echo "  --port PORT    Required for setup. The port assigned by RC support."
     echo "  --gpu          Enable GPU support (if allocated to your VM)"
+    echo "  --globus UUID  Use Globus Compute for GPU inference. Requires endpoint UUID."
     echo "  --help, -h     Show this help message"
     echo ""
     echo "Examples:"
     echo "  $0 --port 12345              # Initial setup on port 12345"
     echo "  $0 --port 12345 --gpu        # Setup with GPU support"
+    echo "  $0 --port 12345 --globus <endpoint-uuid>  # Setup with Globus Compute"
     echo "  $0 start                     # Start the service"
     echo "  $0 logs                      # View logs"
 }
@@ -57,6 +60,11 @@ while [[ $# -gt 0 ]]; do
         --gpu)
             ENABLE_GPU=true
             shift
+            ;;
+        --globus)
+            ENABLE_GLOBUS=true
+            GLOBUS_ENDPOINT_UUID="$2"
+            shift 2
             ;;
         setup|start|stop|restart|status|logs|uninstall)
             ACTION="$1"
@@ -120,11 +128,21 @@ if [ -z "$PORT" ]; then
     exit 1
 fi
 
+if [ "$ENABLE_GLOBUS" = true ] && [ -z "$GLOBUS_ENDPOINT_UUID" ]; then
+    echo "Error: --globus requires an endpoint UUID."
+    echo "Run 'globus-compute-endpoint list' to find your endpoint UUID."
+    exit 1
+fi
+
 echo "=============================================="
 echo "HiPerGator PubApps Deployment"
 echo "=============================================="
 echo "Port: ${PORT}"
 echo "GPU: ${ENABLE_GPU}"
+echo "Globus Compute: ${ENABLE_GLOBUS}"
+if [ "$ENABLE_GLOBUS" = true ]; then
+    echo "Globus Endpoint: ${GLOBUS_ENDPOINT_UUID}"
+fi
 echo "Project: ${PROJECT_ROOT}"
 echo "=============================================="
 echo ""
@@ -164,8 +182,15 @@ Volume=${HOME}/.cache/huggingface:/app/.cache/huggingface:Z
 
 Environment=PORT=${PORT}
 Environment=PYTHONUNBUFFERED=1
-Environment=LLM_MODE=LOCAL
 EOF
+
+# Set LLM_MODE based on deployment type
+if [ "$ENABLE_GLOBUS" = true ]; then
+    echo "Environment=LLM_MODE=GLOBUS" >> "$QUADLET_FILE"
+    echo "Environment=GLOBUS_COMPUTE_ENDPOINT=${GLOBUS_ENDPOINT_UUID}" >> "$QUADLET_FILE"
+else
+    echo "Environment=LLM_MODE=LOCAL" >> "$QUADLET_FILE"
+fi
 
 # Add .env passthrough if .env exists
 if [ -f "${PROJECT_ROOT}/.env" ]; then
@@ -177,6 +202,13 @@ fi
 # Add GPU support if enabled
 if [ "$ENABLE_GPU" = true ]; then
     echo "AddDevice=nvidia.com/gpu=all" >> "$QUADLET_FILE"
+fi
+
+# Add Globus Compute auth token bind-mount
+if [ "$ENABLE_GLOBUS" = true ]; then
+    mkdir -p "${HOME}/.globus_compute"
+    echo "Volume=${HOME}/.globus_compute:/app/.globus_compute:Z" >> "$QUADLET_FILE"
+    echo "Mounted Globus Compute credentials from ${HOME}/.globus_compute"
 fi
 
 cat >> "$QUADLET_FILE" << 'EOF'

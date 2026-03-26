@@ -8,8 +8,9 @@ from core.state import GameState
 from core.logger import LogManager
 import os 
 import joblib
-from nltk.corpus import stopwords
 import pandas as pd
+
+from core.stopwords import ENGLISH_STOP_WORDS
 
 class Observer:
     def __init__(self, model_dir="results/classifiers/models/"):
@@ -35,7 +36,7 @@ class Observer:
         ]
         self.loc_pattern = re.compile(r'\b(?:' + '|'.join(self.locations) + r')\b', flags=re.IGNORECASE)
         self.agent_pattern = re.compile(r'\bagent_\d+\b', flags=re.IGNORECASE)
-        self.stop_words = set(stopwords.words('english'))
+        self.stop_words = ENGLISH_STOP_WORDS
 
     def _preprocess(self, text):
         text = text.lower()

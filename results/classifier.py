@@ -25,13 +25,7 @@ from sklearn.neural_network import MLPClassifier
 from lightgbm import LGBMClassifier
 import xgboost as xgb
 
-import nltk
-from nltk.corpus import stopwords
-
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords', quiet=True)
+from core.stopwords import ENGLISH_STOP_WORDS
 warnings.filterwarnings('ignore')
 
 
@@ -288,7 +282,7 @@ class GameLogLoader:
 
 class DatasetBuilder:
     def __init__(self):
-        self.stop_words = set(stopwords.words('english'))
+        self.stop_words = ENGLISH_STOP_WORDS
         self.locations = [
             "Reactor", "Security", "UpperEngine", "LowerEngine", "MedBay", 
             "Cafeteria", "Electrical", "Storage", "Admin", "Weapons", 

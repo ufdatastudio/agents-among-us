@@ -109,6 +109,53 @@ const DEFAULT_AGENTS_4 = [
 
 ];
 
+/**
+ * Determines if a model value is a local (GPU) model (no ":" separator).
+ */
+function isLocalModel(value) {
+    return value.indexOf(":") === -1;
+}
+
+/**
+ * Determines the API provider for a model value (text before ":").
+ */
+function getModelProvider(value) {
+    var idx = value.indexOf(":");
+    return idx === -1 ? null : value.substring(0, idx);
+}
+
+/**
+ * Fetches /api/app_mode and filters MODELS into AVAILABLE_MODELS.
+ * In "full" mode all models are kept. In "api" mode local models are
+ * removed. In "navigator" mode only navigator models are kept.
+ * After filtering, regenerates the agent table with the new list.
+ */
+function filterModelsByMode() {
+    fetch("/api/app_mode")
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            var allowedProviders = data.allowed_providers;
+            if (allowedProviders === null || allowedProviders === undefined) {
+                AVAILABLE_MODELS = MODELS;
+            } else {
+                var providerSet = {};
+                allowedProviders.forEach(function (p) { providerSet[p] = true; });
+                AVAILABLE_MODELS = MODELS.filter(function (m) {
+                    if (isLocalModel(m.value)) return false;
+                    var provider = getModelProvider(m.value);
+                    return provider && providerSet[provider];
+                });
+            }
+            if (AVAILABLE_MODELS.length === 0) {
+                AVAILABLE_MODELS = MODELS;
+            }
+            generateAgentTable();
+        })
+        .catch(function () {
+            AVAILABLE_MODELS = MODELS;
+        });
+}
+
 // ---------------------------------------------------------------------------
 // prompt customization
 // will default to original prompts unless changed by user
@@ -367,15 +414,29 @@ function validateAgentCount() {
 }
 
 /**
+ * Returns true if a model value exists in AVAILABLE_MODELS.
+ */
+function isModelAvailable(value) {
+    return AVAILABLE_MODELS.some(function (m) { return m.value === value; });
+}
+
+/**
  * Builds default model/role/color for an agent by index.
- * First 4 use DEFAULT_AGENTS_4 (red, orange, yellow, lime); rest use TinyLlama, Honest, and next color in COLORS order.
+ * First 4 use DEFAULT_AGENTS_4 (red, orange, yellow, lime); rest use DEFAULT, Honest, and next color in COLORS order.
+ * If the preferred default is not in AVAILABLE_MODELS, falls back to the first available model.
  */
 function getDefaultForAgent(index) {
+    var fallback = AVAILABLE_MODELS[0] ? AVAILABLE_MODELS[0].value : DEFAULT;
     if (index < DEFAULT_AGENTS_4.length) {
-        return DEFAULT_AGENTS_4[index];
+        var d = DEFAULT_AGENTS_4[index];
+        return {
+            model: isModelAvailable(d.model) ? d.model : fallback,
+            role: d.role,
+            color: d.color
+        };
     }
     return {
-        model: DEFAULT,
+        model: isModelAvailable(DEFAULT) ? DEFAULT : fallback,
         role: "honest",
         color: COLORS[index].value
     };
@@ -402,7 +463,7 @@ function createAgentRow(index) {
     modelSelect.name = `agent_${index}_model`;
     modelSelect.className = "table-select model-select";
     modelSelect.required = true;
-    MODELS.forEach(function (m) {
+    AVAILABLE_MODELS.forEach(function (m) {
         const opt = document.createElement("option");
         opt.value = m.value;
         opt.textContent = m.name;
@@ -813,7 +874,7 @@ function confirmAllPrompts() {
 
 // Initialize on DOM ready: build default 4-agent table and bind CONFIRM + form
 window.addEventListener("DOMContentLoaded", function () {
-    generateAgentTable();
+    filterModelsByMode();
     checkApiKeyStatus();
 
     var confirmBtn = document.getElementById("confirmAgentsBtn");
