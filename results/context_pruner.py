@@ -23,9 +23,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from core.stopwords import ENGLISH_STOP_WORDS
 warnings.filterwarnings('ignore')
 
-# -------------------------------------------------------------------
-# Data Loaders (Kept from original)
-# -------------------------------------------------------------------
 class GameLogLoader:
     def __init__(self, root_dir, cache_dir="classifiers/data"):
         self.root_dir = root_dir
@@ -249,7 +246,6 @@ class DatasetBuilder:
 # -------------------------------------------------------------------
 class ContextPruner:
     def __init__(self):
-        # We define a robust suite to test on the whole dataset
         self.models = {
             #'Logistic_Regression': LogisticRegression(max_iter=1000, random_state=42),
             #'Random_Forest': RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1),
@@ -362,7 +358,6 @@ class ContextPruner:
         df_eval = df.copy()
         df_eval['Prob'] = pipeline.predict_proba(X_all)[:, 1]
         
-        # Data structures for round-based analysis
         rounds_by_n = defaultdict(list)
         all_shifts_flat = []
         
@@ -387,16 +382,13 @@ class ContextPruner:
             
             rounds_by_n[n_agents].append(current_round_shifts)
 
-        # 1. Calculate the Thresholds
         fallback_threshold = np.mean(all_shifts_flat) if all_shifts_flat else 0.5
         dynamic_thresholds = {n: np.mean([s for r in rs for s in r]) for n, rs in rounds_by_n.items()}
         dynamic_thresholds['fallback'] = fallback_threshold
 
-        # 2. Print Report
         print("\n" + "="*110)
         print(f"{'PRUNING PERFORMANCE BY ROUND SIZE (n)':^110}")
         print("="*110)
-        # Using a condensed header for Median (Standard Deviation)
         header = f"{'n':<4} | {'Threshold':<10} | {'Msgs (Med ± Std)':<22} | {'Pruned (Med ± Std)':<22} | {'Retention %':<12}"
         print(header)
         print("-" * 110)
@@ -431,27 +423,13 @@ class ContextPruner:
 
         return dynamic_thresholds
     
-    
+
     def prune(self, statement_data, suspicion_state):
        """
        Live function for in game pruning
        """
        pass
-        # speaker = statement_data['Agent']
-        
-        # df_statement = pd.DataFrame([statement_data])
-        # new_prob = self.best_pipeline.predict_proba(df_statement)[0][1]
-        
-        # old_prob = suspicion_state.get(speaker, 0.5) 
-        
-        # magnitude = abs(new_prob - old_prob)
-        
-        # is_important = magnitude >= self.optimal_threshold
-        
-        # if is_important:
-        #     suspicion_state[speaker] = new_prob 
-            
-        # return is_important, magnitude, suspicion_state
+
 
 
 if __name__ == "__main__":
