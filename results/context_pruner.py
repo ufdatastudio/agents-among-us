@@ -4,6 +4,7 @@ import re
 import warnings
 import ast
 import pickle
+import joblib
 import pandas as pd
 import numpy as np
 from collections import defaultdict, Counter
@@ -241,9 +242,6 @@ class DatasetBuilder:
         df.to_csv(save_path, index=False)
         return df
 
-# -------------------------------------------------------------------
-# Core Pruning Class 
-# -------------------------------------------------------------------
 class ContextPruner:
     def __init__(self):
         self.models = {
@@ -259,7 +257,28 @@ class ContextPruner:
         self.optimal_threshold = 0.5
         self.global_avg_importance = 0.0
         self.dynamic_thresholds = {}
+    
+    def _preprocess_live_text(self, text):
+        """
+        Replicates the DatasetBuilder cleaning so the TF-IDF vectorizer 
+        recognizes the vocabulary during live inference.
+        """
         
+        locations = ["Reactor", "Security", "UpperEngine", "LowerEngine", "MedBay", 
+                     "Cafeteria", "Electrical", "Storage", "Admin", "Weapons", 
+                     "Shields", "O2", "Navigation", "Communications"]
+                     
+        loc_pattern = re.compile(r'\b(?:' + '|'.join(locations) + r')\b', flags=re.IGNORECASE)
+        agent_pattern = re.compile(r'\bagent_\d+\b', flags=re.IGNORECASE)
+
+        text = text.lower()
+        text = loc_pattern.sub('place', text)
+        text = agent_pattern.sub('agent_x', text)
+        text = re.sub(r'[^a-z0-9\s_]', '', text)
+        
+        tokens = [word for word in text.split() if word not in ENGLISH_STOP_WORDS]
+        return ' '.join(tokens)
+    
     def report_discussion_lengths(self, active_games):
         print("\n" + "="*50)
         print(f"{'DISCUSSION LENGTH FREQUENCIES':^50}")
@@ -320,7 +339,10 @@ class ContextPruner:
         for model_name, model_obj in self.models.items():
             clf = self._build_pipeline(model_obj)
             clf.fit(X_train, y_train)
-            
+            model_dir = "classifiers/models"
+            model_path = os.path.join(model_dir, f"{model_name.lower()}.joblib")
+            joblib.dump(clf, model_path)
+
             y_probs = clf.predict_proba(X_test)[:, 1]
             y_pred_default = clf.predict(X_test)
             
@@ -423,12 +445,119 @@ class ContextPruner:
 
         return dynamic_thresholds
     
+    def load_live_model(self, model_path, thresholds):
+        """
+        Loads the pre-trained pipeline and dynamic thresholds for live game inference.
+        """
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Could not find trained model at {model_path}")
+            
+        self.best_pipeline = joblib.load(model_path)
+        self.dynamic_thresholds = thresholds
+        
+    def pruner(self, raw_log: str) -> str:
+        """
+        Parses a multi-round discussion log, retains game info headers, 
+        evaluates agent statements dynamically, and returns a condensed log.
+        """
+        if not self.best_pipeline:
+            print("Pruner not trained/loaded. Returning raw log.")
+            return raw_log
 
-    def prune(self, statement_data, suspicion_state):
-       """
-       Live function for in game pruning
-       """
-       pass
+        lines = raw_log.strip().split('\n')
+        pruned_lines = []
+
+        # Count active speakers per round to set dynamic 'n' 
+        agents_per_round = defaultdict(set)
+        curr_r = 0
+        for line in lines:
+            line = line.strip()
+            if line.startswith("=== Round"):
+                match = re.search(r"=== Round (\d+) ===", line)
+                if match:
+                    curr_r = int(match.group(1))
+            elif line.startswith("Agent_"):
+                agent_match = re.match(r"^(Agent_\d+):", line)
+                if agent_match:
+                    agents_per_round[curr_r].add(agent_match.group(1))
+
+        # Prune the log sequentially 
+        suspicion_state = {}
+        threshold = self.dynamic_thresholds.get('fallback', 0.5)
+        statement_counts = defaultdict(int)
+        meeting_caller = None
+        prior = 0.1
+        n_agents = 0
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
+            # System & Game Info lines
+            if line.startswith("===") or line.startswith("**"):
+                pruned_lines.append(line)
+
+                # Reset trackers if it's a new round
+                if line.startswith("=== Round"):
+                    match = re.search(r"=== Round (\d+) ===", line)
+                    if match:
+                        current_round = int(match.group(1))
+                        n_agents = len(agents_per_round[current_round])
+
+                        # Initialize Suspicion Vector for the new round
+                        prior = 1.0 / n_agents if n_agents > 0 else 0.1
+                        suspicion_state = {agent: prior for agent in agents_per_round[current_round]}
+                        
+                        statement_counts.clear()
+                        meeting_caller = None
+
+                        # Fetch correct dynamic threshold
+                        threshold = self.dynamic_thresholds.get(n_agents, self.dynamic_thresholds.get('fallback', 0.5))
+
+                # Track the reporter
+                elif line.startswith("** MEETING CALLED by"):
+                    caller_match = re.search(r"\*\* MEETING CALLED by (Agent_\d+)", line)
+                    if caller_match:
+                        meeting_caller = caller_match.group(1)
+
+            # 2. Agent Statements 
+            elif line.startswith("Agent_"):
+                agent_match = re.match(r"^(Agent_\d+):\s*(.*)", line)
+                if agent_match:
+                    agent_name = agent_match.group(1)
+                    raw_text = agent_match.group(2)
+
+                    # Update interaction metrics
+                    statement_counts[agent_name] += 1
+                    s_num = min(statement_counts[agent_name], 2)
+                    is_reporter = 1 if (agent_name == meeting_caller and s_num == 1) else 0
+
+                    # Preprocess for the model
+                    clean_text = self._preprocess_live_text(raw_text)
+
+                    # Predict
+                    df_statement = pd.DataFrame([{
+                        'Text': clean_text,
+                        'Reported': is_reporter,
+                        'Statement_Num': s_num
+                    }])
+
+                    new_prob = self.best_pipeline.predict_proba(df_statement)[0][1]
+                    old_prob = suspicion_state.get(agent_name, prior)
+
+                    # Calculate Vector Shift I(t)
+                    shift = abs(new_prob - old_prob)
+
+                    # Apply dynamic threshold filter
+                    if n_agents < 4 or shift >= threshold:
+                        # Append the original RAW line so the LLM gets proper grammar/names
+                        pruned_lines.append(line) 
+                        # Only update the state if the statement was significant enough to keep
+                        suspicion_state[agent_name] = new_prob 
+
+        # Return the condensed string format
+        return "\n".join(pruned_lines)
 
 
 

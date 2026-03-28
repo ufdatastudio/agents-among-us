@@ -5,10 +5,12 @@ from agents.base_agent import BaseAgent
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
 class HonestAgent(BaseAgent):
-    def __init__(self, name, color, model_name, max_moves=None, max_discussion_messages=2):
+    def __init__(self, name, color, model_name, max_moves=None, max_discussion_messages=2, is_hybrid=False):
         super().__init__(name, color, "honest", model_name)
         self.max_moves = max_moves if max_moves is not None else MAX_MOVEMENT_PHASES
         self.max_discussion_messages = max_discussion_messages
+        self.is_hybrid = is_hybrid
+
 
     def _substitute_placeholders(self, template, extra_mapping=None):
         """
@@ -178,10 +180,14 @@ You are in a discussion phase.
 """
         return self.llm.generate(self.model_name, self._system_prompt(), prompt, temperature=1.0)
 
-    def vote(self, world_view, candidates, round_num):
+    def vote(self, world_view, candidates, round_num, pruner=None):
         discussion_log = self._read_file(world_view["discussion_log_path"])
         round_num = int(round_num)
         recent_discussion = self._get_current_round_log(discussion_log, round_num-3) # can adjust as needed
+
+        # Pruner 
+        if self.is_hybrid and pruner is not None:
+            recent_discussion = pruner.prune_live_log(recent_discussion)
         results_log = self._read_file(world_view["results_log_path"])
 
         default_vote_instructions = """

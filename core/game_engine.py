@@ -11,6 +11,7 @@ import joblib
 import pandas as pd
 
 from core.stopwords import ENGLISH_STOP_WORDS
+from results.context_pruner import ContextPruner
 
 class Observer:
     def __init__(self, model_dir="results/classifiers/models/"):
@@ -103,6 +104,13 @@ class GameEngine:
         self.state = None
         self.logger = None
         self.observer = Observer()
+        self.pruner = ContextPruner()
+
+        # double check this, add n = 5
+        importance_thresholds = {10: 0.2210, 9: 0.2450, 8: 0.2510, 7: 0.2600, 'fallback': 0.2661}
+        model_file = "results/classifiers/models/mlp_net.joblib"
+        self.pruner.load_live_model(model_file, importance_thresholds)
+
         
         # ML Classifier config (will be set during setup)
         self.enabled_classifiers = {}
@@ -123,6 +131,7 @@ class GameEngine:
                 model = agent_config['model']
                 role = agent_config['role']
                 color = agent_config['color']
+                is_hybrid = agent_config.get('is_hybrid', False)
                 
                 if role == 'byzantine':
                     teammates = [name for name in byz_names if name != agent_name]
@@ -131,7 +140,7 @@ class GameEngine:
                     )
                 else:
                     self.agents.append(
-                        HonestAgent(agent_name, color, model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages)
+                        HonestAgent(agent_name, color, model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages, is_hybrid=is_hybrid)
                     )
             
             print(f"Created {len(self.agents)} agents with EXACT configuration from frontend")
@@ -141,6 +150,8 @@ class GameEngine:
             byz_models = composition["byzantine_model"]
             n_honest = composition["honest_count"]
             n_byz = composition["byzantine_count"]
+            hybrid_count = composition.get("hybrid_count", 0)
+            hybrid_flags = composition.get("honest_hybrid", [])
             
             colors = ["🔴", "🟠", "🟡", "🟩", "🟢", "🔷", "🔵", "🟣", "🟤", "💗", "⚪", "⚫"]
             
@@ -158,8 +169,15 @@ class GameEngine:
                 name = f"Agent_{start_index + i}"
                 color = colors[(start_index + i) % len(colors)]
                 assigned_model = honest_models[i % len(honest_models)]
+                if hybrid_flags:
+                    # Map the boolean flag directly to the model
+                    is_hybrid = hybrid_flags[i % len(hybrid_flags)]
+                else:
+                    # Fallback to the simple count method
+                    is_hybrid = (i < hybrid_count)
+
                 self.agents.append(
-                    HonestAgent(name, color, assigned_model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages)
+                    HonestAgent(name, color, assigned_model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages, is_hybrid=is_hybrid)
                 )
 
         # random.shuffle(self.agents)  # commented out bc we don't want to shuffle agents
@@ -345,6 +363,11 @@ class GameEngine:
         for agent in active_agents:
             view = self.state.get_agent_view(agent.name, round_num, log_to_file=False)
             candidates = [a.name for a in active_agents if a.name != agent.name] + ["SKIP"]
+            if getattr(agent, "is_hybrid", False):
+                vote = agent.vote(view, candidates, round_num, pruner=self.pruner)
+            else:
+                vote = agent.vote(view, candidates, round_num)
+
             vote = agent.vote(view, candidates, round_num)
             votes[agent.name] = vote
             self.state.record_vote(agent.name, vote, round_num)

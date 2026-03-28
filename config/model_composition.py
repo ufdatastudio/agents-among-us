@@ -1,9 +1,15 @@
 import itertools
 
 HW_FLAG = False
-LW_FLAG = True
+LW_FLAG = False
 HOMOGENEOUS = False
-HETEROGENEOUS = True
+HETEROGENEOUS = False
+
+
+MW_FLAG = True 
+HYBRID_COUNT = 2      # How many crew will be hybrid
+HONEST_COUNT = 6      # Remaining standard honest agents (Total crew = 8)
+
 
 # Model Weight Class: Heavyweight
 LLAMA33_70B = "meta-llama/Llama-3.3-70B-Instruct" 
@@ -138,4 +144,36 @@ if LW_FLAG:
         
             COMPOSITION.append(comp_entry)
             
-            
+if MW_FLAG:
+    COMPOSITION.append({
+        "name": "MixedWeight_0_Hybrid",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "honest_model": [MIXTRAL_8X7B],
+        "byzantine_model": [MIXTRAL_8X7B], 
+        "honest_model": [QWEN3_14B],       
+        "hybrid_count": 0                  
+    })
+
+    # Composition 2: 2 Mixtral Imposters, 8 Qwen3 Crewmates (4 Hybrid)
+    COMPOSITION.append({
+        "name": "MixedWeight_4_Hybrid",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B],
+        "honest_model": [QWEN3_14B],
+        "hybrid_count": 4                
+    })
+
+    # # Composition 3 : Mix of models with specific hybrid flags
+    # COMPOSITION.append({
+    #     "name": "MixedWeight_Mapped_Hybrids",
+    #     "honest_count": 8,
+    #     "byzantine_count": 2,
+    #     "byzantine_model": [MIXTRAL_8X7B],
+    #     "honest_model": [QWEN3_14B, LLAMA3_8B],  
+    #     "honest_hybrid": [True, False]           # Maps True to Qwen, False to Llama
+    # })
+
+
+
