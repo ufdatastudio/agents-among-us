@@ -367,8 +367,9 @@ class GameEngine:
                 vote = agent.vote(view, candidates, round_num, pruner=self.pruner)
             else:
                 vote = agent.vote(view, candidates, round_num)
+            # Do not call vote() again here: a duplicate line (merge artifact) used to
+            # overwrite the hybrid branch and drop the pruner, breaking hybrid voting.
 
-            vote = agent.vote(view, candidates, round_num)
             votes[agent.name] = vote
             self.state.record_vote(agent.name, vote, round_num)
             self.state.save_json()

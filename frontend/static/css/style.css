@@ -323,11 +323,18 @@ tr:hover {
 #agentTable th:nth-child(1),
 #agentTable td:nth-child(1) { width: 50px; text-align: center; }
 #agentTable th:nth-child(2),
-#agentTable td:nth-child(2) { width: 35%; }
+#agentTable td:nth-child(2) { width: 32%; }
 #agentTable th:nth-child(3),
-#agentTable td:nth-child(3) { width: 20%; }
+#agentTable td:nth-child(3) { width: 18%; }
 #agentTable th:nth-child(4),
-#agentTable td:nth-child(4) { width: 25%; }
+#agentTable td:nth-child(4) { width: 22%; }
+#agentTable th:nth-child(5),
+#agentTable td:nth-child(5) { width: 10%; text-align: center; vertical-align: middle; }
+
+.hybrid-cell .hybrid-na {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
 
 .table-select {
     width: 100%;

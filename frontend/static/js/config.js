@@ -432,18 +432,43 @@ function getDefaultForAgent(index) {
         return {
             model: isModelAvailable(d.model) ? d.model : fallback,
             role: d.role,
-            color: d.color
+            color: d.color,
+            hybrid: false
         };
     }
     return {
         model: isModelAvailable(DEFAULT) ? DEFAULT : fallback,
         role: "honest",
-        color: COLORS[index].value
+        color: COLORS[index].value,
+        hybrid: false
     };
 }
 
 /**
- * Creates one table row for an agent (number, model dropdown, role dropdown, color dropdown).
+ * Rightmost column: checkbox for honest (hybrid = context-pruned voting), N/A for Byzantine.
+ */
+function populateHybridCell(hybridCell, index, role, hybridChecked) {
+    hybridCell.innerHTML = "";
+    hybridCell.className = "hybrid-cell";
+    if (role === "byzantine") {
+        var na = document.createElement("span");
+        na.className = "hybrid-na";
+        na.textContent = "N/A";
+        na.setAttribute("aria-label", "Hybrid not applicable for Byzantine agents");
+        hybridCell.appendChild(na);
+    } else {
+        var cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.name = "agent_" + index + "_is_hybrid";
+        cb.value = "true";
+        cb.title = "Hybrid: pruned discussion context when voting (honest only)";
+        if (hybridChecked) cb.checked = true;
+        hybridCell.appendChild(cb);
+    }
+}
+
+/**
+ * Creates one table row for an agent (number, model, role, color, hybrid).
  * @param {number} index - 0-based agent index
  * @returns {HTMLTableRowElement}
  */
@@ -492,6 +517,14 @@ function createAgentRow(index) {
     // Column 4: Color display (hardcoded, read-only - assigned by agent number)
     const colorCell = createColorDisplayCell(index);
     row.appendChild(colorCell);
+
+    // Column 5: Hybrid (honest only; Byzantine shows N/A)
+    const hybridCell = document.createElement("td");
+    populateHybridCell(hybridCell, index, defaults.role, defaults.hybrid === true);
+    roleSelect.addEventListener("change", function () {
+        populateHybridCell(hybridCell, index, roleSelect.value, false);
+    });
+    row.appendChild(hybridCell);
 
     return row;
 }

@@ -160,11 +160,14 @@ def start_game():
         honest_count = 0
         
         for i in range(num_agents):
+            role = request.form.get(f'agent_{i}_role')
+            is_hybrid = role == 'honest' and request.form.get(f'agent_{i}_is_hybrid') == 'true'
             agent = {
                 'agent_num': i,  # Preserve exact agent number
                 'model': request.form.get(f'agent_{i}_model'),
-                'role': request.form.get(f'agent_{i}_role'),
-                'color': request.form.get(f'agent_{i}_color')
+                'role': role,
+                'color': request.form.get(f'agent_{i}_color'),
+                'is_hybrid': is_hybrid,
             }
             agents.append(agent)
             
@@ -222,7 +225,8 @@ def start_game():
         print("\nAgent lineup:")
         for agent in agents:
             role_label = "Byzantine" if agent['role'] == 'byzantine' else "Honest"
-            print(f"  Agent_{agent['agent_num']}: {role_label} | {agent['model']} | {agent['color']}")
+            hybrid_note = " | hybrid" if agent.get('is_hybrid') else ""
+            print(f"  Agent_{agent['agent_num']}: {role_label}{hybrid_note} | {agent['model']} | {agent['color']}")
 
         
         # store in session

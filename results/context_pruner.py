@@ -559,6 +559,13 @@ class ContextPruner:
         # Return the condensed string format
         return "\n".join(pruned_lines)
 
+    def prune_live_log(self, raw_log: str) -> str:
+        """Live inference entry point; same behavior as :meth:`pruner`.
+
+        Named for call sites (e.g. HonestAgent.vote) that expect this API; the
+        implementation lives on :meth:`pruner` above.
+        """
+        return self.pruner(raw_log)
 
 
 if __name__ == "__main__":

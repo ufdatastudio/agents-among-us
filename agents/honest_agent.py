@@ -64,15 +64,16 @@ class HonestAgent(BaseAgent):
         adj = ROOMS[loc]
         bodies = world_view["surroundings"][loc]["bodies"]
         button_used = world_view["self"].get("button_used", False)
-        
+
         move_options = []
         cap_loc = loc.capitalize()
         move_options.append(f"{cap_loc}")
         
         special_actions = []
         options_str = ""
-        if bodies: 
+        if bodies:
             special_actions.append("REPORT")
+            return "report", bodies[0], "REPORT"
 
         if loc == "Cafeteria" and not button_used: 
             special_actions.append("BUTTON")
@@ -185,7 +186,7 @@ You are in a discussion phase.
         round_num = int(round_num)
         recent_discussion = self._get_current_round_log(discussion_log, round_num-3) # can adjust as needed
 
-        # Pruner 
+        # prune_live_log is defined on ContextPruner (wraps pruner(); name kept for this call site).
         if self.is_hybrid and pruner is not None:
             recent_discussion = pruner.prune_live_log(recent_discussion)
         results_log = self._read_file(world_view["results_log_path"])
