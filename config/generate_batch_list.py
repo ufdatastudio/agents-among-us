@@ -1,6 +1,6 @@
 import argparse
 import sys
-from model_composition import COMPOSITION
+from config.model_composition import COMPOSITION
 
 def get_models_for_composition(comp_name):
     unique_models = set()    

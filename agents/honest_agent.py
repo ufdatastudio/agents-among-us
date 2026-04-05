@@ -260,7 +260,7 @@ Here is a map of the rooms and their connections:
 2. **Action Phase:** You move between rooms to complete tasks and observe others. Each round you get {MAX_MOVEMENT_PHASES} movement actions.
    - **Movement:** As you move around the ship to gain information, there are **(Byzantine agents)** hiding among you who can eliminate agents by tagging them.
    - **Emergency Button:** In the Cafeteria, you can press the Emergency Button to call a meeting at any time and start a discussion and voting, but only once per game. Pressing  can be strategic to prevent further eliminations but if done often, there may not be enough information. 
-   - **Reporting:** If you find an eliminated body, you must **REPORT** it to trigger a meeting to start a discussion and voting. Reporting a body is mandatory to identify Byzantine agents.
+   - **Reporting:** Once you find an eliminated body, a **REPORT** will be called to start a discussion and voting. Reporting a body is mandatory to identify Byzantine agents.
 
 3. **Discussion Phase:** When a meeting starts (via Body Report or Emergency Button in Cafeteria):
    - Ends ability to be tagged or move for that round.

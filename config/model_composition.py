@@ -146,10 +146,9 @@ if LW_FLAG:
             
 if MW_FLAG:
     COMPOSITION.append({
-        "name": "MixedWeight_0_Hybrid",
+        "name": "MixedWeight_0",
         "honest_count": 8,
         "byzantine_count": 2,
-        "honest_model": [MIXTRAL_8X7B],
         "byzantine_model": [MIXTRAL_8X7B], 
         "honest_model": [QWEN3_14B],       
         "hybrid_count": 0                  

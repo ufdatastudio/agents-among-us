@@ -20,8 +20,9 @@ if IS_MAC:
     os.environ.setdefault("LLM_MODE", "LOCAL")
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
 else:
-    os.environ.setdefault("LLM_MODE", "LOCAL")
-    #os.environ["CUDA_VISIBLE_DEVICES"] = "-1" # Enable this for distributed GPU runs
+    #os.environ.setdefault("LLM_MODE", "LOCAL")
+    os.environ.setdefault("LLM_MODE", "CONTROLLER") # FOR DISTRIBUTED GPU RUNS
+    #os.environ["CUDA_VISIBLE_DEVICES"] = "-1" # FOR DISTRIBUTED GPU RUNS, COMMENT OUT
 
 import time
 from uuid import uuid4

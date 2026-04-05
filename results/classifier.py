@@ -22,10 +22,11 @@ from sklearn.svm import LinearSVC
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.neural_network import MLPClassifier
-from lightgbm import LGBMClassifier
+#from lightgbm import LGBMClassifier
 import xgboost as xgb
+import matplotlib.pyplot as plt
 
-from core.stopwords import ENGLISH_STOP_WORDS
+from stopwords import ENGLISH_STOP_WORDS
 warnings.filterwarnings('ignore')
 
 
@@ -279,7 +280,6 @@ class GameLogLoader:
         self._save_to_cache()
         return self.games_data, self.silent_games
 
-
 class DatasetBuilder:
     def __init__(self):
         self.stop_words = ENGLISH_STOP_WORDS
@@ -342,8 +342,90 @@ class DatasetBuilder:
         df.to_csv(save_path, index=False)
         return df
 
-
 class GameAnalytics:
+
+    @staticmethod
+    def normalize_model_name(name):
+        """Normalizes raw model names and injects accurate parameter counts."""
+        clean_name = str(name).split('/')[-1]
+        shorthand_map = {
+            "Llama-3.3-70B-Instruct": "Llama3.3-70B",
+            "DeepSeek-R1-Distill-Llama-70B": "DeepSeek-70B",
+            "L3.3-GeneticLemonade-Final-v2-70B": "GeneticLemonade-70B",
+            "Hermes-4-70B": "Hermes4-70B",
+            "Qwen2.5-72B-Instruct": "Qwen2.5-72B",
+            "Qwen3-Next-80B-A3B-Instruct": "Qwen3Next-80B",
+            "Apertus-70B-Instruct-2509": "Apertus-70B",
+            "Arcee-Nova": "ArceeNova-73B", 
+            "Mixtral-8x7B-Instruct-v0.1-upscaled": "MixtralUpscaled-82B",
+            "Athene-V2-Chat": "AtheneV2-73B",
+            "HyperNova-60B": "HyperNova-60B",
+            "Meta-Llama-3-8B-Instruct": "Llama3-8B",
+            "Llama-3.1-8B-Instruct": "Llama3.1-8B",
+            "Olmo-3-7B-Instruct": "Olmo3-7B",
+            "gemma-2-9b-it": "Gemma2-9B",
+            "Qwen2-7B-Instruct": "Qwen2-7B",
+            "Qwen2.5-7B-Instruct": "Qwen2.5-7B",
+            "Qwen3-14B-Instruct": "Qwen3-14B",
+            "gpt-oss-20b": "gpt-oss-20B",
+            "Apertus-8B-Instruct-2509": "Apertus-8B",
+            "Arcee-Agent": "ArceeAgent-8B",
+        }
+        for key, val in shorthand_map.items():
+            if key in clean_name: return val
+        return shorthand_map.get(clean_name, clean_name)
+    
+    @staticmethod
+    def calculate_total_discussions(active_games):
+        """
+        Calculates the total number of unique discussion rounds 
+        that occurred across every game in the dataset.
+        """
+        total_discussions = sum(game.get('discussion_count', 0) for game in active_games)
+        
+        print("\n" + "="*40)
+        print(f"Global Discussion Statistics")
+        print("-" * 40)
+        print(f"Total Games Processed:    {len(active_games)}")
+        print(f"Total Discussions Held:   {total_discussions}")
+        if len(active_games) > 0:
+            avg = total_discussions / len(active_games)
+            print(f"Avg Discussions/Game:     {avg:.2f}")
+        print("="*40)
+        
+        return total_discussions
+    
+    @staticmethod
+    def calculate_average_game_length(active_games):
+        """
+        Computes the average number of rounds played per game.
+        This represents the game duration regardless of whether 
+        discussions occurred in every round.
+        """
+        if not active_games:
+            return 0.0
+
+        durations = []
+        for game in active_games:
+            # Each game dict contains 'turns'. We find the highest round index
+            # present in those turns to determine how long the game lasted.
+            if game['turns']:
+                last_round = max(t['round'] for t in game['turns'])
+                durations.append(last_round)
+        
+        avg_rounds = sum(durations) / len(durations) if durations else 0
+        
+        print("\n" + "="*40)
+        print(f"Game Duration Statistics")
+        print("-" * 40)
+        print(f"Total Games:         {len(durations)}")
+        print(f"Max Rounds (Longest): {max(durations) if durations else 0}")
+        print(f"Min Rounds (Shortest):{min(durations) if durations else 0}")
+        print(f"Avg Rounds Per Game:  {avg_rounds:.2f}")
+        print("="*40)
+        
+        return avg_rounds
+    
     @staticmethod
     def calculate_win_rates(active_games):
         stats = defaultdict(lambda: {'total': 0, 'crew_wins': 0, 'imp_wins': 0})
@@ -496,6 +578,433 @@ class GameAnalytics:
                 d_win_str = f"{r['d_win']:+.1f}%"
                 print(f"{r['model']:<40.30} | {r['s_win']:8.1f}%  {r['t_win']:8.1f}%  {d_win_str:<7}")
 
+    @staticmethod
+    def calculate_voting_metrics(active_games):
+        """
+        Computes TP, FP, FN, Precision, Recall, and F1 for crewmate voting.
+        Excludes 'olmo' and calculates variance across models for the aggregate row.
+        """
+        import statistics
+        
+        # Store global accumulations per model
+        model_metrics = defaultdict(lambda: {
+            'TP': 0, 'FP': 0, 'FN': 0, 
+            'base_TP': 0.0, 'base_FP': 0.0, 'base_FN': 0.0
+        })
+
+        for game in active_games:
+            rounds = defaultdict(list)
+            for turn in game['turns']:
+                rounds[turn['round']].append(turn)
+
+            for round_num, turns in rounds.items():
+                agents_in_round = {}
+                for t in turns:
+                    agents_in_round[t['agent']] = {
+                        'role': t['role'], 
+                        'model': t['model'], 
+                        'vote': t['vote_target'], 
+                        'vote_role': t['vote_target_role']
+                    }
+
+                # V = Valid targets (Total alive - 1 for self)
+                V = max(1, len(agents_in_round) - 1) 
+                I = sum(1 for a in agents_in_round.values() if a['role'] == 'B')
+
+                # Random baseline expectations for this round state
+                e_tp = I / (V + 1)
+                e_fp = (V - I) / (V + 1)
+                e_fn = 1 / (V + 1)
+
+                for agent_id, data in agents_in_round.items():
+                    if data['role'] == 'H' and 'olmo' not in data['model'].lower(): 
+                        model = data['model']
+                        vote = data['vote']
+                        vote_role = data['vote_role']
+
+                        # Global accumulators
+                        model_metrics[model]['base_TP'] += e_tp
+                        model_metrics[model]['base_FP'] += e_fp
+                        model_metrics[model]['base_FN'] += e_fn
+                        
+                        if vote == 'None' or vote == 'SKIP':
+                            model_metrics[model]['FN'] += 1
+                        elif vote_role == 'B':
+                            model_metrics[model]['TP'] += 1
+                        elif vote_role == 'H':
+                            model_metrics[model]['FP'] += 1
+
+        # Aggregate Global Results
+        results = {}
+        ov_TP = ov_FP = ov_FN = 0
+        ov_base_TP = ov_base_FP = ov_base_FN = 0
+
+        # Arrays to hold final model scores to calculate std dev for the overall average
+        model_Ps, model_Rs, model_F1s = [], [], []
+        base_Ps, base_Rs, base_F1s = [], [], []
+
+        for model, counts in model_metrics.items():
+            TP, FP, FN = counts['TP'], counts['FP'], counts['FN']
+            
+            ov_TP += TP
+            ov_FP += FP
+            ov_FN += FN
+            ov_base_TP += counts['base_TP']
+            ov_base_FP += counts['base_FP']
+            ov_base_FN += counts['base_FN']
+
+            P = TP / (TP + FP) if (TP + FP) > 0 else 0
+            R = TP / (TP + FN) if (TP + FN) > 0 else 0
+            F1 = 2 * (P * R) / (P + R) if (P + R) > 0 else 0
+
+            b_TP, b_FP, b_FN = counts['base_TP'], counts['base_FP'], counts['base_FN']
+            bP = b_TP / (b_TP + b_FP) if (b_TP + b_FP) > 0 else 0
+            bR = b_TP / (b_TP + b_FN) if (b_TP + b_FN) > 0 else 0
+            bF1 = 2 * (bP * bR) / (bP + bR) if (bP + bR) > 0 else 0
+
+            results[model] = {
+                'TP': TP, 'FP': FP, 'FN': FN, 
+                'P': P, 'R': R, 'F1': F1,
+                'bP': bP, 'bR': bR, 'bF1': bF1,
+            }
+            
+            # Store for global std dev calculation
+            model_Ps.append(P)
+            model_Rs.append(R)
+            model_F1s.append(F1)
+            base_Ps.append(bP)
+            base_Rs.append(bR)
+            base_F1s.append(bF1)
+
+        def get_std(lst): return statistics.stdev(lst) if len(lst) > 1 else 0.0
+
+        # Calculate overall averages strictly based on sums
+        avg_P = ov_TP / (ov_TP + ov_FP) if (ov_TP + ov_FP) > 0 else 0
+        avg_R = ov_TP / (ov_TP + ov_FN) if (ov_TP + ov_FN) > 0 else 0
+        avg_F1 = 2 * (avg_P * avg_R) / (avg_P + avg_R) if (avg_P + avg_R) > 0 else 0
+
+        avg_bP = ov_base_TP / (ov_base_TP + ov_base_FP) if (ov_base_TP + ov_base_FP) > 0 else 0
+        avg_bR = ov_base_TP / (ov_base_TP + ov_base_FN) if (ov_base_TP + ov_base_FN) > 0 else 0
+        avg_bF1 = 2 * (avg_bP * avg_bR) / (avg_bP + avg_bR) if (avg_bP + avg_bR) > 0 else 0
+
+        results['AVERAGE'] = {
+            'TP': ov_TP, 'FP': ov_FP, 'FN': ov_FN, 
+            'P': avg_P, 'R': avg_R, 'F1': avg_F1,
+            'std_P': get_std(model_Ps),
+            'std_R': get_std(model_Rs),
+            'std_F1': get_std(model_F1s),
+            'bP': avg_bP, 'bR': avg_bR, 'bF1': avg_bF1,
+            'std_bP': get_std(base_Ps),
+            'std_bR': get_std(base_Rs),
+            'std_bF1': get_std(base_F1s)
+        }
+
+        return results
+
+    @classmethod
+    def calculate_grouped_f1(cls, voting_results):      
+        small_f1s = []
+        medium_f1s = []
+        baseline_f1s = []
+        
+        for model_raw, metrics in voting_results.items():
+            if model_raw == 'AVERAGE':
+                continue
+                
+            norm_name = cls.normalize_model_name(model_raw)
+            
+            # Extract the integer parameter count
+            match = re.search(r'(\d+)B', norm_name, re.IGNORECASE)
+            if not match:
+                continue
+                
+            size_val = int(match.group(1))
+            
+            # Convert F1 to percentage
+            f1_pct = metrics['F1'] * 100
+            bf1_pct = metrics['bF1'] * 100
+            
+            # Bucket the models
+            if 7 <= size_val <= 20:
+                small_f1s.append(f1_pct)
+            elif size_val >= 60:
+                medium_f1s.append(f1_pct)
+                
+            # All models contribute to the global random baseline variance
+            baseline_f1s.append(bf1_pct)
+
+        def get_stats(data):
+            if not data:
+                return 0.0, 0.0
+            mean_val = sum(data) / len(data)
+            # Use sample standard deviation if >1 item, else 0
+            std_val = statistics.stdev(data) if len(data) > 1 else 0.0
+            return mean_val, std_val
+
+        small_mean, small_std = get_stats(small_f1s)
+        med_mean, med_std = get_stats(medium_f1s)
+        base_mean, base_std = get_stats(baseline_f1s)
+
+        # Print the exact requested format
+        print("\n" + "="*90)
+        print(f"{'GROUPED F1 SCORES (Small vs Medium)':^90}")
+        print("="*90)
+        print(f"{'Model Group':<18} | {'F1':<15} |")
+        print("-" * 90)
+        print(f"{'Small (7B-20B)':<18} | {small_mean:5.1f}% ± {small_std:<5.1f}% |")
+        print(f"{'Medium (60B+)':<18} | {med_mean:5.1f}% ± {med_std:<5.1f}% |")
+        print(f"{'Random baseline':<18} | {base_mean:5.1f}% ± {base_std:<5.1f}% |")
+        print("="*90)
+    
+    @staticmethod
+    def print_voting_metrics_report(results):
+        print("\n" + "="*125)
+        print(f"{'CREWMATE VOTING PERFORMANCE (vs Random Baseline)':^125}")
+        print("="*125)
+        print(f"{'MODEL NAME':<32} | {'TP':<5} {'FP':<5} {'FN':<5} | {'P':<6} {'R':<6} {'F1':<6} | {'Base P':<7} {'Base R':<7} {'Base F1':<7}")
+        print("-" * 125)
+
+        avg_res = results.pop('AVERAGE')
+        sorted_models = sorted(results.items(), key=lambda x: x[1]['F1'], reverse=True)
+
+        for model, metrics in sorted_models:
+            print(f"{model:<32.30} | {metrics['TP']:<5} {metrics['FP']:<5} {metrics['FN']:<5} | "
+                  f"{metrics['P']*100:5.1f}% {metrics['R']*100:5.1f}% {metrics['F1']*100:5.1f}% | "
+                  f"{metrics['bP']*100:6.1f}% {metrics['bR']*100:6.1f}% {metrics['bF1']*100:6.1f}%")
+
+        print("-" * 125)
+        
+        # Format the overall average string with standard deviation
+        avg_P_str = f"{avg_res['P']*100:.1f}±{avg_res['std_P']*100:.1f}"
+        avg_R_str = f"{avg_res['R']*100:.1f}±{avg_res['std_R']*100:.1f}"
+        avg_F1_str = f"{avg_res['F1']*100:.1f}±{avg_res['std_F1']*100:.1f}"
+        
+        base_P_str = f"{avg_res['bP']*100:.1f}±{avg_res['std_bP']*100:.1f}"
+        base_R_str = f"{avg_res['bR']*100:.1f}±{avg_res['std_bR']*100:.1f}"
+        base_F1_str = f"{avg_res['bF1']*100:.1f}±{avg_res['std_bF1']*100:.1f}"
+
+        print(f"{'AVERAGE':<32} | {avg_res['TP']:<5} {avg_res['FP']:<5} {avg_res['FN']:<5} | "
+              f"{avg_P_str:<11} {avg_R_str:<10} {avg_F1_str:<10} | "
+              f"{base_P_str:<10} {base_R_str:<10} {base_F1_str:<10}")
+        print("=" * 125)
+
+    @classmethod
+    def plot_voting_accuracy_vs_size(cls, voting_results, save_path="voting_accuracy_vs_scale.png"):
+        """
+        Aggregates precision (accuracy) by model parameter count and generates
+        both a table and a bar chart with a random baseline.
+        """
+        # Dictionary to accumulate True Positives, False Positives, and weighted baseline Precision
+        size_data = defaultdict(lambda: {'TP': 0, 'FP': 0, 'votes': 0, 'bP_sum': 0.0})
+        
+        for model_raw, metrics in voting_results.items():
+            if model_raw == 'AVERAGE':
+                continue
+                
+            norm_name = cls.normalize_model_name(model_raw)
+            
+            # Extract the integer parameter count (e.g., 70 from "Llama3.3-70B")
+            match = re.search(r'(\d+)B', norm_name, re.IGNORECASE)
+            if match:
+                size_val = int(match.group(1))
+            else:
+                continue # Skip if size can't be resolved
+                
+            votes = metrics['TP'] + metrics['FP']
+            if votes == 0:
+                continue
+                
+            size_data[size_val]['TP'] += metrics['TP']
+            size_data[size_val]['FP'] += metrics['FP']
+            size_data[size_val]['votes'] += votes
+            # Weight the baseline probability by the number of votes to get accurate global averages
+            size_data[size_val]['bP_sum'] += metrics['bP'] * votes
+
+        rows = []
+        total_votes_all = 0
+        total_bp_sum = 0.0
+        
+        # Build Table Data
+        for size in sorted(size_data.keys()):
+            d = size_data[size]
+            if d['votes'] == 0: continue
+            
+            acc = d['TP'] / d['votes']
+            base_acc = d['bP_sum'] / d['votes']
+            
+            rows.append({
+                'Model Scale': f"{size}B",
+                'Size (Int)': size,
+                'Total Votes': d['votes'],
+                'Voting Accuracy (%)': acc * 100,
+                'Random Baseline (%)': base_acc * 100
+            })
+            
+            total_votes_all += d['votes']
+            total_bp_sum += d['bP_sum']
+            
+        df = pd.DataFrame(rows)
+        
+        # --- 1. Print the Table ---
+        print("\n" + "="*80)
+        print(f"{'VOTING ACCURACY VS. MODEL SCALE':^80}")
+        print("="*80)
+        print(f"{'Model Scale':<15} | {'Total Votes':<15} | {'Accuracy (%)':<15} | {'Baseline (%)':<15}")
+        print("-" * 80)
+        for _, row in df.iterrows():
+            print(f"{row['Model Scale']:<15} | {row['Total Votes']:<15} | {row['Voting Accuracy (%)']:<15.1f} | {row['Random Baseline (%)']:<15.1f}")
+        print("=" * 80)
+
+        # --- 2. Generate the Figure ---
+        # Calculate overall random baseline for the dashed line
+        global_baseline = (total_bp_sum / total_votes_all * 100) if total_votes_all > 0 else 0
+        
+        plt.figure(figsize=(10, 6))
+        
+        # Bar chart sorted implicitly by the X-axis parameter sizes
+        bars = plt.bar(df['Model Scale'], df['Voting Accuracy (%)'], 
+                       color='#1f77b4', edgecolor='black', zorder=3)
+        
+        # Dashed line for random baseline
+        plt.axhline(y=global_baseline, color='#d62728', linestyle='--', linewidth=2, 
+                    label=f'Avg Random Baseline ({global_baseline:.1f}%)', zorder=4)
+        
+        # Styling formatting suitable for a conference paper
+        plt.grid(axis='y', linestyle='--', alpha=0.7, zorder=0)
+        plt.xlabel('Model Scale (Parameters)', fontsize=12, fontweight='bold')
+        plt.ylabel('Crew Voting Precision (%)', fontsize=12, fontweight='bold')
+        plt.title('Voting Precision vs. Model Scale', fontsize=14, fontweight='bold')
+        
+        # Set Y-limit slightly above max value to fit data labels
+        y_max = max(100, df['Voting Accuracy (%)'].max() + 10)
+        plt.ylim(0, y_max)
+        plt.legend(loc='upper left')
+        
+        # Annotate each bar with the exact percentage
+        for bar in bars:
+            yval = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2, yval + 1.5, f'{yval:.1f}%', 
+                     ha='center', va='bottom', fontsize=10, fontweight='bold')
+            
+        plt.tight_layout()
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"\nFigure saved successfully to: {save_path}")
+        
+        return df
+    
+    @classmethod
+    def plot_voting_accuracy_vs_sizegroup(cls, voting_results, save_path="voting_accuracy_vs_scale_grouped.png"):
+        """
+        Aggregates precision (accuracy) by model size group (Small vs Medium) and generates
+        both a table and a bar chart with a random baseline.
+        """
+        # Dictionary to accumulate metrics for our specific groups
+        group_data = {
+            "Small (7B-20B)": {'TP': 0, 'FP': 0, 'votes': 0, 'bP_sum': 0.0},
+            "Medium (60B+)": {'TP': 0, 'FP': 0, 'votes': 0, 'bP_sum': 0.0}
+        }
+        
+        for model_raw, metrics in voting_results.items():
+            if model_raw == 'AVERAGE':
+                continue
+                
+            norm_name = cls.normalize_model_name(model_raw)
+            
+            # Extract the integer parameter count (e.g., 70 from "Llama3.3-70B")
+            match = re.search(r'(\d+)B', norm_name, re.IGNORECASE)
+            if match:
+                size_val = int(match.group(1))
+            else:
+                continue # Skip if size can't be resolved
+                
+            # Assign to the requested groups
+            if 7 <= size_val <= 20:
+                group_key = "Small (7B-20B)"
+            elif size_val >= 60:
+                group_key = "Medium (60B+)"
+            else:
+                continue # Skip models outside these buckets, if any exist
+                
+            votes = metrics['TP'] + metrics['FP']
+            if votes == 0:
+                continue
+                
+            group_data[group_key]['TP'] += metrics['TP']
+            group_data[group_key]['FP'] += metrics['FP']
+            group_data[group_key]['votes'] += votes
+            # Weight the baseline probability by the number of votes
+            group_data[group_key]['bP_sum'] += metrics['bP'] * votes
+
+        rows = []
+        total_votes_all = 0
+        total_bp_sum = 0.0
+        
+        # Build Table Data (Enforcing order: Small, then Medium)
+        for group in ["Small (7B-20B)", "Medium (60B+)"]:
+            d = group_data[group]
+            if d['votes'] == 0: continue
+            
+            acc = d['TP'] / d['votes']
+            base_acc = d['bP_sum'] / d['votes']
+            
+            rows.append({
+                'Model Group': group,
+                'Total Votes': d['votes'],
+                'Voting Accuracy (%)': acc * 100,
+                'Random Baseline (%)': base_acc * 100
+            })
+            
+            total_votes_all += d['votes']
+            total_bp_sum += d['bP_sum']
+            
+        df = pd.DataFrame(rows)
+        
+        # --- 1. Print the Table ---
+        print("\n" + "="*80)
+        print(f"{'VOTING PRECISION VS. MODEL GROUP':^80}")
+        print("="*80)
+        print(f"{'Model Group':<20} | {'Total Votes':<15} | {'Precision (%)':<15} | {'Baseline (%)':<15}")
+        print("-" * 80)
+        for _, row in df.iterrows():
+            print(f"{row['Model Group']:<20} | {row['Total Votes']:<15} | {row['Voting Accuracy (%)']:<15.1f} | {row['Random Baseline (%)']:<15.1f}")
+        print("=" * 80)
+
+        # --- 2. Generate the Figure ---
+        # Calculate overall random baseline for the dashed line across all included votes
+        global_baseline = (total_bp_sum / total_votes_all * 100) if total_votes_all > 0 else 0
+        
+        plt.figure(figsize=(8, 6)) # Slightly narrower since we only have 2 bars
+        
+        # Plot the grouped bars
+        bars = plt.bar(df['Model Group'], df['Voting Accuracy (%)'], 
+                       color=['#1f77b4', '#ff7f0e'], edgecolor='black', zorder=3, width=0.6)
+        
+        # Dashed line for random baseline
+        plt.axhline(y=global_baseline, color='#d62728', linestyle='--', linewidth=2, 
+                    label=f'Avg Random Baseline ({global_baseline:.1f}%)', zorder=4)
+        
+        # Styling formatting suitable for a conference paper
+        plt.grid(axis='y', linestyle='--', alpha=0.7, zorder=0)
+        plt.xlabel('Model Scale (Parameters)', fontsize=12, fontweight='bold')
+        plt.ylabel('Crew Voting Precision (%)', fontsize=12, fontweight='bold')
+        plt.title('Voting Precision: Small vs. Medium Models', fontsize=14, fontweight='bold')
+        
+        # Set Y-limit slightly above max value to fit data labels safely
+        y_max = max(100, df['Voting Accuracy (%)'].max() + 10)
+        plt.ylim(0, y_max)
+        plt.legend(loc='upper left')
+        
+        # Annotate each bar with the exact percentage
+        for bar in bars:
+            yval = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2, yval + 1.5, f'{yval:.1f}%', 
+                     ha='center', va='bottom', fontsize=11, fontweight='bold')
+            
+        plt.tight_layout()
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"\nFigure saved successfully to: {save_path}")
+        
+        return df
 
 class ObserverPipeline:
     def __init__(self, output_dir="results/classifiers"):
@@ -784,14 +1293,33 @@ class ObserverPipeline:
 
 
 if __name__ == "__main__":
-    ROOT_DIRECTORY = "results"
+    ROOT_DIRECTORY = "experiments/MixedWeight_0"
     
-    loader = GameLogLoader(ROOT_DIRECTORY)
+    #loader = GameLogLoader(ROOT_DIRECTORY, cache_dir="")
+    loader = GameLogLoader(ROOT_DIRECTORY, cache_dir="classifiers/data/MixedWeight_0")
     active_games, silent_games = loader.load_all(force_reload=False)
+    win_stats = GameAnalytics.calculate_win_rates(active_games)
+    GameAnalytics.print_win_rate_report(win_stats)
+    total_discussions = GameAnalytics.calculate_total_discussions(active_games)
+    avg_length = GameAnalytics.calculate_average_game_length(active_games)
+
+    voting_results = GameAnalytics.calculate_voting_metrics(active_games)
+    GameAnalytics.print_voting_metrics_report(voting_results)
     
-    dataset_builder = DatasetBuilder()
-    df = dataset_builder.build(active_games)
+    #dataset_builder = DatasetBuilder()
+    #df = dataset_builder.build(active_games)
     
-    pipeline = ObserverPipeline(output_dir="results/classifiers")
-    pipeline.run_suite(df)
+    #voting_results = GameAnalytics.calculate_voting_metrics(active_games)
+    #GameAnalytics.print_voting_metrics_report(voting_results)
+
+    #grouped_f1_results = GameAnalytics.calculate_grouped_f1(voting_results)
+
+    # df_scale = GameAnalytics.plot_voting_accuracy_vs_sizegroup(
+    #     voting_results, 
+    #     save_path="Voting_Accuracy_Vs_Model_Scale_Grouped.png"
+    # )
+
+
+    #pipeline = ObserverPipeline(output_dir="results/classifiers")
+    #pipeline.run_suite(df)
     # pipeline.print_results()
