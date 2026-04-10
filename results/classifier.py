@@ -1,39 +1,158 @@
+import json
 import os
 import re
 import warnings
 import ast
 import pickle
 import statistics
+import concurrent
+import multiprocessing as mp
 import pandas as pd
 import numpy as np
-import joblib
 from collections import defaultdict, Counter
 from tqdm import tqdm
-
-from sklearn.model_selection import train_test_split
+import spacy
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import subprocess
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import LinearSVC
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.neural_network import MLPClassifier
-#from lightgbm import LGBMClassifier
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import xgboost as xgb
 import matplotlib.pyplot as plt
-
-from stopwords import ENGLISH_STOP_WORDS
+from config.prompts import SUSPECT_JUDGE_SYSTEM, SUSPECT_JUDGE_USER
+os.environ["LLM_MODE"] = "CONTROLLER"
+from dotenv import load_dotenv
+load_dotenv()
+import torch
+import scipy.stats as stats
+from core.stopwords import ENGLISH_STOP_WORDS
 warnings.filterwarnings('ignore')
+
+def _gpu_evaluation_worker(gpu_id, tasks_chunk, eval_model_id, batch_size, base_checkpoint_name):
+    """
+    Independent worker process that locks itself to a specific GPU, 
+    loads a full replica of the model, and chews through its chunk of tasks.
+    """
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+    
+    checkpoint_file = base_checkpoint_name.replace(".csv", f"_gpu_{gpu_id}.csv")
+    
+    completed_tasks = set()
+    raw_eval_logs = []
+    
+    if os.path.exists(checkpoint_file):
+        try:
+            df_prev = pd.read_csv(checkpoint_file)
+            for _, row in df_prev.iterrows():
+                sig = (str(row['game_id']), str(row['agent_id']), int(row['round_1']), int(row['round_2']))
+                completed_tasks.add(sig)
+            raw_eval_logs = df_prev.to_dict('records')
+        except Exception:
+            pass
+
+    # Filter out already completed tasks for this specific chunk
+    remaining_tasks = [t for t in tasks_chunk if (t['g_id'], t['a_id'], t['r1'], t['r2']) not in completed_tasks]
+    
+    if not remaining_tasks:
+        return raw_eval_logs
+
+    # Load tokenizer and quantizer with 4-bit q
+    quantization_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_use_double_quant=True,
+    )
+
+    tokenizer = AutoTokenizer.from_pretrained(eval_model_id, trust_remote_code=True)
+    tokenizer.padding_side = 'left'
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    model = AutoModelForCausalLM.from_pretrained(
+        eval_model_id,
+        quantization_config=quantization_config,
+        device_map="auto", 
+        torch_dtype=torch.bfloat16,
+        trust_remote_code=True
+    )
+
+    # Batch Evaluation Loop
+    SAVE_INTERVAL = 100 
+    completed_this_session = 0
+
+    for i in tqdm(range(0, len(remaining_tasks), batch_size), desc=f"GPU {gpu_id}", position=gpu_id):
+        batch_tasks = remaining_tasks[i:i + batch_size]
+        batch_prompts = [t['prompt'] for t in batch_tasks]
+        
+        try:
+            inputs = tokenizer(batch_prompts, padding=True, return_tensors="pt").to(model.device)
+            
+            with torch.no_grad():
+                outputs = model.generate(
+                    **inputs,
+                    max_new_tokens=300,
+                    do_sample=False,
+                    pad_token_id=tokenizer.pad_token_id
+                )
+            
+            input_length = inputs['input_ids'].shape[1]
+            generated_tokens = outputs[:, input_length:]
+            responses = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
+            
+            for task, raw_text in zip(batch_tasks, responses):
+                raw_text = raw_text.strip()
+                try:
+                    clean_json = raw_text.replace("```json", "").replace("```", "").strip()
+                    eval_data = json.loads(clean_json)
+                    
+                    result = {
+                        'game_id': task['g_id'], 'agent_id': task['a_id'],
+                        'round_1': task['r1'], 'round_2': task['r2'],
+                        'vote_1': task['vote1'], 'vote_2': task['vote2'],
+                        'target_changed': eval_data.get("target_changed"),
+                        'justified': eval_data.get("justification_provided"),
+                        'unjustified_reversal': eval_data.get("unjustified_reversal"),
+                        'raw_llm_response': raw_text,
+                        'parse_failed': False
+                    }
+                except json.JSONDecodeError:
+                    result = {
+                        'game_id': task['g_id'], 'agent_id': task['a_id'],
+                        'round_1': task['r1'], 'round_2': task['r2'],
+                        'raw_llm_response': raw_text,
+                        'parse_failed': True
+                    }
+                
+                raw_eval_logs.append(result)
+                completed_this_session += 1
+            
+            if completed_this_session >= SAVE_INTERVAL:
+                pd.DataFrame(raw_eval_logs).to_csv(checkpoint_file, index=False)
+                completed_this_session = 0
+
+        except Exception as e:
+            tqdm.write(f"\n[GPU {gpu_id} Error] Batch failed: {e}")
+            continue
+
+    pd.DataFrame(raw_eval_logs).to_csv(checkpoint_file, index=False)
+    return raw_eval_logs
 
 
 class GameLogLoader:
-    def __init__(self, root_dir, cache_dir="results/classifiers/data"):
+    def __init__(self, root_dir, cache_dir="classifiers/data"):
         self.root_dir = root_dir
         self.cache_dir = cache_dir
+        current_script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.cache_dir = os.path.join(current_script_dir, cache_dir)
         self.cache_file = os.path.join(self.cache_dir, "active_games_data.pkl")
         self.games_data = []      
         self.silent_games = []    
@@ -582,9 +701,7 @@ class GameAnalytics:
     def calculate_voting_metrics(active_games):
         """
         Computes TP, FP, FN, Precision, Recall, and F1 for crewmate voting.
-        Excludes 'olmo' and calculates variance across models for the aggregate row.
         """
-        import statistics
         
         # Store global accumulations per model
         model_metrics = defaultdict(lambda: {
@@ -729,15 +846,13 @@ class GameAnalytics:
                 small_f1s.append(f1_pct)
             elif size_val >= 60:
                 medium_f1s.append(f1_pct)
-                
-            # All models contribute to the global random baseline variance
+
             baseline_f1s.append(bf1_pct)
 
         def get_stats(data):
             if not data:
                 return 0.0, 0.0
             mean_val = sum(data) / len(data)
-            # Use sample standard deviation if >1 item, else 0
             std_val = statistics.stdev(data) if len(data) > 1 else 0.0
             return mean_val, std_val
 
@@ -745,7 +860,6 @@ class GameAnalytics:
         med_mean, med_std = get_stats(medium_f1s)
         base_mean, base_std = get_stats(baseline_f1s)
 
-        # Print the exact requested format
         print("\n" + "="*90)
         print(f"{'GROUPED F1 SCORES (Small vs Medium)':^90}")
         print("="*90)
@@ -756,6 +870,74 @@ class GameAnalytics:
         print(f"{'Random baseline':<18} | {base_mean:5.1f}% ± {base_std:<5.1f}% |")
         print("="*90)
     
+    
+    @classmethod
+    def calculate_round_level_f1_significance(cls, active_games):
+        """
+        Computes F1 scores for every individual round to perform a 
+        high-powered one-sided Mann-Whitney U test on the performance distribution.
+        """
+
+        small_round_f1s = []
+        medium_round_f1s = []
+
+        for game in active_games:
+            # Experiments 1/2 are Medium (Heavyweight); 3/4 are Small (Lightweight)
+            exp_id = game['experiment_id'].lower()
+            is_medium = any(x in exp_id for x in ['experiment_1', 'experiment_2'])
+            is_small = any(x in exp_id for x in ['experiment_3', 'experiment_4'])
+            
+            # Aggregate voting outcomes by round within the game 
+            round_stats = defaultdict(lambda: {'TP': 0, 'FP': 0, 'FN': 0})
+            
+            for turn in game['turns']:
+                if turn['role'] == 'H' and 'olmo' not in turn['model'].lower():
+                    r_num = turn['round']
+                    target = turn.get('vote_target', 'None')
+                    
+                    if target in ['None', 'SKIP']:
+                        round_stats[r_num]['FN'] += 1
+                    elif turn['vote_correct']:
+                        round_stats[r_num]['TP'] += 1
+                    else:
+                        round_stats[r_num]['FP'] += 1
+            
+            for r_num, s in round_stats.items():
+                tp, fp, fn = s['TP'], s['FP'], s['FN']
+                # F1 = 2TP / (2TP + FP + FN) 
+                denominator = (2 * tp) + fp + fn
+                
+                if denominator > 0:
+                    f1 = (2 * tp) / denominator
+                    if is_medium:
+                        medium_round_f1s.append(f1 * 100)
+                    elif is_small:
+                        small_round_f1s.append(f1 * 100)
+
+        print("\n" + "="*90)
+        print(f"{'STATISTICAL SIGNIFICANCE (ONE-TAILED): ROUND-LEVEL F1':^90}")
+        print("="*90)
+
+        # UPDATED: Changed to alternative='less' to test if Small < Medium
+        u_stat, p_value = stats.mannwhitneyu(small_round_f1s, medium_round_f1s, alternative='less')
+
+        print(f"Small Model Rounds  (n={len(small_round_f1s):<6}): "
+            f"Median F1 = {np.median(small_round_f1s):.1f}% | Mean F1 = {np.mean(small_round_f1s):.1f}%")
+        print(f"Medium Model Rounds (n={len(medium_round_f1s):<6}): "
+            f"Median F1 = {np.median(medium_round_f1s):.1f}% | Mean F1 = {np.mean(medium_round_f1s):.1f}%")
+        print("-" * 90)
+        print(f"U-Statistic : {u_stat:.4f}")
+        print(f"P-Value     : {p_value:.4e}") 
+        print("-" * 90)
+
+        if p_value < 0.05:
+            print("CONCLUSION: Small models are significantly less effective than Medium models (p < 0.05).")
+        else:
+            print("CONCLUSION: No significant directional difference found.")
+        print("="*90)
+
+        return u_stat, p_value
+
     @staticmethod
     def print_voting_metrics_report(results):
         print("\n" + "="*125)
@@ -774,7 +956,6 @@ class GameAnalytics:
 
         print("-" * 125)
         
-        # Format the overall average string with standard deviation
         avg_P_str = f"{avg_res['P']*100:.1f}±{avg_res['std_P']*100:.1f}"
         avg_R_str = f"{avg_res['R']*100:.1f}±{avg_res['std_R']*100:.1f}"
         avg_F1_str = f"{avg_res['F1']*100:.1f}±{avg_res['std_F1']*100:.1f}"
@@ -791,219 +972,143 @@ class GameAnalytics:
     @classmethod
     def plot_voting_accuracy_vs_size(cls, voting_results, save_path="voting_accuracy_vs_scale.png"):
         """
-        Aggregates precision (accuracy) by model parameter count and generates
-        both a table and a bar chart with a random baseline.
+        Aggregates precision by model parameter count and generates a bar chart 
+        with error bars representing the standard deviation across models of that size.
         """
-        # Dictionary to accumulate True Positives, False Positives, and weighted baseline Precision
+        
+        size_accuracies = defaultdict(list)
         size_data = defaultdict(lambda: {'TP': 0, 'FP': 0, 'votes': 0, 'bP_sum': 0.0})
         
         for model_raw, metrics in voting_results.items():
-            if model_raw == 'AVERAGE':
-                continue
-                
+            if model_raw == 'AVERAGE': continue
             norm_name = cls.normalize_model_name(model_raw)
-            
-            # Extract the integer parameter count (e.g., 70 from "Llama3.3-70B")
             match = re.search(r'(\d+)B', norm_name, re.IGNORECASE)
+            
             if match:
                 size_val = int(match.group(1))
-            else:
-                continue # Skip if size can't be resolved
-                
-            votes = metrics['TP'] + metrics['FP']
-            if votes == 0:
-                continue
-                
-            size_data[size_val]['TP'] += metrics['TP']
-            size_data[size_val]['FP'] += metrics['FP']
-            size_data[size_val]['votes'] += votes
-            # Weight the baseline probability by the number of votes to get accurate global averages
-            size_data[size_val]['bP_sum'] += metrics['bP'] * votes
+                votes = metrics['TP'] + metrics['FP']
+                if votes > 0:
+                    acc = metrics['TP'] / votes
+                    size_accuracies[size_val].append(acc * 100)
+                    
+                    size_data[size_val]['TP'] += metrics['TP']
+                    size_data[size_val]['FP'] += metrics['FP']
+                    size_data[size_val]['votes'] += votes
+                    size_data[size_val]['bP_sum'] += metrics['bP'] * votes
 
         rows = []
-        total_votes_all = 0
-        total_bp_sum = 0.0
-        
-        # Build Table Data
         for size in sorted(size_data.keys()):
             d = size_data[size]
-            if d['votes'] == 0: continue
-            
-            acc = d['TP'] / d['votes']
-            base_acc = d['bP_sum'] / d['votes']
+            acc_list = size_accuracies[size]
+            mean_acc = d['TP'] / d['votes'] * 100
+            std_dev = statistics.stdev(acc_list) if len(acc_list) > 1 else 0.0
             
             rows.append({
                 'Model Scale': f"{size}B",
-                'Size (Int)': size,
-                'Total Votes': d['votes'],
-                'Voting Accuracy (%)': acc * 100,
-                'Random Baseline (%)': base_acc * 100
+                'Accuracy': mean_acc,
+                'Baseline': (d['bP_sum'] / d['votes']) * 100,
+                'StdDev': std_dev
             })
             
-            total_votes_all += d['votes']
-            total_bp_sum += d['bP_sum']
-            
         df = pd.DataFrame(rows)
-        
-        # --- 1. Print the Table ---
-        print("\n" + "="*80)
-        print(f"{'VOTING ACCURACY VS. MODEL SCALE':^80}")
-        print("="*80)
-        print(f"{'Model Scale':<15} | {'Total Votes':<15} | {'Accuracy (%)':<15} | {'Baseline (%)':<15}")
-        print("-" * 80)
-        for _, row in df.iterrows():
-            print(f"{row['Model Scale']:<15} | {row['Total Votes']:<15} | {row['Voting Accuracy (%)']:<15.1f} | {row['Random Baseline (%)']:<15.1f}")
-        print("=" * 80)
+        global_baseline = df['Baseline'].mean()
 
-        # --- 2. Generate the Figure ---
-        # Calculate overall random baseline for the dashed line
-        global_baseline = (total_bp_sum / total_votes_all * 100) if total_votes_all > 0 else 0
-        
         plt.figure(figsize=(10, 6))
+        bars = plt.bar(df['Model Scale'], df['Accuracy'], yerr=df['StdDev'],
+                       color='#1f77b4', edgecolor='black', capsize=5, zorder=3)
         
-        # Bar chart sorted implicitly by the X-axis parameter sizes
-        bars = plt.bar(df['Model Scale'], df['Voting Accuracy (%)'], 
-                       color='#1f77b4', edgecolor='black', zorder=3)
-        
-        # Dashed line for random baseline
         plt.axhline(y=global_baseline, color='#d62728', linestyle='--', linewidth=2, 
                     label=f'Avg Random Baseline ({global_baseline:.1f}%)', zorder=4)
         
-        # Styling formatting suitable for a conference paper
         plt.grid(axis='y', linestyle='--', alpha=0.7, zorder=0)
         plt.xlabel('Model Scale (Parameters)', fontsize=12, fontweight='bold')
         plt.ylabel('Crew Voting Precision (%)', fontsize=12, fontweight='bold')
-        plt.title('Voting Precision vs. Model Scale', fontsize=14, fontweight='bold')
-        
-        # Set Y-limit slightly above max value to fit data labels
-        y_max = max(100, df['Voting Accuracy (%)'].max() + 10)
-        plt.ylim(0, y_max)
+        plt.title('Voting Precision vs. Model Scale (with StdDev)', fontsize=14, fontweight='bold')
+        plt.ylim(0, 100)
         plt.legend(loc='upper left')
         
-        # Annotate each bar with the exact percentage
         for bar in bars:
             yval = bar.get_height()
             plt.text(bar.get_x() + bar.get_width()/2, yval + 1.5, f'{yval:.1f}%', 
                      ha='center', va='bottom', fontsize=10, fontweight='bold')
             
         plt.tight_layout()
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"\nFigure saved successfully to: {save_path}")
-        
+        plt.savefig(save_path, dpi=300)
         return df
     
     @classmethod
     def plot_voting_accuracy_vs_sizegroup(cls, voting_results, save_path="voting_accuracy_vs_scale_grouped.png"):
         """
-        Aggregates precision (accuracy) by model size group (Small vs Medium) and generates
-        both a table and a bar chart with a random baseline.
+        Aggregates precision by size group with error bars showing model variability.
         """
-        # Dictionary to accumulate metrics for our specific groups
-        group_data = {
+        group_accuracies = defaultdict(list)
+        group_totals = {
             "Small (7B-20B)": {'TP': 0, 'FP': 0, 'votes': 0, 'bP_sum': 0.0},
             "Medium (60B+)": {'TP': 0, 'FP': 0, 'votes': 0, 'bP_sum': 0.0}
         }
         
         for model_raw, metrics in voting_results.items():
-            if model_raw == 'AVERAGE':
-                continue
-                
+            if model_raw == 'AVERAGE': continue
             norm_name = cls.normalize_model_name(model_raw)
-            
-            # Extract the integer parameter count (e.g., 70 from "Llama3.3-70B")
             match = re.search(r'(\d+)B', norm_name, re.IGNORECASE)
-            if match:
-                size_val = int(match.group(1))
-            else:
-                continue # Skip if size can't be resolved
-                
-            # Assign to the requested groups
-            if 7 <= size_val <= 20:
-                group_key = "Small (7B-20B)"
-            elif size_val >= 60:
-                group_key = "Medium (60B+)"
-            else:
-                continue # Skip models outside these buckets, if any exist
-                
-            votes = metrics['TP'] + metrics['FP']
-            if votes == 0:
-                continue
-                
-            group_data[group_key]['TP'] += metrics['TP']
-            group_data[group_key]['FP'] += metrics['FP']
-            group_data[group_key]['votes'] += votes
-            # Weight the baseline probability by the number of votes
-            group_data[group_key]['bP_sum'] += metrics['bP'] * votes
+            if not match: continue
+            
+            size_val = int(match.group(1))
+            group_key = None
+            if 7 <= size_val <= 20: group_key = "Small (7B-20B)"
+            elif size_val >= 60: group_key = "Medium (60B+)"
+            
+            if group_key:
+                votes = metrics['TP'] + metrics['FP']
+                if votes > 0:
+                    acc = (metrics['TP'] / votes) * 100
+                    group_accuracies[group_key].append(acc)
+                    group_totals[group_key]['TP'] += metrics['TP']
+                    group_totals[group_key]['FP'] += metrics['FP']
+                    group_totals[group_key]['votes'] += votes
+                    group_totals[group_key]['bP_sum'] += metrics['bP'] * votes
 
         rows = []
-        total_votes_all = 0
-        total_bp_sum = 0.0
-        
-        # Build Table Data (Enforcing order: Small, then Medium)
         for group in ["Small (7B-20B)", "Medium (60B+)"]:
-            d = group_data[group]
-            if d['votes'] == 0: continue
+            d = group_totals[group]
+            acc_list = group_accuracies[group]
+            if not acc_list: continue
             
-            acc = d['TP'] / d['votes']
-            base_acc = d['bP_sum'] / d['votes']
+            mean_acc = d['TP'] / d['votes'] * 100
+            std_dev = statistics.stdev(acc_list) if len(acc_list) > 1 else 0.0
             
             rows.append({
                 'Model Group': group,
-                'Total Votes': d['votes'],
-                'Voting Accuracy (%)': acc * 100,
-                'Random Baseline (%)': base_acc * 100
+                'Accuracy': mean_acc,
+                'Baseline': (d['bP_sum'] / d['votes']) * 100,
+                'StdDev': std_dev
             })
             
-            total_votes_all += d['votes']
-            total_bp_sum += d['bP_sum']
-            
         df = pd.DataFrame(rows)
+        plt.figure(figsize=(8, 6))
         
-        # --- 1. Print the Table ---
-        print("\n" + "="*80)
-        print(f"{'VOTING PRECISION VS. MODEL GROUP':^80}")
-        print("="*80)
-        print(f"{'Model Group':<20} | {'Total Votes':<15} | {'Precision (%)':<15} | {'Baseline (%)':<15}")
-        print("-" * 80)
-        for _, row in df.iterrows():
-            print(f"{row['Model Group']:<20} | {row['Total Votes']:<15} | {row['Voting Accuracy (%)']:<15.1f} | {row['Random Baseline (%)']:<15.1f}")
-        print("=" * 80)
-
-        # --- 2. Generate the Figure ---
-        # Calculate overall random baseline for the dashed line across all included votes
-        global_baseline = (total_bp_sum / total_votes_all * 100) if total_votes_all > 0 else 0
+        # Plot with yerr (Standard Deviation)
+        bars = plt.bar(df['Model Group'], df['Accuracy'], yerr=df['StdDev'],
+                       color=['#1f77b4', '#ff7f0e'], edgecolor='black', 
+                       capsize=10, zorder=3, width=0.6)
         
-        plt.figure(figsize=(8, 6)) # Slightly narrower since we only have 2 bars
-        
-        # Plot the grouped bars
-        bars = plt.bar(df['Model Group'], df['Voting Accuracy (%)'], 
-                       color=['#1f77b4', '#ff7f0e'], edgecolor='black', zorder=3, width=0.6)
-        
-        # Dashed line for random baseline
+        global_baseline = df['Baseline'].mean()
         plt.axhline(y=global_baseline, color='#d62728', linestyle='--', linewidth=2, 
                     label=f'Avg Random Baseline ({global_baseline:.1f}%)', zorder=4)
         
-        # Styling formatting suitable for a conference paper
         plt.grid(axis='y', linestyle='--', alpha=0.7, zorder=0)
-        plt.xlabel('Model Scale (Parameters)', fontsize=12, fontweight='bold')
         plt.ylabel('Crew Voting Precision (%)', fontsize=12, fontweight='bold')
-        plt.title('Voting Precision: Small vs. Medium Models', fontsize=14, fontweight='bold')
-        
-        # Set Y-limit slightly above max value to fit data labels safely
-        y_max = max(100, df['Voting Accuracy (%)'].max() + 10)
-        plt.ylim(0, y_max)
+        plt.title('Voting Precision: Small vs. Medium (with StdDev)', fontsize=14, fontweight='bold')
+        plt.ylim(0, 110)
         plt.legend(loc='upper left')
         
-        # Annotate each bar with the exact percentage
         for bar in bars:
             yval = bar.get_height()
-            plt.text(bar.get_x() + bar.get_width()/2, yval + 1.5, f'{yval:.1f}%', 
+            plt.text(bar.get_x() + bar.get_width()/2, yval + 2, f'{yval:.1f}%', 
                      ha='center', va='bottom', fontsize=11, fontweight='bold')
             
         plt.tight_layout()
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"\nFigure saved successfully to: {save_path}")
-        
+        plt.savefig(save_path, dpi=300)
         return df
 
 class ObserverPipeline:
@@ -1036,7 +1141,7 @@ class ObserverPipeline:
             'XGBoost': xgb.XGBClassifier(use_label_encoder=False, eval_metric='logloss', random_state=42),
             'SGD_Classifier': SGDClassifier(loss='log_loss', max_iter=1000, tol=1e-3, random_state=42),
             'SVM': CalibratedClassifierCV(LinearSVC(dual='auto', random_state=42), cv=3),
-            'LightGBM': LGBMClassifier(random_state=42, n_jobs=-1, verbose=-1)
+            #'LightGBM': LGBMClassifier(random_state=42, n_jobs=-1, verbose=-1)
         }
 
     def _build_pipeline(self, model):
@@ -1291,27 +1396,503 @@ class ObserverPipeline:
                 
         print("\n" + "="*110)
 
+class LogAnalysis:
+    @classmethod
+    def count_confessions(cls, active_games, save_path="imposter_confessions.csv"):
+        """
+        Analyzes Imposter statements for self-incrimination using NLP dependency parsing.
+        Saves off the exact statements, game IDs, and rounds for traceability.
+        """
+        try:
+            nlp = spacy.load("en_core_web_sm", disable=["ner"])
+        except OSError:
+            subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
+            nlp = spacy.load("en_core_web_sm", disable=["ner"])
 
+        incriminating_lemmas = {"tag", "eliminate", "kill"}
+        
+        # Added 'confession_logs' list to store the exact text and metadata
+        stats = defaultdict(lambda: {'imposter_statements': 0, 'confessions': 0, 'confession_logs': []})
+        
+        print("\nExtracting Imposter Statements...")
+        
+        statements_to_process = []
+        for game in active_games:
+            game_id = game['game_id']
+            for turn in game['turns']:
+                if turn['role'] == 'B':
+                    agent_id = turn['agent'].lower()
+                    
+                    num_match = re.search(r'(\d+)', agent_id)
+                    my_num = num_match.group(1) if num_match else None
+                    
+                    # Pack the traceability metadata into the context
+                    context = {
+                        'model_name': turn['model'],
+                        'my_num': my_num,
+                        'agent_id': agent_id,
+                        'game_id': game_id,
+                        'round': turn['round'],
+                        'text': turn['text']
+                    }
+                    statements_to_process.append((turn['text'], context))
+
+        print(f"Found {len(statements_to_process)} Imposter statements. Parsing with spaCy pipeline...")
+
+        pipeline = nlp.pipe(statements_to_process, as_tuples=True, batch_size=500)
+        
+        for doc, context in tqdm(pipeline, total=len(statements_to_process), desc="Parsing NLP Dependencies"):
+            model_name = context['model_name']
+            my_num = context['my_num']
+            agent_id = context['agent_id']
+            
+            stats[model_name]['imposter_statements'] += 1
+            is_confession = False
+            
+            for token in doc:
+                if token.lemma_.lower() in incriminating_lemmas and token.pos_ == "VERB":
+                    is_negated = any(child.dep_ == "neg" for child in token.children)
+                    if is_negated:
+                        continue
+                    for child in token.children:
+                        if child.dep_ in ("nsubj", "nsubjpass"): 
+                            
+                            # 1st person
+                            if child.text.lower() in ("i", "we", "my"):
+                                is_confession = True
+                                break
+                                
+                            # 3rd person
+                            subj_text = " ".join(t.text.lower() for t in child.subtree)
+                            mentioned_nums = re.findall(r'agent\s*[_]*\s*(\d+)', subj_text)
+                            
+                            if my_num and my_num in mentioned_nums:
+                                is_confession = True
+                                break
+                if is_confession:
+                    break
+            
+            if is_confession:
+                stats[model_name]['confessions'] += 1
+                # Save off the exact statement and metadata for later review
+                stats[model_name]['confession_logs'].append({
+                    'model': model_name,
+                    'game_id': context['game_id'],
+                    'round': context['round'],
+                    'agent': context['agent_id'],
+                    'text': context['text']
+                })
+
+        # --- Calculate Totals ---
+        # Note: If you want to exclude OLMo from the totals, we filter it out here
+        total_stmts = sum(d['imposter_statements'] for m, d in stats.items() if 'olmo' not in m.lower())
+        total_confs = sum(d['confessions'] for m, d in stats.items() if 'olmo' not in m.lower())
+        overall_rate = (total_confs / total_stmts * 100) if total_stmts > 0 else 0.0
+
+        # --- Print the Report ---
+        print("\n" + "="*90)
+        print(f"{'IMPOSTER CONFESSION RATES':^90}")
+        print("="*90)
+        print(f"{'MODEL NAME':<45} | {'STATEMENTS':<12} | {'CONFESSIONS':<12} | {'RATE (%)':<8}")
+        print("-" * 90)
+        
+        sorted_stats = sorted(
+            stats.items(), 
+            key=lambda x: (x[1]['confessions'] / x[1]['imposter_statements']) if x[1]['imposter_statements'] > 0 else 0, 
+            reverse=True
+        )
+        
+        for model, data in sorted_stats:
+            stmts = data['imposter_statements']
+            confs = data['confessions']
+            rate = (confs / stmts * 100) if stmts > 0 else 0.0
+            print(f"{model:<45.43} | {stmts:<12} | {confs:<12} | {rate:.2f}%")
+            
+        print("-" * 90)
+        print(f"{'OVERALL TOTALS (Excluding OLMo)':<45} | {total_stmts:<12} | {total_confs:<12} | {overall_rate:.2f}%")
+        print("="*90)
+        
+        # --- Export the Logs ---
+        all_logs = []
+        for model, data in stats.items():
+            all_logs.extend(data['confession_logs'])
+            
+        if all_logs:
+            df_logs = pd.DataFrame(all_logs)
+            df_logs.to_csv(save_path, index=False)
+            print(f"\nSaved {len(all_logs)} full confession transcripts to '{save_path}'")
+        
+        return stats
+
+    @classmethod
+    def compute_confession_response_rate(cls, active_games, confessions_csv="imposter_confessions.csv"):
+        """
+        Loads the saved confessions CSV and cross-references it with the active_games logs
+        to determine how often the crew successfully ejected the confessing imposter.
+        """
+
+        if not os.path.exists(confessions_csv):
+            print(f"\n[Error] '{confessions_csv}' not found. Please run count_confessions() first.")
+            return None
+
+        print(f"\nLoading confessions from {confessions_csv}...")
+        df_confessions = pd.read_csv(confessions_csv)
+
+        # Build a fast lookup dictionary for round results
+        # Structure: round_results_lookup[game_id][round_num] = ejected_agent
+        round_results_lookup = defaultdict(dict)
+        for game in active_games:
+            g_id = game['game_id']
+            for turn in game['turns']:
+                r_num = turn['round']
+                # We only need to grab the ejection result once per round
+                if r_num not in round_results_lookup[g_id]:
+                    round_results_lookup[g_id][r_num] = turn.get('round_ejected', 'None')
+
+        # Track ejections per model
+        stats = defaultdict(lambda: {'confessions': 0, 'ejections': 0})
+        
+        for _, row in df_confessions.iterrows():
+            model = row['model']
+            g_id = row['game_id']
+            r_num = row['round']
+            confessor_id = str(row['agent']).strip().lower() # e.g., "agent_0"
+
+            stats[model]['confessions'] += 1
+            
+            # Check who was actually ejected at the end of this round
+            ejected_agent = round_results_lookup.get(g_id, {}).get(r_num, "None")
+            ejected_agent_clean = str(ejected_agent).strip().lower()
+
+            # If the ejected agent matches the confessor, the crew successfully punished them
+            if ejected_agent_clean == confessor_id:
+                stats[model]['ejections'] += 1
+
+        # --- Print the Report ---
+        print("\n" + "="*85)
+        print(f"{'EJECTION RATE AFTER CONFESSION':^85}")
+        print("="*85)
+        print(f"{'MODEL NAME':<45} | {'CONFESSIONS':<12} | {'EJECTED':<10} | {'RATE (%)':<8}")
+        print("-" * 85)
+        
+        total_confessions = 0
+        total_ejections = 0
+        
+        # Sort by ejection rate (highest penalty first)
+        sorted_stats = sorted(
+            stats.items(), 
+            key=lambda x: (x[1]['ejections'] / x[1]['confessions']) if x[1]['confessions'] > 0 else 0, 
+            reverse=True
+        )
+        
+        for model, data in sorted_stats:
+            confs = data['confessions']
+            ejects = data['ejections']
+            rate = (ejects / confs * 100) if confs > 0 else 0.0
+            print(f"{model:<45.43} | {confs:<12} | {ejects:<10} | {rate:.2f}%")
+            
+            # Keep running totals, excluding OLMo
+            if 'olmo' not in model.lower():
+                total_confessions += confs
+                total_ejections += ejects
+                
+        overall_rate = (total_ejections / total_confessions * 100) if total_confessions > 0 else 0.0
+        
+        print("-" * 85)
+        print(f"{'OVERALL TOTALS (Excluding OLMo)':<45} | {total_confessions:<12} | {total_ejections:<10} | {overall_rate:.2f}%")
+        print("="*85)
+        
+        return stats
+
+    @classmethod
+    def sentiment_analysis(cls, active_games):
+        """
+        Uses VADER sentiment analysis to compare the emotional affect of the agent 
+        who reported the body vs. the agents giving routine status updates.
+        """
+
+        try:
+            nltk.data.find('sentiment/vader_lexicon.zip')
+        except LookupError:
+            print("Downloading NLTK VADER lexicon...")
+            nltk.download('vader_lexicon', quiet=True)
+
+        sia = SentimentIntensityAnalyzer()
+
+        # Track metrics: Reporter (Body Discovery) vs Bystander (Routine Update)
+        # We will track both the 'compound' score and the 'neu' (neutral) score.
+        stats = {
+            'Reporter': {'compound': [], 'neutral': [], 'count': 0},
+            'Bystander': {'compound': [], 'neutral': [], 'count': 0}
+        }
+
+        print("\nRunning VADER Sentiment Analysis on Discussion Logs...")
+
+        for game in active_games:
+            for turn in game['turns']:
+                text = turn['text']
+                is_reporter = turn['reported'] == 1
+                
+                scores = sia.polarity_scores(text)
+                
+                if is_reporter:
+                    stats['Reporter']['compound'].append(scores['compound'])
+                    stats['Reporter']['neutral'].append(scores['neu'])
+                    stats['Reporter']['count'] += 1
+                else:
+                    stats['Bystander']['compound'].append(scores['compound'])
+                    stats['Bystander']['neutral'].append(scores['neu'])
+                    stats['Bystander']['count'] += 1
+
+        # --- Print the Report ---
+        print("\n" + "="*85)
+        print(f"{'EMOTIONAL FLATNESS ANALYSIS (VADER SENTIMENT)':^85}")
+        print("="*85)
+        print(f"{'GAME STATE (AGENT ROLE)':<30} | {'COUNT':<10} | {'AVG COMPOUND':<15} | {'AVG NEUTRALITY':<15}")
+        print("-" * 85)
+
+        for category, data in stats.items():
+            count = data['count']
+            if count == 0:
+                continue
+                
+            avg_compound = sum(data['compound']) / count
+            std_compound = statistics.stdev(data['compound']) if count > 1 else 0
+            
+            avg_neutral = sum(data['neutral']) / count
+            std_neutral = statistics.stdev(data['neutral']) if count > 1 else 0
+
+            # VADER compound is -1 to 1. Neutral is 0 to 1 (percentage of text that is unemotional)
+            compound_str = f"{avg_compound:+.3f} ± {std_compound:.2f}"
+            neutral_str = f"{avg_neutral:.3f} ± {std_neutral:.2f}"
+
+            print(f"{category:<30} | {count:<10} | {compound_str:<15} | {neutral_str:<15}")
+
+        print("="*85)
+        
+        return stats
+
+    @classmethod
+    def suspect_analysis(cls, active_games):
+        eval_model_id = "meta-llama/Llama-3.1-8B-Instruct" 
+        checkpoint_file = "llm_suspect_evaluations_log.csv"
+
+        completed_task_signatures = set()
+        if os.path.exists(checkpoint_file):
+            print(f"\nFound master log! Loading {checkpoint_file} to skip completed tasks...")
+            try:
+                df_prev = pd.read_csv(checkpoint_file)
+                for _, row in df_prev.iterrows():
+                    # Create a unique signature for every completed task
+                    sig = (str(row['game_id']), str(row['agent_id']), int(row['round_1']), int(row['round_2']))
+                    completed_task_signatures.add(sig)
+                print(f"Successfully loaded {len(completed_task_signatures)} previously completed evaluations.")
+            except Exception as e:
+                print(f"Warning: Could not read checkpoint. Starting fresh. Error: {e}")
+        
+        # --- 1. TRACK ELIMINATIONS ---
+        alive_tracker = defaultdict(lambda: defaultdict(set))
+        for game in active_games:
+            g_id = str(game['game_id'])
+            for turn in game['turns']:
+                alive_tracker[g_id][int(turn['round'])].add(str(turn['agent']))
+        
+        # --- 2. STRUCTURE TIMELINES ---
+        agent_timelines = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'statements': [], 'vote': 'None'})))
+        
+        print("\nStructuring crewmate timelines...")
+        for game in active_games:
+            g_id = str(game['game_id'])
+            for turn in game['turns']:
+                if turn.get('role') != 'H': continue
+                    
+                a_id = str(turn['agent'])
+                r_num = int(turn['round'])
+                text = turn['text']
+                s_num = turn.get('statement_num', 1) 
+                vote = turn.get('vote_target', 'None')
+                
+                agent_timelines[g_id][a_id][r_num]['statements'].append(f"[Message {s_num}]: {text}")
+                if vote and vote not in ('None', 'SKIP'):
+                    agent_timelines[g_id][a_id][r_num]['vote'] = vote
+
+        # --- 3. BUILD WORKLOAD TASKS ---
+        tasks = []
+        
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(eval_model_id, trust_remote_code=True)
+        
+        for g_id, agents in agent_timelines.items():
+            for a_id, rounds_dict in agents.items():
+                sorted_rounds = sorted(rounds_dict.keys())
+                if len(sorted_rounds) < 2: continue
+                
+                for i in range(len(sorted_rounds) - 1):
+                    r1, r2 = sorted_rounds[i], sorted_rounds[i+1]
+
+                    if (g_id, a_id, r1, r2) in completed_task_signatures:
+                        continue
+
+                    eliminated_agents = alive_tracker[g_id][r1] - alive_tracker[g_id][r2]
+                    eliminated_str = ", ".join(eliminated_agents) if eliminated_agents else "None"
+                    
+                    stmt1 = "\n".join(rounds_dict[r1]['statements'])
+                    stmt2 = "\n".join(rounds_dict[r2]['statements'])
+                    
+                    user_prompt = SUSPECT_JUDGE_USER.format(
+                        agent_id=a_id, r1=r1, stmt1=stmt1, vote1=rounds_dict[r1]['vote'], eliminated_r1=eliminated_str,
+                        r2=r2, stmt2=stmt2, vote2=rounds_dict[r2]['vote']
+                    )
+                    
+                    messages = [
+                        {"role": "system", "content": SUSPECT_JUDGE_SYSTEM},
+                        {"role": "user", "content": user_prompt},
+                    ]
+                    formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+                    
+                    tasks.append({
+                        'g_id': g_id, 'a_id': a_id, 'r1': r1, 'r2': r2, 
+                        'vote1': rounds_dict[r1]['vote'], 'vote2': rounds_dict[r2]['vote'], 
+                        'prompt': formatted_prompt
+                    })
+
+        if not tasks:
+            print("No valid multi-round pairs found to evaluate.")
+            return 0.0
+
+        # --- 4. MULTI-GPU DISTRIBUTION ---
+        BATCH_SIZE = 8 
+        
+        num_gpus = torch.cuda.device_count()
+        if num_gpus == 0:
+            print("No GPUs detected! Aborting.")
+            return 0.0
+            
+        print(f"\nDetected {num_gpus} GPUs. Splitting {len(tasks)} tasks across them...")
+        
+        task_chunks = np.array_split(tasks, num_gpus)
+        
+        try:
+            mp.set_start_method('spawn', force=True)
+        except RuntimeError:
+            pass
+
+        all_results = []
+        
+        with concurrent.futures.ProcessPoolExecutor(max_workers=num_gpus) as executor:
+            futures = []
+            for gpu_id in range(num_gpus):
+                chunk = task_chunks[gpu_id].tolist()
+                print(f"Assigning {len(chunk)} tasks to GPU {gpu_id}...")
+                futures.append(
+                    executor.submit(_gpu_evaluation_worker, gpu_id, chunk, eval_model_id, BATCH_SIZE, checkpoint_file)
+                )
+            
+            for future in concurrent.futures.as_completed(futures):
+                all_results.extend(future.result())
+
+        # --- 5. MERGE & FINAL REPORTING ---           
+        df_new = pd.DataFrame(all_results)
+        
+        # Safely concatenate the newly processed tasks with the 15k already in the master file
+        if os.path.exists(checkpoint_file):
+            df_master = pd.read_csv(checkpoint_file)
+            # Only concatenate if the new dataframe actually has data
+            if not df_new.empty:
+                df_final = pd.concat([df_master, df_new], ignore_index=True)
+            else:
+                df_final = df_master
+        else:
+            df_final = df_new
+
+        df_final.to_csv(checkpoint_file, index=False)
+        print(f"\nFinal merge complete. Master log updated and saved to {checkpoint_file}.")
+        
+        final_total = len(df_final[df_final['parse_failed'] == False])
+        final_reversals = len(df_final[df_final['unjustified_reversal'] == True])
+        failed_parses = len(df_final[df_final['parse_failed'] == True])
+        
+        print("\n" + "="*85)
+        print(f"{'CONTRADICTORY REASONING / SUSPICION REVERSAL RATE (CREWMATES ONLY)':^85}")
+        print("="*85)
+        print(f"Total Consecutive Pairs Evaluated : {final_total}")
+        print(f"Total Unjustified Reversals       : {final_reversals}")
+        if failed_parses > 0:
+            print(f"Session Parse Failures            : {failed_parses} (Ignored)")
+        print("-" * 85)
+        
+        reversal_rate = (final_reversals / final_total * 100) if final_total > 0 else 0.0
+        print(f"Final Reversal Rate               : {reversal_rate:.2f}%")
+        print("="*85)
+
+        return reversal_rate
+
+    
 if __name__ == "__main__":
-    ROOT_DIRECTORY = "experiments/MixedWeight_0"
+    #ROOT_DIRECTORY = "experiments/MixedWeight_Full_Hybrid"
+    #ROOT_DIRECTORY = "experiments/MixedWeight_Half_Hybrid"
+    ROOT_DIRECTORY = "results/"
+
+    #cache = "classifiers/data/MixedWeigh_Full_Hybrid"
+    #cache = "classifiers/data/MixedWeigh_Half_Hybrid"
+    cache = "classifiers/data/"
+   
     
     #loader = GameLogLoader(ROOT_DIRECTORY, cache_dir="")
-    loader = GameLogLoader(ROOT_DIRECTORY, cache_dir="classifiers/data/MixedWeight_0")
+    loader = GameLogLoader(ROOT_DIRECTORY, cache_dir=cache)
     active_games, silent_games = loader.load_all(force_reload=False)
-    win_stats = GameAnalytics.calculate_win_rates(active_games)
-    GameAnalytics.print_win_rate_report(win_stats)
-    total_discussions = GameAnalytics.calculate_total_discussions(active_games)
-    avg_length = GameAnalytics.calculate_average_game_length(active_games)
 
-    voting_results = GameAnalytics.calculate_voting_metrics(active_games)
-    GameAnalytics.print_voting_metrics_report(voting_results)
-    
-    #dataset_builder = DatasetBuilder()
-    #df = dataset_builder.build(active_games)
-    
-    #voting_results = GameAnalytics.calculate_voting_metrics(active_games)
-    #GameAnalytics.print_voting_metrics_report(voting_results)
+    # MOVEMENT ANALYSIS
+    # movement_stats = LogAnalysis.movement_analysis(active_games)
+    # SUSPECT ANALYSIS
+    # suspect_analysis = LogAnalysis.suspect_analysis(active_games)
 
+    # SENTIMENT ANALYSIS
+    # sentiment_stats = LogAnalysis.sentiment_analysis(active_games)
+
+    # CONFESSION METRICS 
+    # confession_stats = LogAnalysis.count_confessions(active_games)
+    #response_stats = LogAnalysis.compute_confession_response_rate(active_games)
+
+
+    #csv_path = "imposter_confessions.csv"
+    # if os.path.exists(csv_path):
+    #     df_confessions = pd.read_csv(csv_path)
+    #     print(f"\nSuccessfully loaded {len(df_confessions)} total confessions from '{csv_path}'.")
+        
+    #     print("\n" + "="*90)
+    #     print(f"{'SAMPLE IMPOSTER CONFESSIONS':^90}")
+    #     print("="*90)
+        
+    #     # Grab 5 random examples (or fewer if there aren't 5 total)
+    #     sample_size = min(5, len(df_confessions))
+    #     sample_df = df_confessions.sample(n=sample_size, random_state=42) 
+        
+    #     for idx, row in sample_df.iterrows():
+    #         print(f"MODEL : {row['model']}")
+    #         print(f"GAME  : {row['game_id']} (Round {row['round']})")
+    #         print(f"AGENT : {row['agent']}")
+    #         # Textwrap makes long dialogue strings easier to read in the terminal
+    #         wrapped_text = textwrap.fill(str(row['text']), width=85)
+    #         print(f"TEXT  :\n{wrapped_text}")
+    #         print("-" * 90)
+    
+
+    
+    # WIN STATS   
+    # win_stats = GameAnalytics.calculate_win_rates(active_games)
+    # GameAnalytics.print_win_rate_report(win_stats)
+    # total_discussions = GameAnalytics.calculate_total_discussions(active_games)
+    # avg_length = GameAnalytics.calculate_average_game_length(active_games)
+
+    # Voting STATS
+    # voting_results = GameAnalytics.calculate_voting_metrics(active_games)
+    # GameAnalytics.print_voting_metrics_report(voting_results)
+    
+    # Statistical Test: Mann-Whitney U test to compare F1 scores across models
+    #tat, p_value = GameAnalytics.calculate_round_level_f1_significance(active_games)
+    
+    # MISC
     #grouped_f1_results = GameAnalytics.calculate_grouped_f1(voting_results)
 
     # df_scale = GameAnalytics.plot_voting_accuracy_vs_sizegroup(
@@ -1319,7 +1900,16 @@ if __name__ == "__main__":
     #     save_path="Voting_Accuracy_Vs_Model_Scale_Grouped.png"
     # )
 
+    # plot the voting accuracy vs. model scale for all models (not grouped)
+    # df_scale_all = GameAnalytics.plot_voting_accuracy_vs_size(
+    #     voting_results,
+    #     save_path="Voting_Accuracy_Vs_Model_Scale.png",
+    # )
 
+
+    # TRAIN & TEST CLASSIFIERS
+    #dataset_builder = DatasetBuilder()
+    #df = dataset_builder.build(active_games)
     #pipeline = ObserverPipeline(output_dir="results/classifiers")
     #pipeline.run_suite(df)
     # pipeline.print_results()

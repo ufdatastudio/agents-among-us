@@ -184,11 +184,24 @@ You are in a discussion phase.
     def vote(self, world_view, candidates, round_num, pruner=None):
         discussion_log = self._read_file(world_view["discussion_log_path"])
         round_num = int(round_num)
-        recent_discussion = self._get_current_round_log(discussion_log, round_num-3) # can adjust as needed
+        recent_discussion = self._get_current_round_log(discussion_log, round_num-2) # can adjust as needed
 
-        # prune_live_log is defined on ContextPruner (wraps pruner(); name kept for this call site).
+        
         if self.is_hybrid and pruner is not None:
-            recent_discussion = pruner.prune_live_log(recent_discussion)
+            recent_discussion, suspicion_state, surviving_agents = pruner.prune_live_log(recent_discussion)
+
+            if suspicion_state:
+                tracked_cands = [c for c in candidates if c in surviving_agents]
+                candidates = tracked_cands if tracked_cands else candidates
+           
+        # try:
+        #     with open("debug_discussion.txt", "a", encoding="utf-8") as debug_file:
+        #         debug_file.write(f"\n--- DEBUG: Agent {self.name} | Round {round_num} ---\n")
+        #         debug_file.write(recent_discussion)
+        #         debug_file.write("\n" + "="*50 + "\n")
+        # except Exception as e:
+        #     print(f"Failed to write debug file: {e}")
+        
         results_log = self._read_file(world_view["results_log_path"])
 
         default_vote_instructions = """

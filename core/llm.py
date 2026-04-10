@@ -45,8 +45,9 @@ QUANTIZE = {
     "Nexusflow/Athene-V2-Chat",
 }
 MXFP4_MODELS = {
-    "MultiverseComputingCAI/HyperNova-60B",
+    "MultiverseComputingCAI/HyperNova-60B", 
     "openai/gpt-oss-20b",
+    "openai/gpt-oss-120b",
 }
 
 class ModelManager:

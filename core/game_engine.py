@@ -107,7 +107,7 @@ class GameEngine:
         self.pruner = ContextPruner()
 
         # double check this, add n = 5
-        importance_thresholds = {10: 0.2210, 9: 0.2450, 8: 0.2510, 7: 0.2600, 'fallback': 0.2661}
+        importance_thresholds = {10: 0.2210, 9: 0.2516, 8: 0.2600, 7: 0.2625, 6: 0.2720, 5: 0.2828, 4:0.2718, 'fallback': 0.2661}
         model_file = "results/classifiers/models/mlp_net.joblib"
         self.pruner.load_live_model(model_file, importance_thresholds)
 
@@ -173,7 +173,6 @@ class GameEngine:
                     # Map the boolean flag directly to the model
                     is_hybrid = hybrid_flags[i % len(hybrid_flags)]
                 else:
-                    # Fallback to the simple count method
                     is_hybrid = (i < hybrid_count)
 
                 self.agents.append(
@@ -192,7 +191,7 @@ class GameEngine:
                     if isinstance(role_prompts, dict):
                         setattr(agent, "prompt_overrides", role_prompts)
                 except Exception:
-                    # Fail silently; fallback to default prompts for that agent
+                    # fallback to default prompts for that agent
                     pass
 
         self.logger = LogManager(self.game_id, self.agents, scen_name)
