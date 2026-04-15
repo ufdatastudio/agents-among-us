@@ -987,6 +987,40 @@ select[name*="_color"] {
     cursor: not-allowed;
 }
 
+.human-discussion-panel {
+    position: fixed;
+    right: 16px;
+    bottom: 24px;
+    width: 320px;
+    max-width: calc(100vw - 24px);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 0.7rem;
+    z-index: 5000;
+}
+
+.human-discussion-input {
+    width: 100%;
+    min-height: 92px;
+    resize: vertical;
+    margin-top: 0.35rem;
+    padding: 0.45rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #fff;
+    font: inherit;
+    font-size: 0.84rem;
+}
+
+.human-discussion-actions {
+    margin-top: 0.45rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+}
+
 /* =============================================================================
    CONFIG: PROMPT CUSTOMIZATION INLINE EDITOR
    ============================================================================= */

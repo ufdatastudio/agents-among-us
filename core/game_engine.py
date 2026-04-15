@@ -464,6 +464,84 @@ class GameEngine:
             "is_byzantine": bool(getattr(agent, "role", "") == "byzantine"),
         }
 
+    def _await_human_discussion_message(self, agent, round_num, turn_idx, timeout_s=30):
+        """
+        Wait for a human chat submission during discussion.
+        Timeout fallback is an empty message.
+        """
+        start = time.time()
+        seen = set()
+        agent_name = agent.name
+        phase = "DISCUSSION"
+
+        g = self.state.world_data["global"]
+        g["awaiting_human_action"] = True
+        g["awaiting_human_agent"] = agent_name
+        g["awaiting_human_round"] = int(round_num)
+        g["awaiting_human_tick"] = int(turn_idx)
+        g["awaiting_human_options"] = {
+            "mode": "discussion",
+            "actions": ["say"],
+            "max_chars": 400,
+        }
+        self.state.save_json()
+
+        try:
+            while time.time() - start < timeout_s:
+                inputs = self._read_human_inputs()
+                for item in inputs:
+                    if not isinstance(item, dict):
+                        continue
+                    if item.get("kind") != "chat":
+                        continue
+                    key = (
+                        str(item.get("received_at")),
+                        str(item.get("game_id")),
+                        str(item.get("agent_name")),
+                        str(item.get("phase")),
+                        str(item.get("round")),
+                        str(item.get("tick")),
+                        str(item.get("action")),
+                        str(item.get("target")),
+                    )
+                    if key in seen:
+                        continue
+                    seen.add(key)
+
+                    if str(item.get("game_id")) != str(self.game_id):
+                        continue
+                    if str(item.get("agent_name")) != str(agent_name):
+                        continue
+                    if str(item.get("phase", "")).strip().upper() != phase:
+                        continue
+                    try:
+                        if int(item.get("round")) != int(round_num):
+                            continue
+                        if int(item.get("tick")) != int(turn_idx):
+                            continue
+                    except Exception:
+                        continue
+
+                    action = str(item.get("action", "")).strip().lower()
+                    if action != "say":
+                        continue
+
+                    raw_msg = item.get("message", item.get("target", ""))
+                    msg = str(raw_msg or "").replace("\n", " ").replace("\r", "").strip()
+                    # Keep message bounded for log readability and safety.
+                    if len(msg) > 400:
+                        msg = msg[:400].rstrip()
+                    return msg
+                time.sleep(0.2)
+            return ""
+        finally:
+            g["awaiting_human_action"] = False
+            g["awaiting_human_agent"] = None
+            g["awaiting_human_round"] = 0
+            g["awaiting_human_tick"] = 0
+            g["awaiting_human_options"] = {}
+            self.state.save_json()
+
     def _reset_action_counts(self):
         for agent in self.agents:
             if self.state.world_data["agents"][agent.name]["status"] == "active":
@@ -491,10 +569,20 @@ class GameEngine:
 
         round_statements = []
         statement_counts = {a.name: 0 for a in active_agents}
+        discussion_turn_idx = 0
         for discussion_round in range(self.num_discussion_messages):            
             for agent in discussion_order:
+                discussion_turn_idx += 1
                 view = self.state.get_agent_view(agent.name, round_num, log_to_file=False) 
-                msg = agent.participate_in_discussion("", view, round_num)
+                if getattr(agent, "is_human", False):
+                    msg = self._await_human_discussion_message(
+                        agent,
+                        round_num=round_num,
+                        turn_idx=discussion_turn_idx,
+                        timeout_s=30,
+                    )
+                else:
+                    msg = agent.participate_in_discussion("", view, round_num)
                 
                 clean_msg = msg.replace("\n", " ").replace("\r", "").strip()
                 clean_msg = re.sub(r"^(\*\*)?Agent_\d+:?(\*\*)?:?\s*", "", clean_msg, flags=re.IGNORECASE)

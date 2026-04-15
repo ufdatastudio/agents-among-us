@@ -471,6 +471,9 @@ let humanActionSubmitKey = "";
 let humanActionPending = false;
 let humanSelectedPrimaryAction = "";
 let humanSelectedSecondaryTarget = "";
+let humanDiscussionSubmitKey = "";
+let humanDiscussionPending = false;
+let humanDiscussionDraft = "";
 
 // SUSPICION SCORES 
 let enabledClassifiers = {
@@ -1015,8 +1018,38 @@ async function submitHumanMovementAction(payload) {
     }
 }
 
+async function submitHumanDiscussionMessage(payload) {
+    if (humanDiscussionPending) return;
+    humanDiscussionPending = true;
+    try {
+        const res = await fetch("/api/human/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+            const msg = (data && data.error && data.error.message) ? data.error.message : "Submission failed";
+            setHumanDiscussionStatus("Message rejected: " + msg, true);
+            return;
+        }
+        setHumanDiscussionStatus("Message submitted. Waiting for game update...", false);
+    } catch (e) {
+        setHumanDiscussionStatus("Network error submitting message.", true);
+    } finally {
+        humanDiscussionPending = false;
+    }
+}
+
 function setHumanActionStatus(text, isError) {
     const el = document.getElementById("humanActionStatus");
+    if (!el) return;
+    el.textContent = text || "";
+    el.classList.toggle("is-error", !!isError);
+}
+
+function setHumanDiscussionStatus(text, isError) {
+    const el = document.getElementById("humanDiscussionStatus");
     if (!el) return;
     el.textContent = text || "";
     el.classList.toggle("is-error", !!isError);
@@ -1073,6 +1106,12 @@ function updateHumanConfirmState() {
         ready = !!humanSelectedSecondaryTarget;
     }
     confirmBtn.disabled = !ready || humanActionPending;
+}
+
+function updateHumanDiscussionConfirmState() {
+    const confirmBtn = document.getElementById("humanDiscussionConfirmBtn");
+    if (!confirmBtn) return;
+    confirmBtn.disabled = humanDiscussionPending;
 }
 
 function updateHumanActionPanel(data) {
@@ -1183,6 +1222,83 @@ function updateHumanActionPanel(data) {
     updateHumanConfirmState();
 }
 
+function updateHumanDiscussionPanel(data) {
+    const panel = document.getElementById("humanDiscussionPanel");
+    const input = document.getElementById("humanDiscussionInput");
+    const confirmBtn = document.getElementById("humanDiscussionConfirmBtn");
+    const skipBtn = document.getElementById("humanDiscussionSkipBtn");
+    if (!panel || !input || !confirmBtn || !skipBtn) return;
+
+    const g = (data && data.global) ? data.global : {};
+    const awaiting = !!g.awaiting_human_action;
+    const opts = g.awaiting_human_options || {};
+    const phase = (g.current_phase || "").toUpperCase();
+    const mode = (opts.mode || "").toLowerCase();
+    const gameId = data && data.game_id ? data.game_id : "";
+    const agentName = g.awaiting_human_agent || "";
+    const round = Number(g.awaiting_human_round || g.round || 0);
+    const tick = Number(g.awaiting_human_tick || 0);
+
+    const isDiscussionWait = awaiting && phase === "DISCUSSION" && mode === "discussion" && !!agentName && !!tick;
+    if (!isDiscussionWait) {
+        panel.style.display = "none";
+        humanDiscussionSubmitKey = "";
+        humanDiscussionDraft = "";
+        input.value = "";
+        confirmBtn.disabled = true;
+        return;
+    }
+
+    panel.style.display = "block";
+    const key = [gameId, agentName, phase, round, tick].join("|");
+    if (humanDiscussionSubmitKey !== key) {
+        humanDiscussionSubmitKey = key;
+        humanDiscussionDraft = "";
+        input.value = "";
+        setHumanDiscussionStatus("Your turn to speak. Type a message and press Confirm.", false);
+    } else if (input.value !== humanDiscussionDraft) {
+        input.value = humanDiscussionDraft;
+    }
+
+    input.oninput = function () {
+        humanDiscussionDraft = input.value || "";
+        updateHumanDiscussionConfirmState();
+    };
+
+    confirmBtn.onclick = async function () {
+        const msg = (humanDiscussionDraft || "").trim();
+        await submitHumanDiscussionMessage({
+            game_id: gameId,
+            agent_name: agentName,
+            phase: phase,
+            round: round,
+            tick: tick,
+            action: "say",
+            target: "message",
+            message: msg
+        });
+        updateHumanDiscussionConfirmState();
+    };
+
+    skipBtn.onclick = async function () {
+        humanDiscussionDraft = "";
+        input.value = "";
+        await submitHumanDiscussionMessage({
+            game_id: gameId,
+            agent_name: agentName,
+            phase: phase,
+            round: round,
+            tick: tick,
+            action: "say",
+            target: "message",
+            message: ""
+        });
+        updateHumanDiscussionConfirmState();
+    };
+
+    updateHumanDiscussionConfirmState();
+}
+
 async function updateGameState() {
     try {
         const response = await fetch("/api/game_state");
@@ -1269,6 +1385,7 @@ async function updateGameState() {
             }
         }
         updateHumanActionPanel(data);
+        updateHumanDiscussionPanel(data);
         
         if (data) {
             const currentPhase = (data.global && data.global.current_phase) || "";

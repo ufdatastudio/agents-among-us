@@ -111,6 +111,22 @@
         <button type="button" id="humanActionConfirmBtn" class="human-action-confirm-btn" disabled>Confirm</button>
     </div>
 
+    <div id="humanDiscussionPanel" class="human-discussion-panel" style="display: none;">
+        <div class="human-action-header">Your Discussion Turn</div>
+        <div id="humanDiscussionStatus" class="human-action-status">Type your message, then confirm.</div>
+        <textarea
+            id="humanDiscussionInput"
+            class="human-discussion-input"
+            rows="4"
+            maxlength="400"
+            placeholder="Type your discussion message..."
+        ></textarea>
+        <div class="human-discussion-actions">
+            <button type="button" id="humanDiscussionSkipBtn" class="human-action-btn">Skip (empty)</button>
+            <button type="button" id="humanDiscussionConfirmBtn" class="human-action-confirm-btn" disabled>Confirm</button>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/game.js') }}"></script>
 </body>
 </html>
