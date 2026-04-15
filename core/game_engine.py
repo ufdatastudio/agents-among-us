@@ -335,94 +335,134 @@ class GameEngine:
         agent_name = agent.name
         phase = "MOVEMENT"
         current_loc = view["self"]["location"]
+        options = self._build_human_movement_options(agent, view)
+
+        g = self.state.world_data["global"]
+        g["awaiting_human_action"] = True
+        g["awaiting_human_agent"] = agent_name
+        g["awaiting_human_round"] = int(round_num)
+        g["awaiting_human_tick"] = int(tick)
+        g["awaiting_human_options"] = options
+        self.state.save_json()
 
         def fallback(reason):
             return ("move", current_loc, reason)
-
-        while time.time() - start < timeout_s:
-            inputs = self._read_human_inputs()
-            for item in inputs:
-                if not isinstance(item, dict):
-                    continue
-                if item.get("kind") != "action":
-                    continue
-                key = (
-                    str(item.get("received_at")),
-                    str(item.get("game_id")),
-                    str(item.get("agent_name")),
-                    str(item.get("phase")),
-                    str(item.get("round")),
-                    str(item.get("tick")),
-                    str(item.get("action")),
-                    str(item.get("target")),
-                )
-                if key in seen:
-                    continue
-                seen.add(key)
-
-                if str(item.get("game_id")) != str(self.game_id):
-                    continue
-                if str(item.get("agent_name")) != str(agent_name):
-                    continue
-                if str(item.get("phase", "")).strip().upper() != phase:
-                    continue
-                try:
-                    if int(item.get("round")) != int(round_num):
+        try:
+            while time.time() - start < timeout_s:
+                inputs = self._read_human_inputs()
+                for item in inputs:
+                    if not isinstance(item, dict):
                         continue
-                    if int(item.get("tick")) != int(tick):
+                    if item.get("kind") != "action":
                         continue
-                except Exception:
-                    continue
-
-                action = str(item.get("action", "")).strip().lower()
-                target = item.get("target")
-
-                # stay -> map to move to current room
-                if action == "stay":
-                    return ("move", current_loc, "HUMAN_STAY")
-
-                # move: must be adjacent or same room
-                if action == "move":
-                    if isinstance(target, str) and target in ROOMS:
-                        if target == current_loc or (current_loc in ROOMS and target in ROOMS[current_loc]):
-                            return ("move", target, "HUMAN_MOVE")
-                    continue
-
-                # report: target must be visible body in current room
-                if action == "report":
-                    bodies = view.get("surroundings", {}).get(current_loc, {}).get("bodies", []) or []
-                    if isinstance(target, str) and target in bodies:
-                        return ("report", target, "HUMAN_REPORT")
-                    continue
-
-                # emergency button: cafeteria only and not already used
-                if action == "button":
-                    if current_loc == "Cafeteria" and not view.get("self", {}).get("button_used", False):
-                        return ("button", "meeting", "HUMAN_BUTTON")
-                    continue
-
-                # kill/tag: only if byzantine and target in same room and not teammate
-                if action in {"kill", "tag"}:
-                    if getattr(agent, "role", "") != "byzantine":
+                    key = (
+                        str(item.get("received_at")),
+                        str(item.get("game_id")),
+                        str(item.get("agent_name")),
+                        str(item.get("phase")),
+                        str(item.get("round")),
+                        str(item.get("tick")),
+                        str(item.get("action")),
+                        str(item.get("target")),
+                    )
+                    if key in seen:
                         continue
-                    if not isinstance(target, str):
+                    seen.add(key)
+
+                    if str(item.get("game_id")) != str(self.game_id):
                         continue
-                    # must be active and co-located
+                    if str(item.get("agent_name")) != str(agent_name):
+                        continue
+                    if str(item.get("phase", "")).strip().upper() != phase:
+                        continue
                     try:
-                        tgt = self.state.world_data["agents"][target]
-                        if tgt["status"] != "active":
+                        if int(item.get("round")) != int(round_num):
                             continue
-                        if tgt["location"] != current_loc:
-                            continue
-                        if target in (getattr(agent, "teammates", []) or []):
+                        if int(item.get("tick")) != int(tick):
                             continue
                     except Exception:
                         continue
-                    return ("tag", target, "HUMAN_TAG")
 
-            time.sleep(0.2)
+                    action = str(item.get("action", "")).strip().lower()
+                    target = item.get("target")
 
-        return fallback("HUMAN_TIMEOUT")
+                    # stay -> map to move to current room
+                    if action == "stay":
+                        return ("move", current_loc, "HUMAN_STAY")
+
+                    # move: must be in legal targets provided to UI
+                    if action == "move":
+                        if isinstance(target, str) and target in options.get("move_targets", []):
+                            return ("move", target, "HUMAN_MOVE")
+                        continue
+
+                    # report: target must be one of the legal report targets
+                    if action == "report":
+                        if isinstance(target, str) and target in options.get("report_targets", []):
+                            return ("report", target, "HUMAN_REPORT")
+                        continue
+
+                    # emergency button
+                    if action == "button":
+                        if options.get("can_button", False):
+                            return ("button", "meeting", "HUMAN_BUTTON")
+                        continue
+
+                    # kill/tag
+                    if action in {"kill", "tag"}:
+                        if isinstance(target, str) and target in options.get("kill_targets", []):
+                            return ("tag", target, "HUMAN_TAG")
+                        continue
+
+                time.sleep(0.2)
+
+            return fallback("HUMAN_TIMEOUT")
+        finally:
+            g["awaiting_human_action"] = False
+            g["awaiting_human_agent"] = None
+            g["awaiting_human_round"] = 0
+            g["awaiting_human_tick"] = 0
+            g["awaiting_human_options"] = {}
+            self.state.save_json()
+
+    def _build_human_movement_options(self, agent, view):
+        current_loc = view["self"]["location"]
+        neighbors = ROOMS.get(current_loc, [])
+        move_targets = list(neighbors)
+        report_targets = list(view.get("surroundings", {}).get(current_loc, {}).get("bodies", []) or [])
+        can_button = bool(current_loc == "Cafeteria" and not view.get("self", {}).get("button_used", False))
+
+        kill_targets = []
+        if getattr(agent, "role", "") == "byzantine":
+            teammates = set(getattr(agent, "teammates", []) or [])
+            for other_name, other_data in self.state.world_data["agents"].items():
+                if other_name == agent.name:
+                    continue
+                if other_name in teammates:
+                    continue
+                if other_data.get("status") != "active":
+                    continue
+                if other_data.get("location") != current_loc:
+                    continue
+                kill_targets.append(other_name)
+
+        actions = ["move", "stay"]
+        if report_targets:
+            actions.append("report")
+        if can_button:
+            actions.append("button")
+        if kill_targets:
+            actions.append("kill")
+
+        return {
+            "actions": actions,
+            "current_location": current_loc,
+            "move_targets": move_targets,
+            "report_targets": report_targets,
+            "kill_targets": kill_targets,
+            "can_button": can_button,
+            "is_byzantine": bool(getattr(agent, "role", "") == "byzantine"),
+        }
 
     def _reset_action_counts(self):
         for agent in self.agents:

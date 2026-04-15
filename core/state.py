@@ -28,6 +28,11 @@ class GameState:
                 "meeting_reason_log": "",
                 "human_experiment": False,
                 "human_agent": None,
+                "awaiting_human_action": False,
+                "awaiting_human_agent": None,
+                "awaiting_human_round": 0,
+                "awaiting_human_tick": 0,
+                "awaiting_human_options": {},
             },
             "agents": {},
             "rooms": {room_name: {"occupants": [], "bodies": []} for room_name in ROOMS}

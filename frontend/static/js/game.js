@@ -467,6 +467,10 @@ let lastPhase = "";
 let lastRound = 0;
 let clearedAgents = new Set();
 let currentTokenUsage = {};
+let humanActionSubmitKey = "";
+let humanActionPending = false;
+let humanSelectedPrimaryAction = "";
+let humanSelectedSecondaryTarget = "";
 
 // SUSPICION SCORES 
 let enabledClassifiers = {
@@ -988,6 +992,197 @@ function updateLiveFeed(events) {
     }
 }
 
+async function submitHumanMovementAction(payload) {
+    if (humanActionPending) return;
+    humanActionPending = true;
+    try {
+        const res = await fetch("/api/human/action", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+            const msg = (data && data.error && data.error.message) ? data.error.message : "Submission failed";
+            setHumanActionStatus("Action rejected: " + msg, true);
+            return;
+        }
+        setHumanActionStatus("Action submitted. Waiting for game update...", false);
+    } catch (e) {
+        setHumanActionStatus("Network error submitting action.", true);
+    } finally {
+        humanActionPending = false;
+    }
+}
+
+function setHumanActionStatus(text, isError) {
+    const el = document.getElementById("humanActionStatus");
+    if (!el) return;
+    el.textContent = text || "";
+    el.classList.toggle("is-error", !!isError);
+}
+
+function renderHumanSecondaryTargets(opts, selectedAction) {
+    const labelEl = document.getElementById("humanSecondaryLabel");
+    const container = document.getElementById("humanSecondaryActions");
+    if (!labelEl || !container) return;
+    container.innerHTML = "";
+    labelEl.style.display = "none";
+
+    let targets = [];
+    let label = "";
+    if (selectedAction === "move") {
+        targets = (opts.move_targets || []).slice();
+        label = "Choose destination";
+    } else if (selectedAction === "report") {
+        targets = (opts.report_targets || []).slice();
+        label = "Choose body to report";
+    } else if (selectedAction === "kill") {
+        targets = (opts.kill_targets || []).slice();
+        label = "Choose target to tag";
+    }
+
+    if (!targets.length) return;
+    labelEl.textContent = label;
+    labelEl.style.display = "block";
+    targets.forEach(function (target) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "human-action-btn human-action-btn-secondary";
+        if (humanSelectedSecondaryTarget === target) {
+            btn.classList.add("human-action-btn-selected");
+        }
+        btn.textContent = target;
+        btn.addEventListener("click", function () {
+            humanSelectedSecondaryTarget = target;
+            updateHumanConfirmState();
+            // Re-render so the selected target stays highlighted.
+            renderHumanSecondaryTargets(opts, selectedAction);
+        });
+        container.appendChild(btn);
+    });
+}
+
+function updateHumanConfirmState() {
+    const confirmBtn = document.getElementById("humanActionConfirmBtn");
+    if (!confirmBtn) return;
+    let ready = false;
+    if (humanSelectedPrimaryAction === "stay" || humanSelectedPrimaryAction === "button") {
+        ready = true;
+    } else if (["move", "report", "kill"].indexOf(humanSelectedPrimaryAction) !== -1) {
+        ready = !!humanSelectedSecondaryTarget;
+    }
+    confirmBtn.disabled = !ready || humanActionPending;
+}
+
+function updateHumanActionPanel(data) {
+    const panel = document.getElementById("humanActionPanel");
+    const primary = document.getElementById("humanPrimaryActions");
+    const secondary = document.getElementById("humanSecondaryActions");
+    const secondaryLabel = document.getElementById("humanSecondaryLabel");
+    const confirmBtn = document.getElementById("humanActionConfirmBtn");
+    if (!panel || !primary || !secondary || !secondaryLabel || !confirmBtn) return;
+
+    const g = (data && data.global) ? data.global : {};
+    const awaiting = !!g.awaiting_human_action;
+    const opts = g.awaiting_human_options || {};
+    const phase = (g.current_phase || "").toUpperCase();
+    const gameId = data && data.game_id ? data.game_id : "";
+    const agentName = g.awaiting_human_agent || "";
+    const round = Number(g.awaiting_human_round || g.round || 0);
+    const tick = Number(g.awaiting_human_tick || 0);
+
+    const isMovementWait = awaiting && phase === "MOVEMENT" && !!agentName && !!tick;
+    if (!isMovementWait) {
+        panel.style.display = "none";
+        primary.innerHTML = "";
+        secondary.innerHTML = "";
+        secondaryLabel.style.display = "none";
+        humanActionSubmitKey = "";
+        humanSelectedPrimaryAction = "";
+        humanSelectedSecondaryTarget = "";
+        confirmBtn.disabled = true;
+        return;
+    }
+
+    panel.style.display = "block";
+    const key = [gameId, agentName, phase, round, tick].join("|");
+    if (humanActionSubmitKey !== key) {
+        humanActionSubmitKey = key;
+        humanSelectedPrimaryAction = "";
+        humanSelectedSecondaryTarget = "";
+        setHumanActionStatus("Your turn. Pick one action for this tick.", false);
+    }
+
+    const basePayload = {
+        game_id: gameId,
+        agent_name: agentName,
+        phase: phase,
+        round: round,
+        tick: tick
+    };
+
+    primary.innerHTML = "";
+    if (!humanSelectedPrimaryAction) {
+        secondary.innerHTML = "";
+        secondaryLabel.style.display = "none";
+    }
+
+    const actions = (opts.actions || []).slice();
+    if (humanSelectedPrimaryAction && actions.indexOf(humanSelectedPrimaryAction) === -1) {
+        humanSelectedPrimaryAction = "";
+        humanSelectedSecondaryTarget = "";
+    }
+    actions.forEach(function (a) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "human-action-btn";
+        if (humanSelectedPrimaryAction === a) {
+            btn.classList.add("human-action-btn-selected");
+        }
+        btn.textContent = a === "kill" ? "kill/tag" : a;
+        btn.addEventListener("click", function () {
+            humanSelectedPrimaryAction = a;
+            humanSelectedSecondaryTarget = "";
+            if (a === "stay") humanSelectedSecondaryTarget = "self";
+            if (a === "button") humanSelectedSecondaryTarget = "meeting";
+            // move/report/kill require secondary target selection
+            if (a === "move" || a === "report" || a === "kill") {
+                renderHumanSecondaryTargets(opts, a);
+            } else {
+                secondary.innerHTML = "";
+                secondaryLabel.style.display = "none";
+            }
+            updateHumanActionPanel(data);
+        });
+        primary.appendChild(btn);
+    });
+
+    // Preserve open secondary selector while polling updates within the same tick.
+    if (humanSelectedPrimaryAction && actions.indexOf(humanSelectedPrimaryAction) !== -1) {
+        if (humanSelectedPrimaryAction === "move" || humanSelectedPrimaryAction === "report" || humanSelectedPrimaryAction === "kill") {
+            renderHumanSecondaryTargets(opts, humanSelectedPrimaryAction);
+        }
+    }
+
+    confirmBtn.onclick = async function () {
+        if (confirmBtn.disabled) return;
+        let submitAction = humanSelectedPrimaryAction;
+        let submitTarget = humanSelectedSecondaryTarget;
+        if (submitAction === "kill") submitAction = "tag";
+        if (submitAction === "stay" && !submitTarget) submitTarget = "self";
+        if (submitAction === "button" && !submitTarget) submitTarget = "meeting";
+        if (!submitAction || !submitTarget) return;
+        await submitHumanMovementAction({
+            ...basePayload,
+            action: submitAction,
+            target: submitTarget
+        });
+        updateHumanConfirmState();
+    };
+    updateHumanConfirmState();
+}
+
 async function updateGameState() {
     try {
         const response = await fetch("/api/game_state");
@@ -1073,6 +1268,7 @@ async function updateGameState() {
                 updateSuspicionScores(data.suspicion);
             }
         }
+        updateHumanActionPanel(data);
         
         if (data) {
             const currentPhase = (data.global && data.global.current_phase) || "";

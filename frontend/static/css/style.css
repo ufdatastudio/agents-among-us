@@ -906,6 +906,87 @@ select[name*="_color"] {
     border-color: var(--text-light);
 }
 
+/* Human movement action panel */
+.human-action-panel {
+    position: fixed;
+    right: 16px;
+    bottom: 196px; /* keep above live feed */
+    width: 320px;
+    max-width: calc(100vw - 24px);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 0.7rem;
+    z-index: 5000;
+}
+
+.human-action-header {
+    font-size: 0.92rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.human-action-status {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.human-action-status.is-error {
+    color: #b00020;
+}
+
+.human-action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+}
+
+.human-action-grid-secondary {
+    margin-top: 0.35rem;
+}
+
+.human-secondary-label {
+    margin-top: 0.45rem;
+    margin-bottom: 0.3rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.human-action-btn {
+    width: 100%;
+    padding: 0.38rem 0.45rem;
+    font-size: 0.84rem;
+}
+
+.human-action-btn-selected {
+    background: #dcedff; /* pastel blue */
+    border-color: #b9d6fb;
+}
+
+.human-action-btn-secondary {
+    font-size: 0.8rem;
+}
+
+.human-action-confirm-btn {
+    width: 100%;
+    margin-top: 0.55rem;
+    padding: 0.42rem 0.5rem;
+    font-size: 0.84rem;
+    font-weight: 600;
+    background: #dcedff;
+    border: 1px solid #b9d6fb;
+    border-radius: 8px;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.human-action-confirm-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 /* =============================================================================
    CONFIG: PROMPT CUSTOMIZATION INLINE EDITOR
    ============================================================================= */
@@ -1418,5 +1499,12 @@ hr {
 
     .home-title {
         font-size: 2rem;
+    }
+
+    .human-action-panel {
+        right: 8px;
+        left: 8px;
+        width: auto;
+        bottom: 168px;
     }
 }
