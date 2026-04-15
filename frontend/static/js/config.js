@@ -447,14 +447,14 @@ function getDefaultForAgent(index) {
 /**
  * Rightmost column: checkbox for honest (hybrid = context-pruned voting), N/A for Byzantine.
  */
-function populateHybridCell(hybridCell, index, role, hybridChecked) {
+function populateHybridCell(hybridCell, index, role, hybridChecked, isHuman) {
     hybridCell.innerHTML = "";
     hybridCell.className = "hybrid-cell";
-    if (role === "byzantine") {
+    if (isHuman || role === "byzantine") {
         var na = document.createElement("span");
         na.className = "hybrid-na";
         na.textContent = "N/A";
-        na.setAttribute("aria-label", "Hybrid not applicable for Byzantine agents");
+        na.setAttribute("aria-label", isHuman ? "Hybrid not applicable for human player" : "Hybrid not applicable for Byzantine agents");
         hybridCell.appendChild(na);
     } else {
         var cb = document.createElement("input");
@@ -475,6 +475,9 @@ function populateHybridCell(hybridCell, index, role, hybridChecked) {
 function createAgentRow(index) {
     const defaults = getDefaultForAgent(index);
     const row = document.createElement("tr");
+    const humanExperimentEnabled = !!(document.getElementById("human_experiment") && document.getElementById("human_experiment").checked);
+    const isHuman = humanExperimentEnabled && index === 0;
+    if (isHuman) row.classList.add("agent-row--human");
 
     // Column 1: Agent number
     const numCell = document.createElement("td");
@@ -484,18 +487,33 @@ function createAgentRow(index) {
 
     // Column 2: Model dropdown
     const modelCell = document.createElement("td");
-    const modelSelect = document.createElement("select");
-    modelSelect.name = `agent_${index}_model`;
-    modelSelect.className = "table-select model-select";
-    modelSelect.required = true;
-    AVAILABLE_MODELS.forEach(function (m) {
-        const opt = document.createElement("option");
-        opt.value = m.value;
-        opt.textContent = m.name;
-        modelSelect.appendChild(opt);
-    });
-    modelSelect.value = defaults.model;
-    modelCell.appendChild(modelSelect);
+    if (isHuman) {
+        // Display "Human" but still submit a hidden model value to keep backend stable for now.
+        const hiddenModel = document.createElement("input");
+        hiddenModel.type = "hidden";
+        hiddenModel.name = `agent_${index}_model`;
+        hiddenModel.value = defaults.model;
+
+        const humanLabel = document.createElement("div");
+        humanLabel.className = "human-model-label";
+        humanLabel.textContent = "Human";
+
+        modelCell.appendChild(hiddenModel);
+        modelCell.appendChild(humanLabel);
+    } else {
+        const modelSelect = document.createElement("select");
+        modelSelect.name = `agent_${index}_model`;
+        modelSelect.className = "table-select model-select";
+        modelSelect.required = true;
+        AVAILABLE_MODELS.forEach(function (m) {
+            const opt = document.createElement("option");
+            opt.value = m.value;
+            opt.textContent = m.name;
+            modelSelect.appendChild(opt);
+        });
+        modelSelect.value = defaults.model;
+        modelCell.appendChild(modelSelect);
+    }
     row.appendChild(modelCell);
 
     // Column 3: Role dropdown (Honest / Byzantine)
@@ -511,6 +529,10 @@ function createAgentRow(index) {
         roleSelect.appendChild(opt);
     });
     roleSelect.value = defaults.role;
+    roleSelect.classList.toggle("role-select--byzantine", roleSelect.value === "byzantine");
+    roleSelect.addEventListener("change", function () {
+        roleSelect.classList.toggle("role-select--byzantine", roleSelect.value === "byzantine");
+    });
     roleCell.appendChild(roleSelect);
     row.appendChild(roleCell);
 
@@ -520,9 +542,9 @@ function createAgentRow(index) {
 
     // Column 5: Hybrid (honest only; Byzantine shows N/A)
     const hybridCell = document.createElement("td");
-    populateHybridCell(hybridCell, index, defaults.role, defaults.hybrid === true);
+    populateHybridCell(hybridCell, index, defaults.role, defaults.hybrid === true, isHuman);
     roleSelect.addEventListener("change", function () {
-        populateHybridCell(hybridCell, index, roleSelect.value, false);
+        populateHybridCell(hybridCell, index, roleSelect.value, false, isHuman);
     });
     row.appendChild(hybridCell);
 

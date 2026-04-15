@@ -117,6 +117,8 @@ class GameEngine:
 
     def setup(self, composition):
         scen_name = composition.get("name", "Unknown_Scenario")
+        human_experiment = bool(composition.get("human_experiment", False))
+        human_agent = composition.get("human_agent", "Agent_0" if human_experiment else None)
         
         # check if composition has exact agent configuration
         if "agents" in composition:
@@ -132,16 +134,19 @@ class GameEngine:
                 role = agent_config['role']
                 color = agent_config['color']
                 is_hybrid = agent_config.get('is_hybrid', False)
+                is_human = bool(agent_config.get('is_human', False) or (human_experiment and agent_name == human_agent))
                 
                 if role == 'byzantine':
                     teammates = [name for name in byz_names if name != agent_name]
+                    agent_obj = ByzantineAgent(agent_name, color, teammates, model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages)
+                    setattr(agent_obj, "is_human", is_human)
                     self.agents.append(
-                        ByzantineAgent(agent_name, color, teammates, model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages)
+                        agent_obj
                     )
                 else:
-                    self.agents.append(
-                        HonestAgent(agent_name, color, model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages, is_hybrid=is_hybrid)
-                    )
+                    agent_obj = HonestAgent(agent_name, color, model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages, is_hybrid=is_hybrid)
+                    setattr(agent_obj, "is_human", is_human)
+                    self.agents.append(agent_obj)
             
             print(f"Created {len(self.agents)} agents with EXACT configuration from frontend")
             
@@ -160,9 +165,9 @@ class GameEngine:
             for i, name in enumerate(byz_names):
                 assigned_model = byz_models[i % len(byz_models)]
                 teammates = [b for b in byz_names if b != name]
-                self.agents.append(
-                    ByzantineAgent(name, colors[i], teammates, assigned_model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages)
-                )
+                agent_obj = ByzantineAgent(name, colors[i], teammates, assigned_model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages)
+                setattr(agent_obj, "is_human", bool(human_experiment and name == human_agent))
+                self.agents.append(agent_obj)
 
             start_index = n_byz
             for i in range(n_honest):
@@ -176,9 +181,9 @@ class GameEngine:
                     # Fallback to the simple count method
                     is_hybrid = (i < hybrid_count)
 
-                self.agents.append(
-                    HonestAgent(name, color, assigned_model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages, is_hybrid=is_hybrid)
-                )
+                agent_obj = HonestAgent(name, color, assigned_model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages, is_hybrid=is_hybrid)
+                setattr(agent_obj, "is_human", bool(human_experiment and name == human_agent))
+                self.agents.append(agent_obj)
 
         # random.shuffle(self.agents)  # commented out bc we don't want to shuffle agents
 
@@ -197,6 +202,8 @@ class GameEngine:
 
         self.logger = LogManager(self.game_id, self.agents, scen_name)
         self.state = GameState(self.agents, self.logger)
+        self.state.world_data["global"]["human_experiment"] = human_experiment
+        self.state.world_data["global"]["human_agent"] = human_agent
         
         # Set up ML classifiers from composition
         if "enabled_classifiers" in composition:

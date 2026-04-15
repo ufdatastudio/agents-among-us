@@ -316,6 +316,25 @@ tr:hover {
     background: var(--bg);
 }
 
+#agentTable tr.agent-row--human {
+    background: #e7f6ea; /* pastel green */
+}
+
+#agentTable tr.agent-row--human:hover {
+    background: #ddf0e1;
+}
+
+.human-model-label {
+    width: 100%;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    text-align: center;
+    font-weight: 600;
+}
+
 #agentTable {
     table-layout: fixed;
 }
@@ -343,6 +362,16 @@ tr:hover {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--bg-card);
+}
+
+.table-select.role-select.role-select--byzantine {
+    background: #fce8e8;
+    border-color: #fad4d4;
+}
+
+.table-select.role-select.role-select--byzantine:focus {
+    outline: none;
+    border-color: #e08d8d;
 }
 
 select[name*="_color"] {

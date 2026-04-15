@@ -25,7 +25,9 @@ class GameState:
                 "body_reported": False,
                 "reported_victims": [],
                 "meeting_caller": None,
-                "meeting_reason_log": ""
+                "meeting_reason_log": "",
+                "human_experiment": False,
+                "human_agent": None,
             },
             "agents": {},
             "rooms": {room_name: {"occupants": [], "bodies": []} for room_name in ROOMS}
@@ -44,6 +46,7 @@ class GameState:
                 "location": start_room,
                 "last_round_seen": 0,  
                 "button_used": False,
+                "is_human": bool(getattr(agent, "is_human", False)),
                 "action_num": agent.action_num,
                 "last_action": None,
                 "known_bodies": [],

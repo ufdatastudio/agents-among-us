@@ -138,6 +138,8 @@ def start_game():
         num_ticks = int(request.form.get('num_ticks', 4))
         num_discussion_messages = int(request.form.get('num_discussion_messages', 2))
         game_id = request.form.get('game_id', '').strip()
+        human_experiment = request.form.get('human_experiment') == 'true'
+        human_agent = "Agent_0" if human_experiment else None
         
         # === NEW: Get ML Classifier selections ===
         classifier_sgd = request.form.get('classifier_sgd') == 'true'
@@ -162,12 +164,14 @@ def start_game():
         for i in range(num_agents):
             role = request.form.get(f'agent_{i}_role')
             is_hybrid = role == 'honest' and request.form.get(f'agent_{i}_is_hybrid') == 'true'
+            agent_name = f"Agent_{i}"
             agent = {
                 'agent_num': i,  # Preserve exact agent number
                 'model': request.form.get(f'agent_{i}_model'),
                 'role': role,
                 'color': request.form.get(f'agent_{i}_color'),
                 'is_hybrid': is_hybrid,
+                'is_human': bool(human_experiment and agent_name == human_agent),
             }
             agents.append(agent)
             
@@ -185,7 +189,9 @@ def start_game():
             "num_rounds": num_rounds,
             "num_ticks": num_ticks,
             "num_discussion_messages": num_discussion_messages,
-            "enabled_classifiers": enabled_classifiers
+            "enabled_classifiers": enabled_classifiers,
+            "human_experiment": human_experiment,
+            "human_agent": human_agent,
         }
 
         # Optional: custom per-role, per-phase prompts (frontend overrides)
@@ -221,6 +227,7 @@ def start_game():
         print(f"Discussion messages: {num_discussion_messages}")
         print(f"Observers: {observers_label}")
         print(f"Prompts: {prompts_mode}")
+        print(f"Human experiment: {'ON (Agent_0)' if human_experiment else 'OFF'}")
 
         print("\nAgent lineup:")
         for agent in agents:
