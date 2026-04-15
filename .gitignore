@@ -21,3 +21,5 @@ live_state*.json
 archived/
 experiments/
 tmp_build/
+suspect.sh
+test.ipynb

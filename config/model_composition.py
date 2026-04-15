@@ -146,10 +146,9 @@ if LW_FLAG:
             
 if MW_FLAG:
     COMPOSITION.append({
-        "name": "MixedWeight_0_Hybrid",
+        "name": "MixedWeight_0_c2",
         "honest_count": 8,
         "byzantine_count": 2,
-        "honest_model": [MIXTRAL_8X7B],
         "byzantine_model": [MIXTRAL_8X7B], 
         "honest_model": [QWEN3_14B],       
         "hybrid_count": 0                  
@@ -157,7 +156,16 @@ if MW_FLAG:
 
     # Composition 2: 2 Mixtral Imposters, 8 Qwen3 Crewmates (4 Hybrid)
     COMPOSITION.append({
-        "name": "MixedWeight_4_Hybrid",
+        "name": "MixedWeight_Full_Hybrid_c2",
+        "honest_count": 8,
+        "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B],
+        "honest_model": [QWEN3_14B],
+        "hybrid_count": 8                
+    })
+
+    COMPOSITION.append({
+        "name": "MixedWeight_Half_Hybrid_c2",
         "honest_count": 8,
         "byzantine_count": 2,
         "byzantine_model": [MIXTRAL_8X7B],

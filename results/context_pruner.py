@@ -466,6 +466,7 @@ class ContextPruner:
 
         lines = raw_log.strip().split('\n')
         pruned_lines = []
+        surviving_agents = set()
 
         # Count active speakers per round to set dynamic 'n' 
         agents_per_round = defaultdict(set)
@@ -512,6 +513,8 @@ class ContextPruner:
                         statement_counts.clear()
                         meeting_caller = None
 
+                        surviving_agents.clear()
+
                         # Fetch correct dynamic threshold
                         threshold = self.dynamic_thresholds.get(n_agents, self.dynamic_thresholds.get('fallback', 0.5))
 
@@ -556,14 +559,13 @@ class ContextPruner:
                         # Only update the state if the statement was significant enough to keep
                         suspicion_state[agent_name] = new_prob 
 
+                        surviving_agents.add(agent_name)
+
         # Return the condensed string format
-        return "\n".join(pruned_lines)
+        return "\n".join(pruned_lines), suspicion_state, surviving_agents
 
     def prune_live_log(self, raw_log: str) -> str:
-        """Live inference entry point; same behavior as :meth:`pruner`.
-
-        Named for call sites (e.g. HonestAgent.vote) that expect this API; the
-        implementation lives on :meth:`pruner` above.
+        """Live inference entry point
         """
         return self.pruner(raw_log)
 
