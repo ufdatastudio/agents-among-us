@@ -1,6 +1,7 @@
 import random
 import re
 import time
+import json
 from config.settings import MAX_MOVEMENT_PHASES, ROOMS, NUM_BYZ, NUM_HONEST, NUM_ROUNDS as DEFAULT_NUM_ROUNDS
 from agents.honest_agent import HonestAgent
 from agents.byzantine_agent import ByzantineAgent
@@ -229,7 +230,10 @@ class GameEngine:
             decisions = []
             for agent in active_agents:
                 view = self.state.get_agent_view(agent.name, round_num, log_to_file=True)
-                decision = agent.think_and_act(view, round_num)
+                if getattr(agent, "is_human", False):
+                    decision = self._await_human_movement_action(agent, view, round_num, phase_tick, timeout_s=25)
+                else:
+                    decision = agent.think_and_act(view, round_num)
                 decisions.append((agent, decision))
                 # wait a bit between agent actions to be watchable
                 time.sleep(1)
@@ -297,6 +301,128 @@ class GameEngine:
             self.logger.write_log("results", None, f"No Eliminations or Discussions in Round {round_num}")
 
         return False
+
+    def _human_input_file(self):
+        return os.path.join("logs", "human_inputs", f"{self.game_id}.jsonl")
+
+    def _read_human_inputs(self):
+        fp = self._human_input_file()
+        if not os.path.exists(fp):
+            return []
+        out = []
+        try:
+            with open(fp, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        out.append(json.loads(line))
+                    except Exception:
+                        continue
+        except Exception:
+            return []
+        return out
+
+    def _await_human_movement_action(self, agent, view, round_num, tick, timeout_s=25):
+        """
+        Waits for a human-submitted movement action (via Flask /api/human/action),
+        persisted to logs/human_inputs/<game_id>.jsonl.
+        Timeout fallback is to stay in place (move -> current location).
+        """
+        start = time.time()
+        seen = set()
+        agent_name = agent.name
+        phase = "MOVEMENT"
+        current_loc = view["self"]["location"]
+
+        def fallback(reason):
+            return ("move", current_loc, reason)
+
+        while time.time() - start < timeout_s:
+            inputs = self._read_human_inputs()
+            for item in inputs:
+                if not isinstance(item, dict):
+                    continue
+                if item.get("kind") != "action":
+                    continue
+                key = (
+                    str(item.get("received_at")),
+                    str(item.get("game_id")),
+                    str(item.get("agent_name")),
+                    str(item.get("phase")),
+                    str(item.get("round")),
+                    str(item.get("tick")),
+                    str(item.get("action")),
+                    str(item.get("target")),
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
+
+                if str(item.get("game_id")) != str(self.game_id):
+                    continue
+                if str(item.get("agent_name")) != str(agent_name):
+                    continue
+                if str(item.get("phase", "")).strip().upper() != phase:
+                    continue
+                try:
+                    if int(item.get("round")) != int(round_num):
+                        continue
+                    if int(item.get("tick")) != int(tick):
+                        continue
+                except Exception:
+                    continue
+
+                action = str(item.get("action", "")).strip().lower()
+                target = item.get("target")
+
+                # stay -> map to move to current room
+                if action == "stay":
+                    return ("move", current_loc, "HUMAN_STAY")
+
+                # move: must be adjacent or same room
+                if action == "move":
+                    if isinstance(target, str) and target in ROOMS:
+                        if target == current_loc or (current_loc in ROOMS and target in ROOMS[current_loc]):
+                            return ("move", target, "HUMAN_MOVE")
+                    continue
+
+                # report: target must be visible body in current room
+                if action == "report":
+                    bodies = view.get("surroundings", {}).get(current_loc, {}).get("bodies", []) or []
+                    if isinstance(target, str) and target in bodies:
+                        return ("report", target, "HUMAN_REPORT")
+                    continue
+
+                # emergency button: cafeteria only and not already used
+                if action == "button":
+                    if current_loc == "Cafeteria" and not view.get("self", {}).get("button_used", False):
+                        return ("button", "meeting", "HUMAN_BUTTON")
+                    continue
+
+                # kill/tag: only if byzantine and target in same room and not teammate
+                if action in {"kill", "tag"}:
+                    if getattr(agent, "role", "") != "byzantine":
+                        continue
+                    if not isinstance(target, str):
+                        continue
+                    # must be active and co-located
+                    try:
+                        tgt = self.state.world_data["agents"][target]
+                        if tgt["status"] != "active":
+                            continue
+                        if tgt["location"] != current_loc:
+                            continue
+                        if target in (getattr(agent, "teammates", []) or []):
+                            continue
+                    except Exception:
+                        continue
+                    return ("tag", target, "HUMAN_TAG")
+
+            time.sleep(0.2)
+
+        return fallback("HUMAN_TIMEOUT")
 
     def _reset_action_counts(self):
         for agent in self.agents:

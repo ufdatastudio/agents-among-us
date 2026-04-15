@@ -36,8 +36,21 @@ BACKEND_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 MASTER_CSV = os.path.join(DATA_DIR, 'frontend_stats.csv')
 LIVE_STATE_FILE = os.path.join(BACKEND_PATH, 'logs', 'live_state.json')
+HUMAN_INPUT_DIR = os.path.join(BACKEND_PATH, 'logs', 'human_inputs')
 
 current_game_process = None
+
+# ---------------------------------------------------------------------------
+# Human experiment input buffer (Checkpoint 2)
+# Keeps last-submitted action/chat/vote for a given (game_id, agent_name, phase, round, tick).
+# Engine wiring happens in later checkpoints.
+# ---------------------------------------------------------------------------
+HUMAN_INPUT_LOCK = threading.Lock()
+HUMAN_INPUT_STORE = {
+    "action": {},  # key -> payload
+    "chat": {},    # key -> payload
+    "vote": {},    # key -> payload
+}
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -74,6 +87,180 @@ def read_stats_csv(csv_path=None):
     except Exception as e:
         print(f"ERROR reading stats CSV: {e}")
     return out
+
+
+def _json_error(http_status: int, code: str, message: str, details=None):
+    payload = {"ok": False, "error": {"code": code, "message": message}}
+    if details is not None:
+        payload["error"]["details"] = details
+    return jsonify(payload), http_status
+
+
+def _load_live_state():
+    if not os.path.exists(LIVE_STATE_FILE):
+        return None, ("STATE_MISSING", "live_state.json not found (game not started yet)")
+    try:
+        with open(LIVE_STATE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f), None
+    except json.JSONDecodeError:
+        return None, ("STATE_INVALID", "live_state.json contains invalid JSON")
+    except Exception as e:
+        return None, ("STATE_READ_FAILED", f"Could not read live_state.json: {e}")
+
+
+def _normalize_phase(phase_val):
+    if phase_val is None:
+        return ""
+    return str(phase_val).strip().upper()
+
+
+def _require_fields(obj, fields):
+    missing = []
+    for f in fields:
+        if f not in obj or obj[f] is None or (isinstance(obj[f], str) and obj[f].strip() == ""):
+            missing.append(f)
+    return missing
+
+
+def _validate_human_submission(kind: str, payload: dict):
+    """
+    Strict validation for human experiment submissions.
+    Ensures:
+      - required fields exist
+      - payload matches the running game's live_state.json
+      - submitting agent is the human agent
+      - phase and round match current state
+    """
+    required = ["game_id", "agent_name", "phase", "round", "tick", "action", "target"]
+    missing = _require_fields(payload, required)
+    if missing:
+        return ("MISSING_FIELDS", "Missing required fields", {"missing": missing})
+
+    state, err = _load_live_state()
+    if err:
+        code, msg = err
+        return (code, msg, None)
+
+    # Validate game id
+    state_game_id = state.get("game_id")
+    if str(payload["game_id"]) != str(state_game_id):
+        return ("GAME_MISMATCH", "Payload game_id does not match running game", {"expected": state_game_id})
+
+    g = state.get("global", {}) or {}
+    current_phase = _normalize_phase(g.get("current_phase"))
+    payload_phase = _normalize_phase(payload.get("phase"))
+    if payload_phase != current_phase:
+        return ("PHASE_MISMATCH", "Payload phase does not match current phase", {"expected": current_phase})
+
+    try:
+        payload_round = int(payload.get("round"))
+    except Exception:
+        return ("BAD_ROUND", "Field 'round' must be an integer", None)
+    current_round = g.get("round", 0)
+    if int(current_round) != payload_round:
+        return ("ROUND_MISMATCH", "Payload round does not match current round", {"expected": current_round})
+
+    agents = state.get("agents", {}) or {}
+    agent_name = str(payload.get("agent_name"))
+    agent_state = agents.get(agent_name)
+    if not agent_state:
+        return ("UNKNOWN_AGENT", "agent_name not found in state", None)
+
+    human_enabled = bool(g.get("human_experiment", False))
+    human_agent = g.get("human_agent")
+    if not human_enabled or not human_agent:
+        return ("HUMAN_MODE_OFF", "Human experiment is not enabled for this game", None)
+    if agent_name != str(human_agent):
+        return ("NOT_HUMAN_AGENT", "agent_name is not the configured human agent", {"human_agent": human_agent})
+    if not bool(agent_state.get("is_human", False)):
+        return ("AGENT_NOT_MARKED_HUMAN", "Agent is not marked is_human in state", None)
+
+    # Basic sanity for tick
+    try:
+        _ = int(payload.get("tick"))
+    except Exception:
+        return ("BAD_TICK", "Field 'tick' must be an integer", None)
+
+    # Kind-specific action sanity (minimal for now; detailed legality checks come with engine wiring)
+    action = str(payload.get("action")).strip().lower()
+    if kind == "action":
+        allowed = {"move", "stay", "report", "button", "kill", "tag"}
+        if action not in allowed:
+            return ("BAD_ACTION", "Invalid action", {"allowed": sorted(list(allowed))})
+    elif kind == "chat":
+        if action != "say":
+            return ("BAD_ACTION", "Chat submissions must use action='say'", {"expected": "say"})
+    elif kind == "vote":
+        if action != "vote":
+            return ("BAD_ACTION", "Vote submissions must use action='vote'", {"expected": "vote"})
+
+    return None
+
+
+def _store_human_input(kind: str, payload: dict):
+    key = (
+        str(payload.get("game_id")),
+        str(payload.get("agent_name")),
+        _normalize_phase(payload.get("phase")),
+        int(payload.get("round")),
+        int(payload.get("tick")),
+        kind,
+    )
+    with HUMAN_INPUT_LOCK:
+        HUMAN_INPUT_STORE[kind][key] = {
+            "received_at": datetime.now().isoformat(timespec="seconds"),
+            **payload,
+        }
+        # Also persist to disk so the simulation subprocess (main.py) can consume it.
+        # This enables single-player now and keeps the interface compatible with
+        # future multiplayer transport changes.
+        try:
+            os.makedirs(HUMAN_INPUT_DIR, exist_ok=True)
+            fp = os.path.join(HUMAN_INPUT_DIR, f"{payload.get('game_id')}.jsonl")
+            line_obj = {"kind": kind, **payload, "received_at": datetime.now().isoformat(timespec="seconds")}
+            with open(fp, "a", encoding="utf-8") as f:
+                f.write(json.dumps(line_obj) + "\n")
+        except Exception as e:
+            # Non-fatal: keep in-memory acceptance semantics.
+            print(f"WARNING: Could not persist human input: {e}")
+    return key
+
+
+@app.route('/api/human/action', methods=['POST'])
+def human_action():
+    payload = request.get_json(silent=True) or {}
+    err = _validate_human_submission("action", payload)
+    if err:
+        code, msg, details = err
+        # use 422 for semantic validation issues; 409 for phase/round mismatch
+        status = 409 if code in {"PHASE_MISMATCH", "ROUND_MISMATCH", "GAME_MISMATCH"} else 422
+        return _json_error(status, code, msg, details)
+    key = _store_human_input("action", payload)
+    return jsonify({"ok": True, "status": "accepted", "kind": "action", "key": list(key)})
+
+
+@app.route('/api/human/chat', methods=['POST'])
+def human_chat():
+    payload = request.get_json(silent=True) or {}
+    err = _validate_human_submission("chat", payload)
+    if err:
+        code, msg, details = err
+        status = 409 if code in {"PHASE_MISMATCH", "ROUND_MISMATCH", "GAME_MISMATCH"} else 422
+        return _json_error(status, code, msg, details)
+    key = _store_human_input("chat", payload)
+    return jsonify({"ok": True, "status": "accepted", "kind": "chat", "key": list(key)})
+
+
+@app.route('/api/human/vote', methods=['POST'])
+def human_vote():
+    payload = request.get_json(silent=True) or {}
+    err = _validate_human_submission("vote", payload)
+    if err:
+        code, msg, details = err
+        status = 409 if code in {"PHASE_MISMATCH", "ROUND_MISMATCH", "GAME_MISMATCH"} else 422
+        return _json_error(status, code, msg, details)
+    key = _store_human_input("vote", payload)
+    return jsonify({"ok": True, "status": "accepted", "kind": "vote", "key": list(key)})
 
 
 
@@ -248,6 +435,10 @@ def start_game():
         try:
             if os.path.exists(LIVE_STATE_FILE):
                 os.remove(LIVE_STATE_FILE)
+            # reset human input queue for this run (if any)
+            human_fp = os.path.join(BACKEND_PATH, 'logs', 'human_inputs', f"{game_id}_Run0.jsonl")
+            if os.path.exists(human_fp):
+                os.remove(human_fp)
         except Exception as e:
             print(f"WARNING: Could not clear live_state.json: {e}")
         

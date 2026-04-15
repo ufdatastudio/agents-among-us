@@ -798,6 +798,8 @@ function updateStatusTable(agents) {
         const agentIndex = parseInt(agentNumRaw, 10);
         const displayNum = Number.isNaN(agentIndex) ? agentNumRaw : agentIndex;
         const row = document.createElement("tr");
+        const isHuman = !!(agent && agent.is_human);
+        if (isHuman) row.classList.add("agent-human");
         
         const numCell = document.createElement("td");
         numCell.textContent = displayNum;
@@ -805,8 +807,8 @@ function updateStatusTable(agents) {
         
         const modelCell = document.createElement("td");
         const modelName = agent.stats && agent.stats.model_name ? agent.stats.model_name : agent.model;
-        var modelLabel = getModelAbbreviation(modelName);
-        if (modelName && modelName.indexOf(":") !== -1 && currentTokenUsage[modelName]) {
+        var modelLabel = isHuman ? "Human" : getModelAbbreviation(modelName);
+        if (!isHuman && modelName && modelName.indexOf(":") !== -1 && currentTokenUsage[modelName]) {
             var tokens = currentTokenUsage[modelName];
             modelLabel += " (" + (tokens.input_tokens + tokens.output_tokens) + "t)";
         }
@@ -817,7 +819,13 @@ function updateStatusTable(agents) {
         const role = (agent.role || "").toLowerCase();
         roleCell.textContent = role === "byzantine" ? "Byz." : "Hon.";
         roleCell.className = "agent-role-cell";
-        if (role === "byzantine") row.classList.add("agent-byzantine");
+        if (role === "byzantine") {
+            if (isHuman) {
+                roleCell.classList.add("agent-role-cell--human-byz");
+            } else {
+                row.classList.add("agent-byzantine");
+            }
+        }
         row.appendChild(roleCell);
         
         const statusCell = document.createElement("td");

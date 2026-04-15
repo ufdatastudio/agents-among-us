@@ -574,6 +574,24 @@ select[name*="_color"] {
     background: #fce8e8;
 }
 
+.status-table tr.agent-human {
+    background: #e7f6ea; /* match config human highlight */
+}
+
+.status-table tr.agent-human:hover:not(.agent-dead) {
+    background: #ddf0e1;
+}
+
+.status-table tr.agent-human.agent-dead {
+    background: #c8c8c8;
+    color: #333;
+}
+
+.agent-role-cell--human-byz {
+    color: #c51111;
+    font-weight: 700;
+}
+
 .status-table tr.agent-byzantine.agent-dead {
     background: #c8c8c8;
     color: #333;
