@@ -474,6 +474,18 @@ let humanSelectedSecondaryTarget = "";
 let humanDiscussionSubmitKey = "";
 let humanDiscussionPending = false;
 let humanDiscussionDraft = "";
+let humanVoteSubmitKey = "";
+let humanVotePending = false;
+let humanSelectedVoteTarget = "";
+let humanVoteContext = {
+    active: false,
+    gameId: "",
+    agentName: "",
+    phase: "",
+    round: 0,
+    tick: 0,
+    candidates: []
+};
 
 // SUSPICION SCORES 
 let enabledClassifiers = {
@@ -753,6 +765,11 @@ function updateStatusTable(agents) {
     if (!agents) return;
     const tbody = document.getElementById("statusTableBody");
     if (!tbody) return;
+    const voteHeader = document.getElementById("humanVoteHeader");
+    const isVotingWait = !!humanVoteContext.active;
+    if (voteHeader) {
+        voteHeader.style.display = isVotingWait ? "" : "none";
+    }
     
     const cachedScores = {};
     tbody.querySelectorAll('tr').forEach(row => {
@@ -880,6 +897,43 @@ function updateStatusTable(agents) {
             killsCell.textContent = "n/a";
         }
         row.appendChild(killsCell);
+
+        if (isVotingWait) {
+            const voteCell = document.createElement("td");
+            const isSelf = agentKey === humanVoteContext.agentName;
+            const isActive = (agent.status === "active" || agent.status === "alive");
+            const canVoteForRow = humanVoteContext.candidates.indexOf(agentKey) !== -1;
+            if (isSelf || !isActive || !canVoteForRow) {
+                voteCell.textContent = "--";
+            } else {
+                const voteBtn = document.createElement("button");
+                voteBtn.type = "button";
+                voteBtn.className = "human-vote-btn";
+                if (humanSelectedVoteTarget === agentKey) {
+                    voteBtn.classList.add("human-vote-btn-selected");
+                    voteBtn.textContent = "Selected";
+                } else {
+                    voteBtn.textContent = "Vote";
+                }
+                voteBtn.disabled = humanVotePending;
+                voteBtn.addEventListener("click", async function () {
+                    humanSelectedVoteTarget = agentKey;
+                    updateStatusTable(agents);
+                    await submitHumanVote({
+                        game_id: humanVoteContext.gameId,
+                        agent_name: humanVoteContext.agentName,
+                        phase: humanVoteContext.phase,
+                        round: humanVoteContext.round,
+                        tick: humanVoteContext.tick,
+                        action: "vote",
+                        target: agentKey
+                    });
+                    updateStatusTable(agents);
+                });
+                voteCell.appendChild(voteBtn);
+            }
+            row.appendChild(voteCell);
+        }
         
         if (enabledClassifiers.sgd) {
             const sgdCell = document.createElement("td");
@@ -1038,6 +1092,31 @@ async function submitHumanDiscussionMessage(payload) {
         setHumanDiscussionStatus("Network error submitting message.", true);
     } finally {
         humanDiscussionPending = false;
+    }
+}
+
+async function submitHumanVote(payload) {
+    if (humanVotePending) return false;
+    humanVotePending = true;
+    try {
+        const res = await fetch("/api/human/vote", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+            const msg = (data && data.error && data.error.message) ? data.error.message : "Vote failed";
+            setHumanActionStatus("Vote rejected: " + msg, true);
+            return false;
+        }
+        setHumanActionStatus("Vote submitted. Waiting for game update...", false);
+        return true;
+    } catch (e) {
+        setHumanActionStatus("Network error submitting vote.", true);
+        return false;
+    } finally {
+        humanVotePending = false;
     }
 }
 
@@ -1374,6 +1453,45 @@ async function updateGameState() {
         
         if (data.token_usage) {
             currentTokenUsage = data.token_usage;
+        }
+
+        const g = (data && data.global) ? data.global : {};
+        const opts = g.awaiting_human_options || {};
+        const phase = (g.current_phase || "").toUpperCase();
+        const mode = (opts.mode || "").toLowerCase();
+        const gameId = data && data.game_id ? data.game_id : "";
+        const waitingAgent = g.awaiting_human_agent || "";
+        const waitingRound = Number(g.awaiting_human_round || g.round || 0);
+        const waitingTick = Number(g.awaiting_human_tick || 0);
+        const voteActive = !!g.awaiting_human_action && phase === "VOTING" && mode === "voting" && !!waitingAgent && !!waitingTick;
+        const voteKey = [gameId, waitingAgent, phase, waitingRound, waitingTick].join("|");
+        if (!voteActive) {
+            humanVoteContext = {
+                active: false,
+                gameId: "",
+                agentName: "",
+                phase: "",
+                round: 0,
+                tick: 0,
+                candidates: []
+            };
+            humanVoteSubmitKey = "";
+            humanSelectedVoteTarget = "";
+        } else {
+            humanVoteContext = {
+                active: true,
+                gameId: gameId,
+                agentName: waitingAgent,
+                phase: phase,
+                round: waitingRound,
+                tick: waitingTick,
+                candidates: (opts.candidates || []).slice()
+            };
+            if (humanVoteSubmitKey !== voteKey) {
+                humanVoteSubmitKey = voteKey;
+                humanSelectedVoteTarget = "";
+                setHumanActionStatus("Voting open. Click a red Vote button in the table.", false);
+            }
         }
 
         if (data.agents && Object.keys(data.agents).length > 0) {

@@ -541,6 +541,81 @@ class GameEngine:
             g["awaiting_human_options"] = {}
             self.state.save_json()
 
+    def _await_human_vote(self, agent, round_num, vote_turn_idx, candidates, timeout_s=30):
+        """
+        Wait for a human vote submission during voting.
+        Timeout fallback is SKIP.
+        """
+        start = time.time()
+        seen = set()
+        agent_name = agent.name
+        phase = "VOTING"
+        legal_candidates = list(candidates or [])
+
+        g = self.state.world_data["global"]
+        g["awaiting_human_action"] = True
+        g["awaiting_human_agent"] = agent_name
+        g["awaiting_human_round"] = int(round_num)
+        g["awaiting_human_tick"] = int(vote_turn_idx)
+        g["awaiting_human_options"] = {
+            "mode": "voting",
+            "actions": ["vote"],
+            "candidates": legal_candidates,
+        }
+        self.state.save_json()
+
+        try:
+            while time.time() - start < timeout_s:
+                inputs = self._read_human_inputs()
+                for item in inputs:
+                    if not isinstance(item, dict):
+                        continue
+                    if item.get("kind") != "vote":
+                        continue
+                    key = (
+                        str(item.get("received_at")),
+                        str(item.get("game_id")),
+                        str(item.get("agent_name")),
+                        str(item.get("phase")),
+                        str(item.get("round")),
+                        str(item.get("tick")),
+                        str(item.get("action")),
+                        str(item.get("target")),
+                    )
+                    if key in seen:
+                        continue
+                    seen.add(key)
+
+                    if str(item.get("game_id")) != str(self.game_id):
+                        continue
+                    if str(item.get("agent_name")) != str(agent_name):
+                        continue
+                    if str(item.get("phase", "")).strip().upper() != phase:
+                        continue
+                    try:
+                        if int(item.get("round")) != int(round_num):
+                            continue
+                        if int(item.get("tick")) != int(vote_turn_idx):
+                            continue
+                    except Exception:
+                        continue
+
+                    action = str(item.get("action", "")).strip().lower()
+                    target = str(item.get("target", "")).strip()
+                    if action != "vote":
+                        continue
+                    if target in legal_candidates:
+                        return target
+                time.sleep(0.2)
+            return "SKIP"
+        finally:
+            g["awaiting_human_action"] = False
+            g["awaiting_human_agent"] = None
+            g["awaiting_human_round"] = 0
+            g["awaiting_human_tick"] = 0
+            g["awaiting_human_options"] = {}
+            self.state.save_json()
+
     def _reset_action_counts(self):
         for agent in self.agents:
             if self.state.world_data["agents"][agent.name]["status"] == "active":
@@ -620,10 +695,20 @@ class GameEngine:
 
         self.state.update_phase("VOTING") 
         votes = {}
+        vote_turn_idx = 0
         for agent in active_agents:
+            vote_turn_idx += 1
             view = self.state.get_agent_view(agent.name, round_num, log_to_file=False)
             candidates = [a.name for a in active_agents if a.name != agent.name] + ["SKIP"]
-            if getattr(agent, "is_hybrid", False):
+            if getattr(agent, "is_human", False):
+                vote = self._await_human_vote(
+                    agent,
+                    round_num=round_num,
+                    vote_turn_idx=vote_turn_idx,
+                    candidates=candidates,
+                    timeout_s=30,
+                )
+            elif getattr(agent, "is_hybrid", False):
                 vote = agent.vote(view, candidates, round_num, pruner=self.pruner)
             else:
                 vote = agent.vote(view, candidates, round_num)

@@ -592,6 +592,34 @@ select[name*="_color"] {
     font-weight: 700;
 }
 
+.human-vote-btn {
+    width: 100%;
+    padding: 0.28rem 0.4rem;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #7d2a2a;
+    background: #fde2e2; /* pastel red, aligned with byzantine row vibe */
+    border: 1px solid #f0b4b4;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.human-vote-btn:hover {
+    background: #ffd4d4;
+    border-color: #e8a0a0;
+}
+
+.human-vote-btn.human-vote-btn-selected {
+    background: #ffc9c9;
+    border-color: #e09090;
+    color: #5c1f1f;
+}
+
+.human-vote-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .status-table tr.agent-byzantine.agent-dead {
     background: #c8c8c8;
     color: #333;
