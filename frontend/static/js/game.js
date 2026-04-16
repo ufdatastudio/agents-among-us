@@ -52,6 +52,16 @@ const ROOM_CONNECTIONS = [
     ["Storage", "Shields"], ["Storage", "Communications"], ["Shields", "Communications"]
 ];
 
+const ROOM_ADJACENCY = {};
+ROOM_CONNECTIONS.forEach(function (pair) {
+    const a = pair[0];
+    const b = pair[1];
+    if (!ROOM_ADJACENCY[a]) ROOM_ADJACENCY[a] = [];
+    if (!ROOM_ADJACENCY[b]) ROOM_ADJACENCY[b] = [];
+    if (ROOM_ADJACENCY[a].indexOf(b) === -1) ROOM_ADJACENCY[a].push(b);
+    if (ROOM_ADJACENCY[b].indexOf(a) === -1) ROOM_ADJACENCY[b].push(a);
+});
+
 // map nodes for roads (25 total nodes)
 const ROAD_NODES = {
     "1":  { x: 30.2, y: 22.1 },
@@ -442,21 +452,43 @@ var DEAD_SPRITES = {
 
 function getModelAbbreviation(modelName) {
     if (!modelName) return "Unknown";
-    if (modelName.indexOf(":") !== -1) {
-        var parts = modelName.split(":");
-        var provider = parts[0];
-        var modelId = parts[1];
-        var tag = provider.charAt(0).toUpperCase() + provider.slice(1);
-        return tag + "/" + modelId.substring(0, 15);
+    const normalized = String(modelName);
+    const modelMap = {
+        "navigator:llama-3.3-70b-instruct": "Nav Llama3.3-70B",
+        "navigator:gemma-3-27b-it": "Nav Gemma3-27B",
+        "navigator:mistral-small-3.1": "Nav Mistral-S",
+        "navigator:claude-4-sonnet": "Nav Claude4-S",
+        "navigator:gpt-4o": "Nav GPT-4o",
+        "navigator:gemini-2.0-flash": "Nav Gemini2-F",
+        "anthropic:claude-sonnet-4-20250514": "Anth Claude4-S",
+        "anthropic:claude-3-5-haiku-20241022": "Anth Claude3.5-H",
+        "openai:gpt-4o": "OAI GPT-4o",
+        "openai:gpt-4o-mini": "OAI GPT-4o-m",
+        "openai/gpt-oss-20b": "GPT-OSS-20B",
+        "meta-llama/Llama-3.3-70B-Instruct": "Llama3.3-70B",
+        "meta-llama/Llama-3.1-8B-Instruct": "Llama3.1-8B",
+        "meta-llama/Meta-Llama-3-8B-Instruct": "Llama3-8B",
+        "meta-llama/Llama-3.2-3B-Instruct": "Llama3.2-3B",
+        "google/gemma-2-9b-it": "Gemma2-9B",
+        "OpenPipe/Qwen3-14B-Instruct": "Qwen3-14B",
+        "Qwen/Qwen3-Next-80B-A3B-Instruct": "Qwen3Next-80B",
+        "Qwen/Qwen2.5-72B-Instruct": "Qwen2.5-72B",
+        "Qwen/Qwen2.5-7B-Instruct": "Qwen2.5-7B",
+        "Qwen/Qwen2-7B-Instruct": "Qwen2-7B",
+        "Qwen/Qwen2.5-1.5B-Instruct": "Qwen2.5-1.5B",
+        "TinyLlama/TinyLlama-1.1B-Chat-v1.0": "TinyLlama-1.1B",
+        "swiss-ai/Apertus-70B-Instruct-2509": "Apertus-70B",
+        "swiss-ai/Apertus-8B-Instruct-2509": "Apertus-8B"
+    };
+    if (modelMap[normalized]) return modelMap[normalized];
+    if (normalized.indexOf(":") !== -1) {
+        const parts = normalized.split(":");
+        const provider = parts[0];
+        const modelId = parts[1] || "";
+        return provider.slice(0, 4).toUpperCase() + " " + modelId.replace(/-instruct/ig, "").substring(0, 12);
     }
-    if (modelName.includes("TinyLlama")) return "TinyLlama";
-    if (modelName.includes("Qwen")) {
-        if (modelName.includes("1.5B")) return "Qwen 1.5B";
-        return "Qwen";
-    }
-    if (modelName.includes("Llama")) return "Llama";
-    if (modelName.includes("DeepSeek")) return "DeepSeek";
-    return modelName.split("/").pop().substring(0, 10);
+    const tail = normalized.split("/").pop() || normalized;
+    return tail.replace(/-instruct/ig, "").substring(0, 14);
 }
 
 let lastEventCount = 0;
@@ -486,6 +518,76 @@ let humanVoteContext = {
     tick: 0,
     candidates: []
 };
+let latestGlobalState = {};
+let knownFinalInfoAgents = new Set();
+let knownFinalInfoGameId = "";
+
+function isDebugRevealEnabled() {
+    return !!debugOverlayVisible;
+}
+
+function computeHumanVisibleRooms(agents) {
+    if (isDebugRevealEnabled()) return null;
+    if (!latestGlobalState || !latestGlobalState.human_experiment) return null;
+    if (!agents) return null;
+    const humanAgentName = latestGlobalState.human_agent || "";
+    const humanAgent = agents[humanAgentName] || null;
+    if (!humanAgent || !humanAgent.location) return null;
+    const baseRoom = humanAgent.location;
+    const visible = new Set([baseRoom]);
+    const neighbors = ROOM_ADJACENCY[baseRoom] || [];
+    neighbors.forEach(function (r) { visible.add(r); });
+    return visible;
+}
+
+function isVisibleToHumanMask(agent, visibleRooms) {
+    if (!visibleRooms) return true;
+    if (!agent || !agent.location) return false;
+    return visibleRooms.has(agent.location);
+}
+
+function shouldRevealByzantineTeamRole(agentKey, agent, agents) {
+    if (!latestGlobalState || !latestGlobalState.human_experiment) return false;
+    const humanName = latestGlobalState.human_agent || "";
+    const humanAgent = agents && humanName ? agents[humanName] : null;
+    if (!humanAgent) return false;
+    const humanRole = String(humanAgent.role || "").toLowerCase();
+    if (humanRole !== "byzantine") return false;
+    if (!agent || agentKey === humanName) return false;
+    return String(agent.role || "").toLowerCase() === "byzantine";
+}
+
+function updateKnownFinalInfoFromCurrentView(agents) {
+    if (!agents) return;
+    const gameId = String((latestGlobalState && latestGlobalState.game_id) || "");
+    if (gameId && knownFinalInfoGameId !== gameId) {
+        knownFinalInfoGameId = gameId;
+        knownFinalInfoAgents = new Set();
+    }
+    const phase = String((latestGlobalState && latestGlobalState.current_phase) || "").toUpperCase();
+    const visibleRooms = computeHumanVisibleRooms(agents);
+    Object.keys(agents).forEach(function (agentKey) {
+        const a = agents[agentKey];
+        if (!a) return;
+        const deadLike = (a.status === "eliminated" || a.status === "ejected");
+        if (!deadLike) return;
+        if (phase === "DISCUSSION") {
+            knownFinalInfoAgents.add(agentKey);
+            return;
+        }
+        if (isVisibleToHumanMask(a, visibleRooms)) {
+            knownFinalInfoAgents.add(agentKey);
+        }
+    });
+}
+
+function shouldRevealFinalInfoNow(agentKey, agent) {
+    if (!agent) return false;
+    const isDeadLike = (agent.status === "eliminated" || agent.status === "ejected");
+    if (!isDeadLike) return false;
+    if (isDebugRevealEnabled()) return true;
+    return knownFinalInfoAgents.has(agentKey);
+}
 
 // SUSPICION SCORES 
 let enabledClassifiers = {
@@ -594,6 +696,7 @@ function updateAgentPositions(agents) {
 
     // Track which agents are still present this tick
     const seenAgents = new Set();
+    const visibleRooms = computeHumanVisibleRooms(agents);
 
     const agentsByRoom = {};
     Object.keys(agents).forEach(function(agentKey) {
@@ -606,6 +709,9 @@ function updateAgentPositions(agents) {
         }
         
         if (clearedAgents.has(agentKey)) {
+            return;
+        }
+        if (!isVisibleToHumanMask(agent, visibleRooms)) {
             return;
         }
         
@@ -765,10 +871,14 @@ function updateStatusTable(agents) {
     if (!agents) return;
     const tbody = document.getElementById("statusTableBody");
     if (!tbody) return;
-    const voteHeader = document.getElementById("humanVoteHeader");
+    const statusTable = document.querySelector(".status-table");
     const isVotingWait = !!humanVoteContext.active;
-    if (voteHeader) {
-        voteHeader.style.display = isVotingWait ? "" : "none";
+    const visibleRooms = computeHumanVisibleRooms(agents);
+    updateKnownFinalInfoFromCurrentView(agents);
+    const voteHeader = document.getElementById("humanVoteHeader");
+    if (voteHeader) voteHeader.style.display = "none";
+    if (statusTable) {
+        statusTable.classList.toggle("status-table--voting-controls", isVotingWait);
     }
     
     const cachedScores = {};
@@ -830,20 +940,23 @@ function updateStatusTable(agents) {
         row.appendChild(numCell);
         
         const modelCell = document.createElement("td");
+        modelCell.className = "status-model-cell";
         const modelName = agent.stats && agent.stats.model_name ? agent.stats.model_name : agent.model;
         var modelLabel = isHuman ? "Human" : getModelAbbreviation(modelName);
-        if (!isHuman && modelName && modelName.indexOf(":") !== -1 && currentTokenUsage[modelName]) {
-            var tokens = currentTokenUsage[modelName];
-            modelLabel += " (" + (tokens.input_tokens + tokens.output_tokens) + "t)";
-        }
         modelCell.textContent = modelLabel;
+        modelCell.title = modelName || modelLabel;
         row.appendChild(modelCell);
         
         const roleCell = document.createElement("td");
         const role = (agent.role || "").toLowerCase();
-        roleCell.textContent = role === "byzantine" ? "Byz." : "Hon.";
+        const isHumanExperiment = !!(latestGlobalState && latestGlobalState.human_experiment);
+        const debugReveal = isDebugRevealEnabled();
+        const isFinalRevealed = shouldRevealFinalInfoNow(agentKey, agent);
+        const revealByzTeamRole = shouldRevealByzantineTeamRole(agentKey, agent, agents);
+        const showRole = debugReveal || !isHumanExperiment || isHuman || isFinalRevealed || revealByzTeamRole;
+        roleCell.textContent = showRole ? (role === "byzantine" ? "Byz." : "Hon.") : "???";
         roleCell.className = "agent-role-cell";
-        if (role === "byzantine") {
+        if (showRole && role === "byzantine") {
             if (isHuman) {
                 roleCell.classList.add("agent-role-cell--human-byz");
             } else {
@@ -855,7 +968,8 @@ function updateStatusTable(agents) {
         const statusCell = document.createElement("td");
         statusCell.className = "agent-status-cell";
         var isAlive = agent.status === "active" || agent.status === "alive";
-        if (agent.status === "eliminated" || agent.status === "ejected") {
+        const revealFinalInfoNow = shouldRevealFinalInfoNow(agentKey, agent);
+        if ((agent.status === "eliminated" || agent.status === "ejected") && revealFinalInfoNow) {
             row.classList.add("agent-dead");
         }
         
@@ -870,11 +984,21 @@ function updateStatusTable(agents) {
         img.src = spriteUrl;
         img.alt = isAlive ? "Alive" : "Dead";
         img.title = isAlive ? "Alive" : (agent.status === "ejected" ? "Voted off" : "Dead");
-        statusCell.appendChild(img);
+        const isVisible = isVisibleToHumanMask(agent, visibleRooms);
+        const isFinalRevealedRow = revealFinalInfoNow;
+        // Keep sprite visible even when other fields are masked so players can
+        // still identify colors at a glance during human experiments.
+        if ((agent.status === "eliminated" || agent.status === "ejected") && !isFinalRevealedRow) {
+            statusCell.textContent = "???";
+        } else {
+            statusCell.appendChild(img);
+        }
         row.appendChild(statusCell);
         
         const locationCell = document.createElement("td");
-        if (agent.status === "ejected") {
+        if (!isVisible && !isFinalRevealedRow) {
+            locationCell.textContent = "???";
+        } else if (agent.status === "ejected") {
             locationCell.textContent = "Ejected";
         } else {
             locationCell.textContent = agent.location || "Unknown";
@@ -885,27 +1009,17 @@ function updateStatusTable(agents) {
         const votesCell = document.createElement("td");
         const votesValue = agent.stats && typeof agent.stats.votes_received !== "undefined"
             ? agent.stats.votes_received : agent.votes_received;
-        votesCell.textContent = votesValue || 0;
-        row.appendChild(votesCell);
-        
-        const killsCell = document.createElement("td");
-        if (agent.role === "byzantine") {
-            const elimValue = agent.stats && typeof agent.stats.eliminations !== "undefined"
-                ? agent.stats.eliminations : agent.eliminations;
-            killsCell.textContent = elimValue || 0;
-        } else {
-            killsCell.textContent = "n/a";
-        }
-        row.appendChild(killsCell);
-
+        const votesWrap = document.createElement("div");
+        votesWrap.className = "votes-cell-wrap";
+        const votesCount = document.createElement("span");
+        votesCount.className = "votes-count";
+        votesCount.textContent = String(votesValue || 0);
+        votesWrap.appendChild(votesCount);
         if (isVotingWait) {
-            const voteCell = document.createElement("td");
             const isSelf = agentKey === humanVoteContext.agentName;
             const isActive = (agent.status === "active" || agent.status === "alive");
             const canVoteForRow = humanVoteContext.candidates.indexOf(agentKey) !== -1;
-            if (isSelf || !isActive || !canVoteForRow) {
-                voteCell.textContent = "--";
-            } else {
+            if (!isSelf && isActive && canVoteForRow) {
                 const voteBtn = document.createElement("button");
                 voteBtn.type = "button";
                 voteBtn.className = "human-vote-btn";
@@ -930,11 +1044,24 @@ function updateStatusTable(agents) {
                     });
                     updateStatusTable(agents);
                 });
-                voteCell.appendChild(voteBtn);
+                votesWrap.appendChild(voteBtn);
             }
-            row.appendChild(voteCell);
         }
+        votesCell.appendChild(votesWrap);
+        row.appendChild(votesCell);
         
+        const killsCell = document.createElement("td");
+        if (!showRole) {
+            killsCell.textContent = "???";
+        } else if (agent.role === "byzantine") {
+            const elimValue = agent.stats && typeof agent.stats.eliminations !== "undefined"
+                ? agent.stats.eliminations : agent.eliminations;
+            killsCell.textContent = elimValue || 0;
+        } else {
+            killsCell.textContent = "n/a";
+        }
+        row.appendChild(killsCell);
+
         if (enabledClassifiers.sgd) {
             const sgdCell = document.createElement("td");
             sgdCell.id = `suspicion-${agentNumRaw}-sgd`;
@@ -979,11 +1106,52 @@ function updateStatusTable(agents) {
         
         tbody.appendChild(row);
     });
+
+    if (isVotingWait && humanVoteContext.candidates.indexOf("SKIP") !== -1) {
+        const totalCols = 7 + (enabledClassifiers.sgd ? 1 : 0) + (enabledClassifiers.svm ? 1 : 0) + (enabledClassifiers.lr ? 1 : 0);
+        const skipRow = document.createElement("tr");
+        skipRow.className = "vote-skip-row";
+
+        const leftPad = document.createElement("td");
+        leftPad.colSpan = 5;
+        leftPad.textContent = "";
+        skipRow.appendChild(leftPad);
+
+        const skipCell = document.createElement("td");
+        const skipBtn = document.createElement("button");
+        skipBtn.type = "button";
+        skipBtn.className = "human-vote-skip-btn";
+        skipBtn.textContent = (humanSelectedVoteTarget === "SKIP") ? "Skip selected" : "Skip";
+        skipBtn.disabled = humanVotePending;
+        skipBtn.addEventListener("click", async function () {
+            humanSelectedVoteTarget = "SKIP";
+            updateStatusTable(agents);
+            await submitHumanVote({
+                game_id: humanVoteContext.gameId,
+                agent_name: humanVoteContext.agentName,
+                phase: humanVoteContext.phase,
+                round: humanVoteContext.round,
+                tick: humanVoteContext.tick,
+                action: "vote",
+                target: "SKIP"
+            });
+            updateStatusTable(agents);
+        });
+        skipCell.appendChild(skipBtn);
+        skipRow.appendChild(skipCell);
+
+        const rightPad = document.createElement("td");
+        rightPad.colSpan = Math.max(1, totalCols - 6);
+        rightPad.textContent = "";
+        skipRow.appendChild(rightPad);
+        tbody.appendChild(skipRow);
+    }
 }
 
-function updateLiveFeed(events) {
+function updateLiveFeed(events, isPaused) {
     const feedContent = document.getElementById("feedContent");
     if (!feedContent) return;
+    if (isPaused) return;
     if (!events || !Array.isArray(events)) {
         if (feedContent.children.length === 0) {
             feedContent.innerHTML = "<div class=\"feed-event\"><span class=\"feed-timestamp\">[--]</span><span class=\"feed-text\">No events yet.</span></div>";
@@ -1456,6 +1624,7 @@ async function updateGameState() {
         }
 
         const g = (data && data.global) ? data.global : {};
+        latestGlobalState = g;
         const opts = g.awaiting_human_options || {};
         const phase = (g.current_phase || "").toUpperCase();
         const mode = (opts.mode || "").toLowerCase();
@@ -1550,7 +1719,9 @@ async function updateGameState() {
                 addFeedTick(te.msg);
             });
 
-            updateLiveFeed(events);
+            const isHumanExperiment = !!(data.global && data.global.human_experiment);
+            const pauseFeedForSpoilers = isHumanExperiment && currentPhase !== "DISCUSSION" && !isDebugRevealEnabled();
+            updateLiveFeed(events, pauseFeedForSpoilers);
         }
     } catch (error) {
         console.error("Error:", error);
@@ -1564,6 +1735,16 @@ function exitToHome() {
 window.addEventListener("DOMContentLoaded", function() {
     createDebugCanvas();
     document.addEventListener("keydown", (e) => {
+        const activeEl = document.activeElement;
+        const isTypingTarget = !!(
+            activeEl &&
+            (
+                activeEl.tagName === "INPUT" ||
+                activeEl.tagName === "TEXTAREA" ||
+                activeEl.isContentEditable
+            )
+        );
+        if (isTypingTarget) return;
         if (e.key === "d" || e.key === "D") toggleDebug();
     });
     

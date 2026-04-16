@@ -25,7 +25,11 @@ if _LOAD_LOCAL_MODELS:
             from unsloth import FastLanguageModel
         except ImportError:
             FastLanguageModel = None
-    from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, Mxfp4Config
+    from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+    try:
+        from transformers import Mxfp4Config  # optional: only present in newer transformers
+    except Exception:
+        Mxfp4Config = None
 
 # See Model Specific Documentation   
 CONCATENATE = {

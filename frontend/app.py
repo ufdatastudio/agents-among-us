@@ -6,6 +6,7 @@ Complete backend integration with all API routes + ML Classifiers
 import csv
 import json
 import os
+import random
 import subprocess
 import sys
 import threading
@@ -327,6 +328,8 @@ def start_game():
         game_id = request.form.get('game_id', '').strip()
         human_experiment = request.form.get('human_experiment') == 'true'
         human_agent = "Agent_0" if human_experiment else None
+        requested_num_byzantines = None
+        randomized_byzantines = set()
         
         # === NEW: Get ML Classifier selections ===
         classifier_sgd = request.form.get('classifier_sgd') == 'true'
@@ -347,10 +350,23 @@ def start_game():
         agents = []
         byzantine_count = 0
         honest_count = 0
+
+        if human_experiment:
+            requested_num_byzantines = int(request.form.get('num_byzantines', 1))
+            max_byz = (num_agents - 1) // 2
+            if requested_num_byzantines < 1 or requested_num_byzantines > max_byz:
+                return jsonify({
+                    "error": f"Invalid num_byzantines={requested_num_byzantines}. Must be between 1 and {max_byz} for {num_agents} agents."
+                }), 400
+            randomized_byzantines = set(random.sample(range(num_agents), requested_num_byzantines))
         
         for i in range(num_agents):
             role = request.form.get(f'agent_{i}_role')
-            is_hybrid = role == 'honest' and request.form.get(f'agent_{i}_is_hybrid') == 'true'
+            if human_experiment:
+                role = 'byzantine' if i in randomized_byzantines else 'honest'
+                is_hybrid = False
+            else:
+                is_hybrid = role == 'honest' and request.form.get(f'agent_{i}_is_hybrid') == 'true'
             agent_name = f"Agent_{i}"
             agent = {
                 'agent_num': i,  # Preserve exact agent number
@@ -380,6 +396,9 @@ def start_game():
             "human_experiment": human_experiment,
             "human_agent": human_agent,
         }
+        if human_experiment:
+            composition["roles_randomized"] = True
+            composition["num_byzantines"] = requested_num_byzantines
 
         # Optional: custom per-role, per-phase prompts (frontend overrides)
         raw_prompts = request.form.get('custom_prompts_json', '').strip()
@@ -415,6 +434,8 @@ def start_game():
         print(f"Observers: {observers_label}")
         print(f"Prompts: {prompts_mode}")
         print(f"Human experiment: {'ON (Agent_0)' if human_experiment else 'OFF'}")
+        if human_experiment:
+            print(f"Human hidden-role mode: ON (randomized Byzantine count = {requested_num_byzantines})")
 
         print("\nAgent lineup:")
         for agent in agents:

@@ -513,7 +513,7 @@ select[name*="_color"] {
 }
 
 .status-table-wrapper {
-    overflow-x: auto;
+    overflow-x: hidden;
     overflow-y: hidden;
     max-width: 100%;
 }
@@ -523,7 +523,7 @@ select[name*="_color"] {
     max-width: 100%;
     table-layout: auto;
     border-collapse: collapse;
-    font-size: 0.72rem;
+    font-size: clamp(0.64rem, 0.75vw, 0.74rem);
 }
 
 .status-table th {
@@ -536,29 +536,28 @@ select[name*="_color"] {
 }
 
 .status-table td {
-    padding: 0.25rem;
+    padding: 0.28rem 0.26rem;
     border: 1px solid var(--border);
     text-align: left;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* Prefer content-sized columns (compact numerics, wider text) */
-.status-table th:nth-child(1),
-.status-table td:nth-child(1),
-.status-table th:nth-child(3),
-.status-table td:nth-child(3),
-.status-table th:nth-child(6),
-.status-table td:nth-child(6),
-.status-table th:nth-child(7),
-.status-table td:nth-child(7),
-.status-table th:nth-child(n + 8),
-.status-table td:nth-child(n + 8) {
-    width: 1%;
+.status-table th,
+.status-table td {
+    width: auto;
 }
 
-.status-table th:nth-child(4),
-.status-table td:nth-child(4) {
-    width: 40px;
+.status-model-cell {
+    font-size: 0.67rem;
+    max-width: 11ch;
+}
+
+/* While vote buttons are rendered in the votes column, give it extra room. */
+.status-table.status-table--voting-controls th:nth-child(6),
+.status-table.status-table--voting-controls td:nth-child(6) {
+    min-width: 7.2rem;
 }
 
 .status-table tbody tr:nth-child(even):not(.agent-dead):not(.agent-byzantine) {
@@ -617,6 +616,38 @@ select[name*="_color"] {
 
 .human-vote-btn:disabled {
     opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.votes-cell-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.votes-count {
+    min-width: 1.1rem;
+    text-align: right;
+}
+
+.human-vote-skip-btn {
+    width: 100%;
+    padding: 0.26rem 0.38rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #3d4752;
+    background: #e5e7eb;
+    border: 1px solid #c3c8cf;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.human-vote-skip-btn:hover {
+    background: #d9dde3;
+}
+
+.human-vote-skip-btn:disabled {
+    opacity: 0.65;
     cursor: not-allowed;
 }
 
