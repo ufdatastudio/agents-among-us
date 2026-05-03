@@ -651,6 +651,40 @@ select[name*="_color"] {
     cursor: not-allowed;
 }
 
+.human-vote-actions-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem;
+}
+
+.human-vote-confirm-btn {
+    width: 100%;
+    padding: 0.26rem 0.38rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #1f5131;
+    background: #dff5e5;
+    border: 1px solid #b7e3c5;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.human-vote-confirm-btn:hover {
+    background: #d2efd9;
+}
+
+.human-vote-confirm-btn:active,
+.human-vote-confirm-btn.is-submitting {
+    background: #bfe7cb;
+    border-color: #93d2a9;
+    transform: translateY(1px);
+}
+
+.human-vote-confirm-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
 .status-table tr.agent-byzantine.agent-dead {
     background: #c8c8c8;
     color: #333;

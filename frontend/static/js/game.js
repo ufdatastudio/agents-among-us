@@ -1030,18 +1030,8 @@ function updateStatusTable(agents) {
                     voteBtn.textContent = "Vote";
                 }
                 voteBtn.disabled = humanVotePending;
-                voteBtn.addEventListener("click", async function () {
+                voteBtn.addEventListener("click", function () {
                     humanSelectedVoteTarget = agentKey;
-                    updateStatusTable(agents);
-                    await submitHumanVote({
-                        game_id: humanVoteContext.gameId,
-                        agent_name: humanVoteContext.agentName,
-                        phase: humanVoteContext.phase,
-                        round: humanVoteContext.round,
-                        tick: humanVoteContext.tick,
-                        action: "vote",
-                        target: agentKey
-                    });
                     updateStatusTable(agents);
                 });
                 votesWrap.appendChild(voteBtn);
@@ -1118,14 +1108,28 @@ function updateStatusTable(agents) {
         skipRow.appendChild(leftPad);
 
         const skipCell = document.createElement("td");
+        const actionsWrap = document.createElement("div");
+        actionsWrap.className = "human-vote-actions-row";
         const skipBtn = document.createElement("button");
         skipBtn.type = "button";
         skipBtn.className = "human-vote-skip-btn";
         skipBtn.textContent = (humanSelectedVoteTarget === "SKIP") ? "Skip selected" : "Skip";
         skipBtn.disabled = humanVotePending;
-        skipBtn.addEventListener("click", async function () {
+        skipBtn.addEventListener("click", function () {
             humanSelectedVoteTarget = "SKIP";
             updateStatusTable(agents);
+        });
+        actionsWrap.appendChild(skipBtn);
+        const confirmBtn = document.createElement("button");
+        confirmBtn.type = "button";
+        confirmBtn.className = "human-vote-confirm-btn";
+        confirmBtn.textContent = humanVotePending ? "Submitting..." : "Confirm";
+        confirmBtn.disabled = humanVotePending || !humanSelectedVoteTarget;
+        confirmBtn.addEventListener("click", async function () {
+            if (!humanSelectedVoteTarget) return;
+            confirmBtn.classList.add("is-submitting");
+            confirmBtn.textContent = "Submitting...";
+            confirmBtn.disabled = true;
             await submitHumanVote({
                 game_id: humanVoteContext.gameId,
                 agent_name: humanVoteContext.agentName,
@@ -1133,11 +1137,12 @@ function updateStatusTable(agents) {
                 round: humanVoteContext.round,
                 tick: humanVoteContext.tick,
                 action: "vote",
-                target: "SKIP"
+                target: humanSelectedVoteTarget
             });
             updateStatusTable(agents);
         });
-        skipCell.appendChild(skipBtn);
+        actionsWrap.appendChild(confirmBtn);
+        skipCell.appendChild(actionsWrap);
         skipRow.appendChild(skipCell);
 
         const rightPad = document.createElement("td");
@@ -1720,7 +1725,10 @@ async function updateGameState() {
             });
 
             const isHumanExperiment = !!(data.global && data.global.human_experiment);
-            const pauseFeedForSpoilers = isHumanExperiment && currentPhase !== "DISCUSSION" && !isDebugRevealEnabled();
+            // Keep movement-phase events hidden to avoid spoilers, but allow
+            // discussion/voting feed so chat + vote messages remain visible.
+            const phaseUpper = String(currentPhase || "").toUpperCase();
+            const pauseFeedForSpoilers = isHumanExperiment && phaseUpper === "MOVEMENT" && !isDebugRevealEnabled();
             updateLiveFeed(events, pauseFeedForSpoilers);
         }
     } catch (error) {

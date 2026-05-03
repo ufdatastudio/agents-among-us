@@ -2,6 +2,13 @@
 import os
 import re
 from agents.base_agent import BaseAgent
+from agents.prompts import (
+    BYZANTINE_DEFAULT_MOVE_INSTRUCTIONS,
+    BYZANTINE_DEFAULT_VOTE_INSTRUCTIONS,
+    BYZANTINE_DISCUSSION_INSTRUCTIONS_PREFIX,
+    BYZANTINE_DISCUSSION_INSTRUCTIONS_SUFFIX,
+    byzantine_system_prompt,
+)
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
 class ByzantineAgent(BaseAgent):
@@ -90,14 +97,6 @@ class ByzantineAgent(BaseAgent):
 
         options_str += "Available map locations to move to:\n" + move_options_str + "\n"
 
-        default_move_instructions = """
-INSTRUCTIONS:
-1. Choose ONE action from the lists above.
-2. Output ONLY the action keyword or room name.
-3. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.
-4. If option is available, to TAG an honest agent, output "TAG" followed by the agent's name.
-5. Do NOT write "Action:", "I will", or explain your reasoning. One word or phrase only.
-"""
         overrides = getattr(self, "prompt_overrides", {}) or {}
         move_override = overrides.get("movement")
         if move_override:
@@ -106,7 +105,7 @@ INSTRUCTIONS:
                 {"round_num": str(round_num)},
             )
         else:
-            move_body = default_move_instructions
+            move_body = BYZANTINE_DEFAULT_MOVE_INSTRUCTIONS
 
         teammates_str = ", ".join(self.teammates) if self.teammates else ""
         prompt = f"""
@@ -160,17 +159,11 @@ Options
         else:
             chances_line = f"4. You get {n} chances to speak: your first message is your opening statement, the middle messages are for interactive discussion (follow-ups, questions, answers), and your last message is your final stance."
 
-        default_discussion_instructions = """
-INSTRUCTIONS:
-1. Use your memory and what has been said to discuss amongst each other (unless you are the opening statement). Provide useful, unique observations.
-2. Check the discussion log above. If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.
-3. Discuss amongst each other. Share observations while avoiding suspicion or redirect suspicion onto others to avoid ejection of you or your teammates.
-""" + chances_line + """
-5. Keep it short (< 30 words).
-6. Speak in first person as if you are the agent yourself.
-7. **DO NOT** include your name or "Agent_X:" at the start.
-8. **DO NOT** use quotes. Just output the sentence.
-"""
+        default_discussion_instructions = (
+            BYZANTINE_DISCUSSION_INSTRUCTIONS_PREFIX
+            + chances_line
+            + BYZANTINE_DISCUSSION_INSTRUCTIONS_SUFFIX
+        )
         overrides = getattr(self, "prompt_overrides", {}) or {}
         discussion_override = overrides.get("discussion")
         extra = {"round_num": str(round_num), "max_discussion_messages": str(self.max_discussion_messages)}
@@ -205,12 +198,6 @@ Your Teammates: {teammates_str}
         recent_discussion = self._get_current_round_log(discussion_log, round_num-2)           
         results_log = self._read_file(world_view["results_log_path"])
 
-        default_vote_instructions = """
-INSTRUCTIONS:
-1. Review the logs above composed of the past round results and recent discussions.
-2. Decide which candidate to vote for that helps you win, avoiding ejection of you or your teammates using any strategies necessary.
-3. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote.
-"""
         teammates_str = ", ".join(self.teammates) if self.teammates else ""
         candidates_str = ", ".join(candidates) if isinstance(candidates, list) else str(candidates)
         overrides = getattr(self, "prompt_overrides", {}) or {}
@@ -222,7 +209,7 @@ INSTRUCTIONS:
             )
         else:
             vote_body = self._substitute_placeholders(
-                default_vote_instructions,
+                BYZANTINE_DEFAULT_VOTE_INSTRUCTIONS,
                 {"round_num": str(round_num), "candidates": candidates_str},
             )
         prompt = f"""
@@ -258,38 +245,4 @@ Note: Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts
                 },
             )
 
-        return f"""
-You are **{self.name}**, a **Byzantine Agent** in a spaceship social deduction simulation. As a Byzantine, you have the unique ability to Tag honest agents.
-You are NOT a chat assistant.
-You must output concise commands during movement. During discussion, be conversational.
-You do not use pleasantries like "Great" or "Let's get started".
-You do not include any internal thought processes or analysis.
-You strictly follow formatting instructions.
-
-**GAME RULES:**
-1. **The Map:** The ship consists of connected rooms. You can only see occupants in your current room and adjacent rooms.
-Here is a map of the rooms and their connections:
-{ROOMS}
-
-2. **Action Phase:** You move between rooms to tag Honest agents. Each round you get {MAX_MOVEMENT_PHASES} movement actions.
-   - **Eliminating:** You can **TAG** (eliminate) an Honest agent if you are in the same room (occupants). You cannot tag in consecutive actions in the same round. 
-   - **Reporting:** If you find an eliminated body from yourself or Byzantine teammates, you have the option to **REPORT** it to trigger a meeting. Think about possible motivations for reporting, positive or negative.
-   - **Emergency Button:** ONLY If in the Cafeteria, you can press the Emergency Button to call a meeting at any time, but only once per game.
-
-3. **Discussion Phase:** When a meeting starts (via Body Report or Emergency Button in Cafeteria).
-   - Ends ability to tag players or move for that round.
-   - Agents discuss who is suspicious.
-   - Agents **VOTE** to **EJECT** someone into space.
-   - Your goal is to avoid ejection of you and ideally your teammates while eliminating Honest agents.
-   - You can choose to skip voting. 
-   - Find the best playstyle, that helps achieve your team's goal. 
-   
-4. **Victory Condition :**
-   - **WIN:** Eliminate Crewmates until Byzantine Agents >= Crewmates either through tagging or ejections.
-   - **LOSE:** If both you and your teammates are voted out/ejected or if the all rounds complete with equal or more Honest Agents than Byzantine Agents.
-
-**Additional Info:**
-- You know who your fellow Byzantine Agents are. You cannot tag them. Work with teammates to stack votes on honest agents or tag multiple agents in a room.
-- If you tag someone, you can run away OR **REPORT** the body yourself ("self-report") to in hopes of pretending you are innocent.
-- Be aware of active agent count at all times.
-"""
+        return byzantine_system_prompt(self.name)

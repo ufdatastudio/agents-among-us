@@ -323,13 +323,12 @@ class GameEngine:
             return []
         return out
 
-    def _await_human_movement_action(self, agent, view, round_num, tick, timeout_s=25):
+    def _await_human_movement_action(self, agent, view, round_num, tick, timeout_s=None):
         """
         Waits for a human-submitted movement action (via Flask /api/human/action),
         persisted to logs/human_inputs/<game_id>.jsonl.
-        Timeout fallback is to stay in place (move -> current location).
+        Blocks until a valid human action is submitted.
         """
-        start = time.time()
         seen = set()
         agent_name = agent.name
         phase = "MOVEMENT"
@@ -344,10 +343,8 @@ class GameEngine:
         g["awaiting_human_options"] = options
         self.state.save_json()
 
-        def fallback(reason):
-            return ("move", current_loc, reason)
         try:
-            while time.time() - start < timeout_s:
+            while True:
                 inputs = self._read_human_inputs()
                 for item in inputs:
                     if not isinstance(item, dict):
@@ -414,8 +411,6 @@ class GameEngine:
                         continue
 
                 time.sleep(0.2)
-
-            return fallback("HUMAN_TIMEOUT")
         finally:
             g["awaiting_human_action"] = False
             g["awaiting_human_agent"] = None
@@ -463,12 +458,11 @@ class GameEngine:
             "is_byzantine": bool(getattr(agent, "role", "") == "byzantine"),
         }
 
-    def _await_human_discussion_message(self, agent, round_num, turn_idx, timeout_s=30):
+    def _await_human_discussion_message(self, agent, round_num, turn_idx, timeout_s=None):
         """
         Wait for a human chat submission during discussion.
-        Timeout fallback is an empty message.
+        Blocks until a human chat submission is received.
         """
-        start = time.time()
         seen = set()
         agent_name = agent.name
         phase = "DISCUSSION"
@@ -486,7 +480,7 @@ class GameEngine:
         self.state.save_json()
 
         try:
-            while time.time() - start < timeout_s:
+            while True:
                 inputs = self._read_human_inputs()
                 for item in inputs:
                     if not isinstance(item, dict):
@@ -532,7 +526,6 @@ class GameEngine:
                         msg = msg[:400].rstrip()
                     return msg
                 time.sleep(0.2)
-            return ""
         finally:
             g["awaiting_human_action"] = False
             g["awaiting_human_agent"] = None
@@ -541,12 +534,11 @@ class GameEngine:
             g["awaiting_human_options"] = {}
             self.state.save_json()
 
-    def _await_human_vote(self, agent, round_num, vote_turn_idx, candidates, timeout_s=30):
+    def _await_human_vote(self, agent, round_num, vote_turn_idx, candidates, timeout_s=None):
         """
         Wait for a human vote submission during voting.
-        Timeout fallback is SKIP.
+        Blocks until a valid human vote is submitted.
         """
-        start = time.time()
         seen = set()
         agent_name = agent.name
         phase = "VOTING"
@@ -565,7 +557,7 @@ class GameEngine:
         self.state.save_json()
 
         try:
-            while time.time() - start < timeout_s:
+            while True:
                 inputs = self._read_human_inputs()
                 for item in inputs:
                     if not isinstance(item, dict):
@@ -607,7 +599,6 @@ class GameEngine:
                     if target in legal_candidates:
                         return target
                 time.sleep(0.2)
-            return "SKIP"
         finally:
             g["awaiting_human_action"] = False
             g["awaiting_human_agent"] = None
