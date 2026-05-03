@@ -5,11 +5,15 @@ from agents.base_agent import BaseAgent
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
 class HonestAgent(BaseAgent):
-    def __init__(self, name, color, model_name, max_moves=None, max_discussion_messages=2, is_hybrid=False):
+    def __init__(self, name, color, model_name, max_moves=None, max_discussion_messages=2, is_hybrid=False, 
+                 skip_discussion=False, context_window=0):
         super().__init__(name, color, "honest", model_name)
         self.max_moves = max_moves if max_moves is not None else MAX_MOVEMENT_PHASES
         self.max_discussion_messages = max_discussion_messages
         self.is_hybrid = is_hybrid
+        self.skip_discussion = skip_discussion
+        self.context_window = context_window
+
 
 
     def _substitute_placeholders(self, template, extra_mapping=None):
@@ -184,8 +188,13 @@ You are in a discussion phase.
     def vote(self, world_view, candidates, round_num, pruner=None):
         discussion_log = self._read_file(world_view["discussion_log_path"])
         round_num = int(round_num)
-        recent_discussion = self._get_current_round_log(discussion_log, round_num-2) # can adjust as needed
+        recent_discussion = self._get_current_round_log(discussion_log, round_num - self.context_window) # can adjust as needed
 
+        skip_discussion = world_view.get("skip_discussion", False)
+        if skip_discussion:
+            action_log = self._read_file(world_view["log_path"])
+            recent_action_log = self._get_current_round_log(action_log, round_num - 1)
+            recent_discussion = f"=== YOUR RECENT ACTION LOG ===\n{recent_action_log}"
         
         if self.is_hybrid and pruner is not None:
             recent_discussion, suspicion_state, surviving_agents = pruner.prune_live_log(recent_discussion)
@@ -193,24 +202,27 @@ You are in a discussion phase.
             if suspicion_state:
                 tracked_cands = [c for c in candidates if c in surviving_agents]
                 candidates = tracked_cands if tracked_cands else candidates
-           
-        # try:
-        #     with open("debug_discussion.txt", "a", encoding="utf-8") as debug_file:
-        #         debug_file.write(f"\n--- DEBUG: Agent {self.name} | Round {round_num} ---\n")
-        #         debug_file.write(recent_discussion)
-        #         debug_file.write("\n" + "="*50 + "\n")
-        # except Exception as e:
-        #     print(f"Failed to write debug file: {e}")
-        
+                   
         results_log = self._read_file(world_view["results_log_path"])
 
-        default_vote_instructions = """
+
+        if skip_discussion:
+            default_vote_instructions = """
+INSTRUCTIONS:
+1. Review the logs above composed of the past round results and your recent action log.
+2. Vote for the candidate who is most suspicious based on your action history and past round results.
+3. Decide which candidate is most likely to be a Byzantine agent to eject, looking for incriminating behavior from logs.
+4. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote.
+"""
+        else:
+            default_vote_instructions = """
 INSTRUCTIONS:
 1. Review the logs above composed of the past round results and recent discussions.
 2. Vote for the candidate who is most suspicious based on the discussion history of the recent rounds above and past round results.
 3. Decide which candidate is most likely to be a Byzantine agent to eject, looking for inconsistencies in their statements or suspicious or incriminating behavior from logs.
 4. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote.
 """
+
         overrides = getattr(self, "prompt_overrides", {}) or {}
         vote_override = overrides.get("voting")
         if vote_override:
@@ -246,17 +258,54 @@ Note: Be aware of total player count to ensure Byzantines do not equal or outnum
         return "SKIP"
 
     def _system_prompt(self):
-       overrides = getattr(self, "prompt_overrides", {}) or {}
-       custom = overrides.get("system")
-       if custom:
+        overrides = getattr(self, "prompt_overrides", {}) or {}
+        custom = overrides.get("system")
+        if custom:
            return self._substitute_placeholders(
                custom,
                {
                    "round_num": "",
                },
            )
+        if self.skip_discussion:
+            prompt = f"""
+You are **{self.name}**, an **Honest Agent** in a spaceship social deduction simulation.
+You are NOT a chat assistant.
+You must output concise commands during movement. During voting, analyze the logs carefully.
+You do not use pleasantries like "Great" or "Let's get started".
+You do not include any internal thought processes or analysis.
+You strictly follow formatting instructions.
 
-       return f"""
+**GAME RULES:**
+1. **The Map:** The ship consists of connected rooms. You can only see occupants in your current room and adjacent rooms.
+Here is a map of the rooms and their connections:  
+{ROOMS}
+
+2. **Action Phase:** You move between rooms to complete tasks and observe others. Each round you get {MAX_MOVEMENT_PHASES} movement actions.
+   - **Movement:** As you move around the ship to gain information, there are **(Byzantine agents)** hiding among you who can eliminate agents by tagging them.
+   - **Emergency Button:** In the Cafeteria, you can press the Emergency Button to call a vote at any time, but only once per game. Pressing can be strategic to prevent further eliminations but if done often, there may not be enough information. 
+   - **Reporting:** Once you find an eliminated body, a **REPORT** will be called to start the voting phase. Reporting a body is mandatory to identify Byzantine agents.
+
+3. **Voting Phase:** When a body is reported or the Emergency Button is pressed:
+   - Ends ability to be tagged or move for that round.
+   - **Discussions are completely disabled.** You will not be able to talk to other agents.
+   - You must track agent movements through action logs to deduce who is suspicious. Look for agents who were near eliminated bodies. 
+   - Agents **VOTE** to **EJECT** someone into space. Your goal is to identify and eject Byzantine agents.
+   - You can choose to skip voting. However, voting is the only active path to eject Byzantine agents.
+   - Find the best playstyle, that helps achieve your team's goal. 
+
+4. **Victory Condition:**
+   - **WIN:** Eject all Byzantine agents by voting correctly (active) or all rounds complete with agents surviving (passive). 
+   - **LOSE:** If Byzantine agents equal or outnumber agents either via tagging or ejections.
+
+**Additional Info:**
+- Use logic and deduction to analyze the action logs and vote out the Byzantine agents. You must rely solely on the logs to accomplish this since you cannot converse.
+- Be aware of active agent count at all times.
+- Voting phases are the only opportunity to have a direct impact on the chance of winning. 
+"""
+            return prompt
+        else:
+            return f"""
 You are **{self.name}**, an **Honest Agent** in a spaceship social deduction simulation.
 You are NOT a chat assistant.
 You must output concise commands during movement. During discussion, be conversational.

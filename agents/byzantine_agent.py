@@ -5,11 +5,14 @@ from agents.base_agent import BaseAgent
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
 class ByzantineAgent(BaseAgent):
-    def __init__(self, name, color, teammates, model_name, max_moves=None, max_discussion_messages=2):
+    def __init__(self, name, color, teammates, model_name, max_moves=None, 
+                 max_discussion_messages=2, skip_discussion=False, context_window=0):
         super().__init__(name, color, "byzantine", model_name)
         self.teammates = teammates
         self.max_moves = max_moves if max_moves is not None else MAX_MOVEMENT_PHASES
         self.max_discussion_messages = max_discussion_messages
+        self.skip_discussion = skip_discussion
+        self.context_window = context_window
 
     def _substitute_placeholders(self, template, extra_mapping=None):
         """
@@ -202,10 +205,24 @@ Your Teammates: {teammates_str}
     def vote(self, world_view, candidates, round_num):
         discussion_log = self._read_file(world_view["discussion_log_path"])
         round_num = int(round_num)
-        recent_discussion = self._get_current_round_log(discussion_log, round_num-2)           
+        recent_discussion = self._get_current_round_log(discussion_log, round_num - self.context_window)           
         results_log = self._read_file(world_view["results_log_path"])
 
-        default_vote_instructions = """
+        skip_discussion = world_view.get("skip_discussion", False)
+        if skip_discussion:
+            action_log = self._read_file(world_view["log_path"])
+            recent_action_log = self._get_current_round_log(action_log, round_num - 1)
+            recent_discussion = f"=== YOUR RECENT ACTION LOG===\n{recent_action_log}"
+
+        if skip_discussion:
+            default_vote_instructions = """
+INSTRUCTIONS:
+1. Review the logs above composed of the past round results and your recent action history.
+2. Decide which candidate to vote for that helps you win, avoiding ejection of you or your teammates using any strategies necessary.
+3. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote.
+"""
+        else:
+            default_vote_instructions = """
 INSTRUCTIONS:
 1. Review the logs above composed of the past round results and recent discussions.
 2. Decide which candidate to vote for that helps you win, avoiding ejection of you or your teammates using any strategies necessary.
@@ -257,8 +274,47 @@ Note: Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts
                     "round_num": "",
                 },
             )
+        
+        if self.skip_discussion:
+            prompt = f"""
+You are **{self.name}**, a **Byzantine Agent** in a spaceship social deduction simulation. As a Byzantine, you have the unique ability to Tag honest agents.
+You are NOT a chat assistant.
+You must output concise commands during movement. During voting, be strategic based on action logs.
+You do not use pleasantries like "Great" or "Let's get started".
+You do not include any internal thought processes or analysis.
+You strictly follow formatting instructions.
 
-        return f"""
+**GAME RULES:**
+1. **The Map:** The ship consists of connected rooms. You can only see occupants in your current room and adjacent rooms.
+Here is a map of the rooms and their connections:
+{ROOMS}
+
+2. **Action Phase:** You move between rooms to tag Honest agents. Each round you get {MAX_MOVEMENT_PHASES} movement actions.
+   - **Eliminating:** You can **TAG** (eliminate) an Honest agent if you are in the same room (occupants). You cannot tag in consecutive actions in the same round. 
+   - **Reporting:** If you find an eliminated body from yourself or Byzantine teammates, you have the option to **REPORT** it to trigger a voting phase. Think about possible motivations for reporting, positive or negative.
+   - **Emergency Button:** ONLY If in the Cafeteria, you can press the Emergency Button to call a vote at any time, but only once per game.
+
+3. **Voting Phase:** When a body is reported or the Emergency Button is pressed.
+   - Ends ability to tag players or move for that round.
+   - **Discussions are completely disabled.** You will only see the raw action logs of other agents.
+   - Agents **VOTE** to **EJECT** someone based only on what was seen in their own action logs.
+   - Your goal is to avoid ejection of you and ideally your teammates while eliminating Honest agents.
+   - You can choose to skip voting. 
+   - Find the best playstyle, that helps achieve your team's goal. 
+   
+4. **Victory Condition :**
+   - **WIN:** Eliminate Crewmates until Byzantine Agents >= Crewmates either through tagging or ejections.
+   - **LOSE:** If both you and your teammates are voted out/ejected or if the all rounds complete with equal or more Honest Agents than Byzantine Agents.
+
+**Additional Info:**
+- You know who your fellow Byzantine Agents are. You cannot tag them. Work with teammates to stack votes on honest agents or tag multiple agents in a room.
+- If you tag someone, you can run away OR **REPORT** the body yourself ("self-report") to in hopes of appearing innocent in the logs.
+- Be aware of active agent count at all times.
+"""
+            return prompt
+            
+        else:
+            return f"""
 You are **{self.name}**, a **Byzantine Agent** in a spaceship social deduction simulation. As a Byzantine, you have the unique ability to Tag honest agents.
 You are NOT a chat assistant.
 You must output concise commands during movement. During discussion, be conversational.

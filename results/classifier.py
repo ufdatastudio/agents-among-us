@@ -27,7 +27,7 @@ from sklearn.neural_network import MLPClassifier
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import xgboost as xgb
 import matplotlib.pyplot as plt
-from config.prompts import SUSPECT_JUDGE_SYSTEM, SUSPECT_JUDGE_USER
+#from config.prompts import SUSPECT_JUDGE_SYSTEM, SUSPECT_JUDGE_USER
 os.environ["LLM_MODE"] = "CONTROLLER"
 from dotenv import load_dotenv
 load_dotenv()
@@ -384,6 +384,41 @@ class GameLogLoader:
             all_agent_votes = self._find_and_parse_votes(root)
             turns = self._parse_discussion_log(os.path.join(root, 'discussion.log'), agent_map, round_results, all_agent_votes)
             
+            if not turns and all_agent_votes:
+                for round_num, r_res in round_results.items():
+                    # Only create turns for agents who were alive to cast a vote this round
+                    for agent, votes_by_round in all_agent_votes.items():
+                        if round_num in votes_by_round:
+                            my_vote_target = votes_by_round[round_num]
+                            meta = agent_map.get(agent, {})
+                            agent_role = meta.get('role', 'Unknown')
+                            
+                            target_role = "Unknown"
+                            vote_is_correct = False
+                            if my_vote_target not in ["None", "SKIP"]:
+                                target_meta = agent_map.get(my_vote_target, {})
+                                target_role = target_meta.get('role', 'Unknown')
+                                if agent_role == 'H' and target_role == 'B':
+                                    vote_is_correct = True
+                                if agent_role == 'B' and target_role == 'H':
+                                    vote_is_correct = True
+                            
+                            turns.append({
+                                'round': round_num,
+                                'agent': agent,
+                                'model': meta.get('model', 'Unknown'),
+                                'role': agent_role,
+                                'won': meta.get('won', 0),
+                                'text': "", # Silent round
+                                'vote_target': my_vote_target,
+                                'vote_target_role': target_role,
+                                'vote_correct': vote_is_correct,
+                                'round_tally': r_res['tally'],
+                                'round_consensus': r_res['consensus'],
+                                'round_ejected': r_res['ejected'],
+                                'reported': 0,
+                                'statement_num': 0
+                            })
             if not turns:
                 self.silent_games.append({'experiment': exp_id, 'composition': composition_id, 'game_id': game_id})
             else:
@@ -1829,18 +1864,16 @@ class LogAnalysis:
 
     
 if __name__ == "__main__":
-    #ROOT_DIRECTORY = "experiments/MixedWeight_Full_Hybrid"
-    #ROOT_DIRECTORY = "experiments/MixedWeight_Half_Hybrid"
-    ROOT_DIRECTORY = "results/"
+    ROOT_DIRECTORY = "results/experiments/MixedWeight_NoDiscuss"
+    #ROOT_DIRECTORY = "results/"
 
-    #cache = "classifiers/data/MixedWeigh_Full_Hybrid"
-    #cache = "classifiers/data/MixedWeigh_Half_Hybrid"
-    cache = "classifiers/data/"
+    cache = "classifiers/data/MixedWeight_NoDiscuss"
+    #cache = "classifiers/data/"
    
     
     #loader = GameLogLoader(ROOT_DIRECTORY, cache_dir="")
     loader = GameLogLoader(ROOT_DIRECTORY, cache_dir=cache)
-    active_games, silent_games = loader.load_all(force_reload=False)
+    active_games, silent_games = loader.load_all(force_reload=True)
 
     # MOVEMENT ANALYSIS
     # movement_stats = LogAnalysis.movement_analysis(active_games)
@@ -1880,14 +1913,14 @@ if __name__ == "__main__":
 
     
     # WIN STATS   
-    # win_stats = GameAnalytics.calculate_win_rates(active_games)
-    # GameAnalytics.print_win_rate_report(win_stats)
-    # total_discussions = GameAnalytics.calculate_total_discussions(active_games)
-    # avg_length = GameAnalytics.calculate_average_game_length(active_games)
+    win_stats = GameAnalytics.calculate_win_rates(active_games)
+    GameAnalytics.print_win_rate_report(win_stats)
+    #total_discussions = GameAnalytics.calculate_total_discussions(active_games)
+    #avg_length = GameAnalytics.calculate_average_game_length(active_games)
 
-    # Voting STATS
-    # voting_results = GameAnalytics.calculate_voting_metrics(active_games)
-    # GameAnalytics.print_voting_metrics_report(voting_results)
+    # VOTING STATS
+    voting_results = GameAnalytics.calculate_voting_metrics(active_games)
+    GameAnalytics.print_voting_metrics_report(voting_results)
     
     # Statistical Test: Mann-Whitney U test to compare F1 scores across models
     #tat, p_value = GameAnalytics.calculate_round_level_f1_significance(active_games)
