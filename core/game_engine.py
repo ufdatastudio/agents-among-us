@@ -95,12 +95,13 @@ class Observer:
         return scores_by_agent  
 
 class GameEngine:
-    def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST, num_rounds=DEFAULT_NUM_ROUNDS, num_ticks=None, num_discussion_messages=2):
+    def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST, num_rounds=DEFAULT_NUM_ROUNDS, num_ticks=None, num_discussion_messages=2,skip_discussion=False):
         self.game_id = game_id
         self.num_agents = num_agents
         self.num_rounds = num_rounds
         self.num_ticks = num_ticks if num_ticks is not None else MAX_MOVEMENT_PHASES
         self.num_discussion_messages = num_discussion_messages
+        self.skip_discussion = skip_discussion
         self.agents = []
         self.state = None
         self.logger = None
@@ -139,13 +140,27 @@ class GameEngine:
                 
                 if role == 'byzantine':
                     teammates = [name for name in byz_names if name != agent_name]
-                    agent_obj = ByzantineAgent(agent_name, color, teammates, model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages)
-                    setattr(agent_obj, "is_human", is_human)
-                    self.agents.append(
-                        agent_obj
+                    agent_obj = ByzantineAgent(
+                        agent_name,
+                        color,
+                        teammates,
+                        model,
+                        max_moves=self.num_ticks,
+                        max_discussion_messages=self.num_discussion_messages,
+                        skip_discussion=self.skip_discussion,
                     )
+                    setattr(agent_obj, "is_human", is_human)
+                    self.agents.append(agent_obj)
                 else:
-                    agent_obj = HonestAgent(agent_name, color, model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages, is_hybrid=is_hybrid)
+                    agent_obj = HonestAgent(
+                        agent_name,
+                        color,
+                        model,
+                        max_moves=self.num_ticks,
+                        max_discussion_messages=self.num_discussion_messages,
+                        is_hybrid=is_hybrid,
+                        skip_discussion=self.skip_discussion,
+                    )
                     setattr(agent_obj, "is_human", is_human)
                     self.agents.append(agent_obj)
             
@@ -158,6 +173,8 @@ class GameEngine:
             n_byz = composition["byzantine_count"]
             hybrid_count = composition.get("hybrid_count", 0)
             hybrid_flags = composition.get("honest_hybrid", [])
+            context_windows = composition.get("context_windows", [])
+            byz_context_windows = composition.get("byz_context_windows", context_windows)
             
             colors = ["🔴", "🟠", "🟡", "🟩", "🟢", "🔷", "🔵", "🟣", "🟤", "💗", "⚪", "⚫"]
             
@@ -166,7 +183,17 @@ class GameEngine:
             for i, name in enumerate(byz_names):
                 assigned_model = byz_models[i % len(byz_models)]
                 teammates = [b for b in byz_names if b != name]
-                agent_obj = ByzantineAgent(name, colors[i], teammates, assigned_model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages)
+                cw = byz_context_windows[i % len(byz_context_windows)] if byz_context_windows else 0
+                agent_obj = ByzantineAgent(
+                    name,
+                    colors[i],
+                    teammates,
+                    assigned_model,
+                    max_moves=self.num_ticks,
+                    max_discussion_messages=self.num_discussion_messages,
+                    skip_discussion=self.skip_discussion,
+                    context_window=cw,
+                )
                 setattr(agent_obj, "is_human", bool(human_experiment and name == human_agent))
                 self.agents.append(agent_obj)
 
@@ -181,7 +208,17 @@ class GameEngine:
                 else:
                     is_hybrid = (i < hybrid_count)
 
-                agent_obj = HonestAgent(name, color, assigned_model, max_moves=self.num_ticks, max_discussion_messages=self.num_discussion_messages, is_hybrid=is_hybrid)
+                cw = context_windows[i % len(context_windows)] if context_windows else 0
+                agent_obj = HonestAgent(
+                    name,
+                    color,
+                    assigned_model,
+                    max_moves=self.num_ticks,
+                    max_discussion_messages=self.num_discussion_messages,
+                    is_hybrid=is_hybrid,
+                    skip_discussion=self.skip_discussion,
+                    context_window=cw,
+                )
                 setattr(agent_obj, "is_human", bool(human_experiment and name == human_agent))
                 self.agents.append(agent_obj)
 
@@ -633,51 +670,59 @@ class GameEngine:
                 discussion_order.append(agent)
 
         round_statements = []
-        statement_counts = {a.name: 0 for a in active_agents}
-        discussion_turn_idx = 0
-        for discussion_round in range(self.num_discussion_messages):            
-            for agent in discussion_order:
-                discussion_turn_idx += 1
-                view = self.state.get_agent_view(agent.name, round_num, log_to_file=False) 
-                if getattr(agent, "is_human", False):
-                    msg = self._await_human_discussion_message(
-                        agent,
-                        round_num=round_num,
-                        turn_idx=discussion_turn_idx,
-                        timeout_s=30,
+        if not self.skip_discussion:
+            statement_counts = {a.name: 0 for a in active_agents}
+            discussion_turn_idx = 0
+            for discussion_round in range(self.num_discussion_messages):
+                for agent in discussion_order:
+                    discussion_turn_idx += 1
+                    view = self.state.get_agent_view(agent.name, round_num, log_to_file=False)
+                    if getattr(agent, "is_human", False):
+                        msg = self._await_human_discussion_message(
+                            agent,
+                            round_num=round_num,
+                            turn_idx=discussion_turn_idx,
+                            timeout_s=30,
+                        )
+                    else:
+                        msg = agent.participate_in_discussion("", view, round_num)
+
+                    clean_msg = msg.replace("\n", " ").replace("\r", "").strip()
+                    clean_msg = re.sub(
+                        rf"^(\*\*)?{re.escape(agent.name)}:?(\*\*)?:?\s*",
+                        "",
+                        clean_msg,
+                        flags=re.IGNORECASE,
                     )
-                else:
-                    msg = agent.participate_in_discussion("", view, round_num)
-                
-                clean_msg = msg.replace("\n", " ").replace("\r", "").strip()
-                clean_msg = re.sub(r"^(\*\*)?Agent_\d+:?(\*\*)?:?\s*", "", clean_msg, flags=re.IGNORECASE)
-                clean_msg = clean_msg.strip('"').strip("'")
-                
-                statement_counts[agent.name] += 1
-                is_reporter = 1 if (agent.name == caller_name and statement_counts[agent.name] == 1) else 0
+                    clean_msg = clean_msg.strip('"').strip("'")
 
-                round_statements.append({
-                    'Agent': agent.name,
-                    'Text': clean_msg,
-                    'Reported': is_reporter,
-                    'S_Num': min(statement_counts[agent.name], self.num_discussion_messages)
-                })
+                    statement_counts[agent.name] += 1
+                    is_reporter = 1 if (agent.name == caller_name and statement_counts[agent.name] == 1) else 0
 
-                formatted_msg = f"{agent.name}: {clean_msg}"
-                self.logger.write_log("discussion", None, formatted_msg)
-                
-               
-                self.logger.log_discussion_chat(
-                    discussion_num=round_num,
-                    reason=reason,
-                    agent_name=agent.name,
-                    model_name=agent.model_name,
-                    role=agent.role,
-                    message=clean_msg
-                )
-                
-                self.state.record_chat(agent.name, clean_msg)
-                self.state.save_json()
+                    round_statements.append({
+                        'Agent': agent.name,
+                        'Text': clean_msg,
+                        'Reported': is_reporter,
+                        'S_Num': min(statement_counts[agent.name], self.num_discussion_messages)
+                    })
+
+                    formatted_msg = f"{agent.name}: {clean_msg}"
+                    self.logger.write_log("discussion", None, formatted_msg)
+
+                    self.logger.log_discussion_chat(
+                        discussion_num=round_num,
+                        reason=reason,
+                        agent_name=agent.name,
+                        model_name=agent.model_name,
+                        role=agent.role,
+                        message=clean_msg
+                    )
+
+                    self.state.record_chat(agent.name, clean_msg)
+                    self.state.save_json()
+        else:
+            self.logger.write_log("discussion", None, "** DISCUSSION PHASE SKIPPED **")
+            self.state.add_ui_event("Discussion Skipped", "info")
 
         # After Discussion, Use Classifier to see probabilities and store results
         suspicion_scores = self.observer.analyze_round(round_statements)
@@ -690,6 +735,7 @@ class GameEngine:
         for agent in active_agents:
             vote_turn_idx += 1
             view = self.state.get_agent_view(agent.name, round_num, log_to_file=False)
+            view["skip_discussion"] = self.skip_discussion
             candidates = [a.name for a in active_agents if a.name != agent.name] + ["SKIP"]
             if getattr(agent, "is_human", False):
                 vote = self._await_human_vote(

@@ -7,16 +7,21 @@ from agents.prompts import (
     BYZANTINE_DEFAULT_VOTE_INSTRUCTIONS,
     BYZANTINE_DISCUSSION_INSTRUCTIONS_PREFIX,
     BYZANTINE_DISCUSSION_INSTRUCTIONS_SUFFIX,
+    BYZANTINE_VOTE_INSTRUCTIONS_SKIP_DISCUSSION,
     byzantine_system_prompt,
+    byzantine_system_prompt_skip_discussion,
 )
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
 class ByzantineAgent(BaseAgent):
-    def __init__(self, name, color, teammates, model_name, max_moves=None, max_discussion_messages=2):
+    def __init__(self, name, color, teammates, model_name, max_moves=None, 
+                 max_discussion_messages=2, skip_discussion=False, context_window=0):
         super().__init__(name, color, "byzantine", model_name)
         self.teammates = teammates
         self.max_moves = max_moves if max_moves is not None else MAX_MOVEMENT_PHASES
         self.max_discussion_messages = max_discussion_messages
+        self.skip_discussion = skip_discussion
+        self.context_window = context_window
 
     def _substitute_placeholders(self, template, extra_mapping=None):
         """
@@ -195,8 +200,14 @@ Your Teammates: {teammates_str}
     def vote(self, world_view, candidates, round_num):
         discussion_log = self._read_file(world_view["discussion_log_path"])
         round_num = int(round_num)
-        recent_discussion = self._get_current_round_log(discussion_log, round_num-2)           
+        recent_discussion = self._get_current_round_log(discussion_log, round_num - self.context_window)           
         results_log = self._read_file(world_view["results_log_path"])
+
+        skip_discussion = world_view.get("skip_discussion", False)
+        if skip_discussion:
+            action_log = self._read_file(world_view["log_path"])
+            recent_action_log = self._get_current_round_log(action_log, round_num - 1)
+            recent_discussion = f"=== YOUR RECENT ACTION LOG ===\n{recent_action_log}"
 
         teammates_str = ", ".join(self.teammates) if self.teammates else ""
         candidates_str = ", ".join(candidates) if isinstance(candidates, list) else str(candidates)
@@ -208,8 +219,13 @@ Your Teammates: {teammates_str}
                 {"round_num": str(round_num), "candidates": candidates_str},
             )
         else:
+            vote_tmpl = (
+                BYZANTINE_VOTE_INSTRUCTIONS_SKIP_DISCUSSION
+                if skip_discussion
+                else BYZANTINE_DEFAULT_VOTE_INSTRUCTIONS
+            )
             vote_body = self._substitute_placeholders(
-                BYZANTINE_DEFAULT_VOTE_INSTRUCTIONS,
+                vote_tmpl,
                 {"round_num": str(round_num), "candidates": candidates_str},
             )
         prompt = f"""
@@ -245,4 +261,6 @@ Note: Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts
                 },
             )
 
+        if self.skip_discussion:
+            return byzantine_system_prompt_skip_discussion(self.name)
         return byzantine_system_prompt(self.name)

@@ -7,16 +7,22 @@ from agents.prompts import (
     HONEST_DEFAULT_VOTE_INSTRUCTIONS,
     HONEST_DISCUSSION_INSTRUCTIONS_PREFIX,
     HONEST_DISCUSSION_INSTRUCTIONS_SUFFIX,
+    HONEST_VOTE_INSTRUCTIONS_SKIP_DISCUSSION,
     honest_system_prompt,
+    honest_system_prompt_skip_discussion,
 )
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
 class HonestAgent(BaseAgent):
-    def __init__(self, name, color, model_name, max_moves=None, max_discussion_messages=2, is_hybrid=False):
+    def __init__(self, name, color, model_name, max_moves=None, max_discussion_messages=2, is_hybrid=False, 
+                 skip_discussion=False, context_window=0):
         super().__init__(name, color, "honest", model_name)
         self.max_moves = max_moves if max_moves is not None else MAX_MOVEMENT_PHASES
         self.max_discussion_messages = max_discussion_messages
         self.is_hybrid = is_hybrid
+        self.skip_discussion = skip_discussion
+        self.context_window = context_window
+
 
 
     def _substitute_placeholders(self, template, extra_mapping=None):
@@ -176,8 +182,13 @@ You are in a discussion phase.
     def vote(self, world_view, candidates, round_num, pruner=None):
         discussion_log = self._read_file(world_view["discussion_log_path"])
         round_num = int(round_num)
-        recent_discussion = self._get_current_round_log(discussion_log, round_num-2) # can adjust as needed
+        recent_discussion = self._get_current_round_log(discussion_log, round_num - self.context_window) # can adjust as needed
 
+        skip_discussion = world_view.get("skip_discussion", False)
+        if skip_discussion:
+            action_log = self._read_file(world_view["log_path"])
+            recent_action_log = self._get_current_round_log(action_log, round_num - 1)
+            recent_discussion = f"=== YOUR RECENT ACTION LOG ===\n{recent_action_log}"
         
         if self.is_hybrid and pruner is not None:
             recent_discussion, suspicion_state, surviving_agents = pruner.prune_live_log(recent_discussion)
@@ -185,15 +196,7 @@ You are in a discussion phase.
             if suspicion_state:
                 tracked_cands = [c for c in candidates if c in surviving_agents]
                 candidates = tracked_cands if tracked_cands else candidates
-           
-        # try:
-        #     with open("debug_discussion.txt", "a", encoding="utf-8") as debug_file:
-        #         debug_file.write(f"\n--- DEBUG: Agent {self.name} | Round {round_num} ---\n")
-        #         debug_file.write(recent_discussion)
-        #         debug_file.write("\n" + "="*50 + "\n")
-        # except Exception as e:
-        #     print(f"Failed to write debug file: {e}")
-        
+                   
         results_log = self._read_file(world_view["results_log_path"])
 
         overrides = getattr(self, "prompt_overrides", {}) or {}
@@ -204,8 +207,13 @@ You are in a discussion phase.
                 {"round_num": str(round_num), "candidates": candidates},
             )
         else:
+            vote_tmpl = (
+                HONEST_VOTE_INSTRUCTIONS_SKIP_DISCUSSION
+                if skip_discussion
+                else HONEST_DEFAULT_VOTE_INSTRUCTIONS
+            )
             vote_body = self._substitute_placeholders(
-                HONEST_DEFAULT_VOTE_INSTRUCTIONS,
+                vote_tmpl,
                 {"round_num": str(round_num), "candidates": candidates},
             )
 
@@ -241,4 +249,6 @@ Note: Be aware of total player count to ensure Byzantines do not equal or outnum
                 },
             )
 
+        if self.skip_discussion:
+            return honest_system_prompt_skip_discussion(self.name)
         return honest_system_prompt(self.name)

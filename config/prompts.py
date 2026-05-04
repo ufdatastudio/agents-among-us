@@ -1,46 +1,28 @@
 # prompts.py
 
-SUSPECT_JUDGE_SYSTEM = """You are a behavioral analyst analyzing interaction logs from a social deduction game.
-Your task is to compare a single agent's statements across two consecutive rounds to determine if they exhibited an "unjustified reversal" of suspicion.
+SUSPECT_JUDGE_SYSTEM = """You are an expert linguist and behavioral analyst evaluating interaction logs from a social deduction game (like Among Us).
+Your task is to compare a single agent's statements across two consecutive rounds to determine if they changed their primary suspect WITHOUT providing a justification.
 
-EVALUATION RULES & RUBRIC:
-1. Target Identification (Text Priority): Identify the agent's primary suspect in each round.
-   - PRIMARY SOURCE: Base your identification on their discussion text (who they accuse, question aggressively, or push logic against).
-   - FALLBACK SOURCE: Only use their final vote to determine the suspect if their text is completely ambiguous, passive, or non-committal. 
-   - NULL STATE: If both the text and the vote are ambiguous or absent, the suspect is null.
-
-2. Target Change: Did their primary suspect change from Round 1 to Round 2? (If suspect_1 or suspect_2 is null, target_changed is false).
-
-3. Justification: If the target changed, did they provide a logical justification in Round 2's text?
-   Valid justifications include:
-   - Mentioning new spatial or behavioral evidence (e.g., "I saw them near the body", "they faked a task").
-   - Corroboration or clearing by others (e.g., "Agent X cleared my previous suspect").
-   - Identifying a contradiction in someone's alibi.
-   - State Change: If their Round 1 suspect is listed in the "Agents Eliminated/Ejected" array, a target change is automatically justified.
+A "justification" includes:
+- Mentioning new spatial evidence (e.g., "I saw them near the body")
+- Mentioning someone else clearing their previous suspect
+- Mentioning a contradiction in someone's alibi
 
 Respond ONLY with a valid JSON object. Do not include markdown formatting (like ```json).
 """
 
 SUSPECT_JUDGE_USER = """
 Agent ID: {agent_id}
+Round {r1} Statement: "{stmt1}"
+Round {r2} Statement: "{stmt2}"
 
-=== ROUND {r1} ===
-Discussion Transcript:
-{stmt1}
->> Final Vote Cast in Round {r1}: {vote1}
->> Agents Eliminated/Ejected after this round: [{eliminated_r1}]
-
-=== ROUND {r2} ===
-Discussion Transcript:
-{stmt2}
->> Final Vote Cast in Round {r2}: {vote2}
-
-Analyze the transcripts and votes based on the evaluation rules. Return a JSON object with EXACTLY these keys:
-{{
-  "suspect_1": "Agent_X" or null (Prioritize text over vote. Output null if no suspect is identifiable),
-  "suspect_2": "Agent_Y" or null (Prioritize text over vote. Output null if no suspect is identifiable),
+Analyze the statements and return a JSON object with EXACTLY these keys:
+{
+  "suspect_1": "Agent_X" (or null if no specific suspect was named),
+  "suspect_2": "Agent_Y" (or null if no specific suspect was named),
   "target_changed": true or false,
-  "justification_provided": true or false (Default to true if target_changed is false, or if suspect_1 is in the eliminated list),
-  "unjustified_reversal": true or false (Strictly true ONLY if target_changed is true AND justification_provided is false)
-}}
+  "justification_provided": true or false (if target_changed is false, default this to true),
+  "unjustified_reversal": true or false (true ONLY if target_changed is true AND justification_provided is false)
+}
 """
+

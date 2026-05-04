@@ -40,6 +40,7 @@ def main():
     parser.add_argument("--num_rounds", type=int, default=DEFAULT_NUM_ROUNDS, help="Number of rounds to play")
     parser.add_argument("--num_ticks", type=int, default=MAX_MOVEMENT_PHASES, help="Movement ticks per round")
     parser.add_argument("--num_discussion_messages", type=int, default=2, help="Messages per agent per discussion")
+    parser.add_argument("--skip_discussion", action="store_true", help="Skip discussion phase and vote purely on action logs")
     args = parser.parse_args()
 
     num_rounds = args.num_rounds
@@ -75,6 +76,10 @@ def main():
     if selected_composition is None:
         raise ValueError(f"Composition '{args.composition_name}' not found in COMPOSITION list or config directory.")
 
+    skip_discussion = args.skip_discussion
+    if isinstance(selected_composition, dict) and 'skip_discussion' in selected_composition:
+        skip_discussion = selected_composition['skip_discussion']
+
     if isinstance(selected_composition, dict) and 'num_discussion_messages' in selected_composition:
         num_discussion_messages = selected_composition['num_discussion_messages']
 
@@ -91,7 +96,8 @@ def main():
         num_agents=selected_composition['honest_count'] + selected_composition['byzantine_count'],
         num_rounds=num_rounds,
         num_ticks=num_ticks,
-        num_discussion_messages=num_discussion_messages
+        num_discussion_messages=num_discussion_messages,
+        skip_discussion=skip_discussion
     )
    
     engine.setup(composition=selected_composition)
