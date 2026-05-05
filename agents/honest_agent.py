@@ -2,6 +2,15 @@
 import os
 import re
 from agents.base_agent import BaseAgent
+from agents.prompts import (
+    HONEST_DEFAULT_MOVE_INSTRUCTIONS,
+    HONEST_DEFAULT_VOTE_INSTRUCTIONS,
+    HONEST_DISCUSSION_INSTRUCTIONS_PREFIX,
+    HONEST_DISCUSSION_INSTRUCTIONS_SUFFIX,
+    HONEST_VOTE_INSTRUCTIONS_SKIP_DISCUSSION,
+    honest_system_prompt,
+    honest_system_prompt_skip_discussion,
+)
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
 class HonestAgent(BaseAgent):
@@ -90,13 +99,6 @@ class HonestAgent(BaseAgent):
         move_options_str = "\n".join(move_options)
         options_str += "Available movement actions:\n" + move_options_str + "\n"
 
-        default_move_instructions = """
-INSTRUCTIONS:
-1. Choose ONE action from the lists above.
-2. Output ONLY the action keyword or room name.
-3. Do NOT write "Action:", "I will", or explain your reasoning.
-4. Do NOT output markdown or punctuation. One word or phrase only.
-"""
         overrides = getattr(self, "prompt_overrides", {}) or {}
         move_override = overrides.get("movement")
         if move_override:
@@ -105,7 +107,7 @@ INSTRUCTIONS:
                 {"round_num": str(round_num)},
             )
         else:
-            move_body = default_move_instructions
+            move_body = HONEST_DEFAULT_MOVE_INSTRUCTIONS
 
         prompt = f"""
 {results_log}
@@ -147,19 +149,11 @@ Options:
         else:
             chances_line = f"6. You get {n} chances to speak: your first message is your opening statement, the middle messages are for interactive discussion (follow-ups, questions, answers), and your last message is your final stance."
 
-        default_discussion_instructions = """
-INSTRUCTIONS:
-1. Use your memory to determine innocent, suspicious, or incrementing behavior. Look at what has been said to discuss (unless you are the opening statement) amongst each other.
-2. Build a consensus to eject a suspect.
-3. If you ({self.name}) saw someone safe, verify their alibi. If you saw something suspicious or incriminating, state it clearly. If you have no new info, state your location to help others build the timeline.
-4. Check the discussion log above. If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.
-5. Share observations and deduce who you suspect, if anyone, to be Byzantine agents in order to eject them. Look at strong correlations between agents' locations and bodies seen to deduce who could be responsible for eliminations.
-""" + chances_line + """
-7. Keep it short (< 30 words).
-8. Speak in first person as if you are the agent yourself.
-9. **DO NOT** include your name or "Agent_X:" at the start.
-10. **DO NOT** use quotes. Just output the sentence.
-"""
+        default_discussion_instructions = (
+            HONEST_DISCUSSION_INSTRUCTIONS_PREFIX
+            + chances_line
+            + HONEST_DISCUSSION_INSTRUCTIONS_SUFFIX
+        )
         overrides = getattr(self, "prompt_overrides", {}) or {}
         discussion_override = overrides.get("discussion")
         extra = {"round_num": str(round_num), "max_discussion_messages": str(self.max_discussion_messages)}
@@ -205,24 +199,6 @@ You are in a discussion phase.
                    
         results_log = self._read_file(world_view["results_log_path"])
 
-
-        if skip_discussion:
-            default_vote_instructions = """
-INSTRUCTIONS:
-1. Review the logs above composed of the past round results and your recent action log.
-2. Vote for the candidate who is most suspicious based on your action history and past round results.
-3. Decide which candidate is most likely to be a Byzantine agent to eject, looking for incriminating behavior from logs.
-4. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote.
-"""
-        else:
-            default_vote_instructions = """
-INSTRUCTIONS:
-1. Review the logs above composed of the past round results and recent discussions.
-2. Vote for the candidate who is most suspicious based on the discussion history of the recent rounds above and past round results.
-3. Decide which candidate is most likely to be a Byzantine agent to eject, looking for inconsistencies in their statements or suspicious or incriminating behavior from logs.
-4. Reply with ONLY the exact name of the agent or 'SKIP' if you choose not to vote.
-"""
-
         overrides = getattr(self, "prompt_overrides", {}) or {}
         vote_override = overrides.get("voting")
         if vote_override:
@@ -231,8 +207,13 @@ INSTRUCTIONS:
                 {"round_num": str(round_num), "candidates": candidates},
             )
         else:
+            vote_tmpl = (
+                HONEST_VOTE_INSTRUCTIONS_SKIP_DISCUSSION
+                if skip_discussion
+                else HONEST_DEFAULT_VOTE_INSTRUCTIONS
+            )
             vote_body = self._substitute_placeholders(
-                default_vote_instructions,
+                vote_tmpl,
                 {"round_num": str(round_num), "candidates": candidates},
             )
 
@@ -261,83 +242,13 @@ Note: Be aware of total player count to ensure Byzantines do not equal or outnum
         overrides = getattr(self, "prompt_overrides", {}) or {}
         custom = overrides.get("system")
         if custom:
-           return self._substitute_placeholders(
-               custom,
-               {
-                   "round_num": "",
-               },
-           )
+            return self._substitute_placeholders(
+                custom,
+                {
+                    "round_num": "",
+                },
+            )
+
         if self.skip_discussion:
-            prompt = f"""
-You are **{self.name}**, an **Honest Agent** in a spaceship social deduction simulation.
-You are NOT a chat assistant.
-You must output concise commands during movement. During voting, analyze the logs carefully.
-You do not use pleasantries like "Great" or "Let's get started".
-You do not include any internal thought processes or analysis.
-You strictly follow formatting instructions.
-
-**GAME RULES:**
-1. **The Map:** The ship consists of connected rooms. You can only see occupants in your current room and adjacent rooms.
-Here is a map of the rooms and their connections:  
-{ROOMS}
-
-2. **Action Phase:** You move between rooms to complete tasks and observe others. Each round you get {MAX_MOVEMENT_PHASES} movement actions.
-   - **Movement:** As you move around the ship to gain information, there are **(Byzantine agents)** hiding among you who can eliminate agents by tagging them.
-   - **Emergency Button:** In the Cafeteria, you can press the Emergency Button to call a vote at any time, but only once per game. Pressing can be strategic to prevent further eliminations but if done often, there may not be enough information. 
-   - **Reporting:** Once you find an eliminated body, a **REPORT** will be called to start the voting phase. Reporting a body is mandatory to identify Byzantine agents.
-
-3. **Voting Phase:** When a body is reported or the Emergency Button is pressed:
-   - Ends ability to be tagged or move for that round.
-   - **Discussions are completely disabled.** You will not be able to talk to other agents.
-   - You must track agent movements through action logs to deduce who is suspicious. Look for agents who were near eliminated bodies. 
-   - Agents **VOTE** to **EJECT** someone into space. Your goal is to identify and eject Byzantine agents.
-   - You can choose to skip voting. However, voting is the only active path to eject Byzantine agents.
-   - Find the best playstyle, that helps achieve your team's goal. 
-
-4. **Victory Condition:**
-   - **WIN:** Eject all Byzantine agents by voting correctly (active) or all rounds complete with agents surviving (passive). 
-   - **LOSE:** If Byzantine agents equal or outnumber agents either via tagging or ejections.
-
-**Additional Info:**
-- Use logic and deduction to analyze the action logs and vote out the Byzantine agents. You must rely solely on the logs to accomplish this since you cannot converse.
-- Be aware of active agent count at all times.
-- Voting phases are the only opportunity to have a direct impact on the chance of winning. 
-"""
-            return prompt
-        else:
-            return f"""
-You are **{self.name}**, an **Honest Agent** in a spaceship social deduction simulation.
-You are NOT a chat assistant.
-You must output concise commands during movement. During discussion, be conversational.
-You do not use pleasantries like "Great" or "Let's get started".
-You do not include any internal thought processes or analysis.
-You strictly follow formatting instructions.
-
-**GAME RULES:**
-1. **The Map:** The ship consists of connected rooms. You can only see occupants in your current room and adjacent rooms.
-Here is a map of the rooms and their connections:  
-{ROOMS}
-
-
-2. **Action Phase:** You move between rooms to complete tasks and observe others. Each round you get {MAX_MOVEMENT_PHASES} movement actions.
-   - **Movement:** As you move around the ship to gain information, there are **(Byzantine agents)** hiding among you who can eliminate agents by tagging them.
-   - **Emergency Button:** In the Cafeteria, you can press the Emergency Button to call a meeting at any time and start a discussion and voting, but only once per game. Pressing  can be strategic to prevent further eliminations but if done often, there may not be enough information. 
-   - **Reporting:** Once you find an eliminated body, a **REPORT** will be called to start a discussion and voting. Reporting a body is mandatory to identify Byzantine agents.
-
-3. **Discussion Phase:** When a meeting starts (via Body Report or Emergency Button in Cafeteria):
-   - Ends ability to be tagged or move for that round.
-   - Agents discuss who is suspicious. 
-   - Agents **VOTE** to **EJECT** someone into space. Your goal is to identify and eject Byzantine agents.
-   - You can choose to skip voting. However, voting is the only active path to eject Byzantine agents.
-   - Find the best playstyle, that helps achieve your team's goal. 
-
-
-4. **Victory Condition:
-   - **WIN:** Eject all Byzantine agents by voting correctly (active) or all rounds complete with agents surviving (passive). 
-   - **LOSE:** If Byzantine agents equal or outnumber agents either via tagging or ejections.
-
-**Additional Info:**
-- Use logic and deduction to convince others and come to a consensus to vote out the Byzantine agents. You need to be in discussions to accomplish this.
-- Be aware of active agent count at all times.
-- Meetings are the only opportunity to  have a direct impact on the chance of winning. 
-"""
+            return honest_system_prompt_skip_discussion(self.name)
+        return honest_system_prompt(self.name)

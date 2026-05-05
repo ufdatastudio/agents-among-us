@@ -447,14 +447,14 @@ function getDefaultForAgent(index) {
 /**
  * Rightmost column: checkbox for honest (hybrid = context-pruned voting), N/A for Byzantine.
  */
-function populateHybridCell(hybridCell, index, role, hybridChecked) {
+function populateHybridCell(hybridCell, index, role, hybridChecked, isHuman) {
     hybridCell.innerHTML = "";
     hybridCell.className = "hybrid-cell";
-    if (role === "byzantine") {
+    if (isHuman || role === "byzantine") {
         var na = document.createElement("span");
         na.className = "hybrid-na";
         na.textContent = "N/A";
-        na.setAttribute("aria-label", "Hybrid not applicable for Byzantine agents");
+        na.setAttribute("aria-label", isHuman ? "Hybrid not applicable for human player" : "Hybrid not applicable for Byzantine agents");
         hybridCell.appendChild(na);
     } else {
         var cb = document.createElement("input");
@@ -475,6 +475,9 @@ function populateHybridCell(hybridCell, index, role, hybridChecked) {
 function createAgentRow(index) {
     const defaults = getDefaultForAgent(index);
     const row = document.createElement("tr");
+    const humanExperimentEnabled = isHumanExperimentEnabled();
+    const isHuman = humanExperimentEnabled && index === 0;
+    if (isHuman) row.classList.add("agent-row--human");
 
     // Column 1: Agent number
     const numCell = document.createElement("td");
@@ -484,34 +487,66 @@ function createAgentRow(index) {
 
     // Column 2: Model dropdown
     const modelCell = document.createElement("td");
-    const modelSelect = document.createElement("select");
-    modelSelect.name = `agent_${index}_model`;
-    modelSelect.className = "table-select model-select";
-    modelSelect.required = true;
-    AVAILABLE_MODELS.forEach(function (m) {
-        const opt = document.createElement("option");
-        opt.value = m.value;
-        opt.textContent = m.name;
-        modelSelect.appendChild(opt);
-    });
-    modelSelect.value = defaults.model;
-    modelCell.appendChild(modelSelect);
+    if (isHuman) {
+        // Display "Human" but still submit a hidden model value to keep backend stable for now.
+        const hiddenModel = document.createElement("input");
+        hiddenModel.type = "hidden";
+        hiddenModel.name = `agent_${index}_model`;
+        hiddenModel.value = defaults.model;
+
+        const humanLabel = document.createElement("div");
+        humanLabel.className = "human-model-label";
+        humanLabel.textContent = "Human";
+
+        modelCell.appendChild(hiddenModel);
+        modelCell.appendChild(humanLabel);
+    } else {
+        const modelSelect = document.createElement("select");
+        modelSelect.name = `agent_${index}_model`;
+        modelSelect.className = "table-select model-select";
+        modelSelect.required = true;
+        AVAILABLE_MODELS.forEach(function (m) {
+            const opt = document.createElement("option");
+            opt.value = m.value;
+            opt.textContent = m.name;
+            modelSelect.appendChild(opt);
+        });
+        modelSelect.value = defaults.model;
+        modelCell.appendChild(modelSelect);
+    }
     row.appendChild(modelCell);
 
     // Column 3: Role dropdown (Honest / Byzantine)
     const roleCell = document.createElement("td");
-    const roleSelect = document.createElement("select");
-    roleSelect.name = `agent_${index}_role`;
-    roleSelect.className = "table-select role-select";
-    roleSelect.required = true;
-    ["honest", "byzantine"].forEach(function (r) {
-        const opt = document.createElement("option");
-        opt.value = r;
-        opt.textContent = r === "honest" ? "Honest" : "Byzantine";
-        roleSelect.appendChild(opt);
-    });
-    roleSelect.value = defaults.role;
-    roleCell.appendChild(roleSelect);
+    let roleSelect = null;
+    if (humanExperimentEnabled) {
+        const hiddenRole = document.createElement("input");
+        hiddenRole.type = "hidden";
+        hiddenRole.name = `agent_${index}_role`;
+        hiddenRole.value = "honest";
+        const hiddenLabel = document.createElement("span");
+        hiddenLabel.className = "hybrid-na";
+        hiddenLabel.textContent = "Hidden";
+        roleCell.appendChild(hiddenRole);
+        roleCell.appendChild(hiddenLabel);
+    } else {
+        roleSelect = document.createElement("select");
+        roleSelect.name = `agent_${index}_role`;
+        roleSelect.className = "table-select role-select";
+        roleSelect.required = true;
+        ["honest", "byzantine"].forEach(function (r) {
+            const opt = document.createElement("option");
+            opt.value = r;
+            opt.textContent = r === "honest" ? "Honest" : "Byzantine";
+            roleSelect.appendChild(opt);
+        });
+        roleSelect.value = defaults.role;
+        roleSelect.classList.toggle("role-select--byzantine", roleSelect.value === "byzantine");
+        roleSelect.addEventListener("change", function () {
+            roleSelect.classList.toggle("role-select--byzantine", roleSelect.value === "byzantine");
+        });
+        roleCell.appendChild(roleSelect);
+    }
     row.appendChild(roleCell);
 
     // Column 4: Color display (hardcoded, read-only - assigned by agent number)
@@ -520,10 +555,14 @@ function createAgentRow(index) {
 
     // Column 5: Hybrid (honest only; Byzantine shows N/A)
     const hybridCell = document.createElement("td");
-    populateHybridCell(hybridCell, index, defaults.role, defaults.hybrid === true);
-    roleSelect.addEventListener("change", function () {
-        populateHybridCell(hybridCell, index, roleSelect.value, false);
-    });
+    if (humanExperimentEnabled) {
+        populateHybridCell(hybridCell, index, "byzantine", false, true);
+    } else {
+        populateHybridCell(hybridCell, index, defaults.role, defaults.hybrid === true, isHuman);
+        roleSelect.addEventListener("change", function () {
+            populateHybridCell(hybridCell, index, roleSelect.value, false, isHuman);
+        });
+    }
     row.appendChild(hybridCell);
 
     return row;
@@ -584,6 +623,7 @@ function generateAgentTable() {
     for (let i = 0; i < count; i++) {
         tbody.appendChild(createAgentRow(i));
     }
+    updateHumanExperimentControls();
 }
 
 /**
@@ -642,12 +682,56 @@ function getMaxByzantines(numAgents) {
     return maxByHalf;
 }
 
+function isHumanExperimentEnabled() {
+    var cb = document.getElementById("human_experiment");
+    return !!(cb && cb.checked);
+}
+
+function updateHumanExperimentControls() {
+    var group = document.getElementById("humanByzantineCountGroup");
+    var byzInput = document.getElementById("num_byzantines");
+    var count = validateAgentCount();
+    var enabled = isHumanExperimentEnabled();
+    if (!group || !byzInput || count === null) return;
+    group.style.display = enabled ? "" : "none";
+    var maxByz = getMaxByzantines(count);
+    byzInput.max = String(maxByz);
+    if (parseInt(byzInput.value, 10) > maxByz) byzInput.value = String(maxByz);
+    if (parseInt(byzInput.value, 10) < 1 || Number.isNaN(parseInt(byzInput.value, 10))) byzInput.value = "1";
+}
+
+function setConfirmHumanStatus(message, isError) {
+    var el = document.getElementById("confirmHumanStatus");
+    if (!el) return;
+    el.textContent = message || "";
+    el.className = "confirm-prompts-status" + (message ? (isError ? " confirm-prompts-status--error" : " confirm-prompts-status--ok") : "");
+}
+
 /**
  * Validates Byzantine count: at least 1, and at most getMaxByzantines(numAgents).
  * Called on form submit.
  * @returns {boolean} true if valid
  */
 function validateByzantineCount() {
+    if (isHumanExperimentEnabled()) {
+        var byzInput = document.getElementById("num_byzantines");
+        var numAgentsInput = document.getElementById("num_agents");
+        var numAgents = parseInt(numAgentsInput.value, 10);
+        var numByz = byzInput ? parseInt(byzInput.value, 10) : NaN;
+        if (Number.isNaN(numByz) || numByz < 1) {
+            alert("In Human Experiment, number of Byzantines must be at least 1.");
+            if (byzInput) byzInput.focus();
+            return false;
+        }
+        var maxByzForHuman = getMaxByzantines(numAgents);
+        if (numByz > maxByzForHuman) {
+            alert("Too many Byzantine agents for Human Experiment. Max allowed is " + maxByzForHuman + ".");
+            if (byzInput) byzInput.focus();
+            return false;
+        }
+        return true;
+    }
+
     var numAgents = 0;
     var byzantineCount = 0;
     document.querySelectorAll('select[name^="agent_"][name$="_role"]').forEach(function (select) {
@@ -912,7 +996,34 @@ window.addEventListener("DOMContentLoaded", function () {
 
     var confirmBtn = document.getElementById("confirmAgentsBtn");
     if (confirmBtn) {
-        confirmBtn.addEventListener("click", generateAgentTable);
+        confirmBtn.addEventListener("click", function () {
+            generateAgentTable();
+            setConfirmHumanStatus("Confirmed.");
+        });
+    }
+    var humanCb = document.getElementById("human_experiment");
+    if (humanCb) {
+        humanCb.addEventListener("change", function () {
+            setConfirmHumanStatus("");
+            updateHumanExperimentControls();
+            generateAgentTable();
+        });
+    }
+    var numAgentsInput = document.getElementById("num_agents");
+    if (numAgentsInput) {
+        numAgentsInput.addEventListener("change", function () {
+            setConfirmHumanStatus("");
+            updateHumanExperimentControls();
+        });
+        numAgentsInput.addEventListener("input", function () {
+            setConfirmHumanStatus("");
+            updateHumanExperimentControls();
+        });
+    }
+    var numByzInput = document.getElementById("num_byzantines");
+    if (numByzInput) {
+        numByzInput.addEventListener("change", function () { setConfirmHumanStatus(""); });
+        numByzInput.addEventListener("input", function () { setConfirmHumanStatus(""); });
     }
 
     var form = document.getElementById("configForm");

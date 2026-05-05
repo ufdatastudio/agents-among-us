@@ -49,6 +49,7 @@
                             <th>Location</th>
                             <th>Votes</th>
                             <th>Kills</th>
+                            <th id="humanVoteHeader" style="display: none;">Vote</th>
                             <th id="sgdHeader" style="display: none;">SGD</th>
                             <th id="svmHeader" style="display: none;">SVM</th>
                             <th id="lrHeader" style="display: none;">LR</th>
@@ -99,6 +100,32 @@
         </div>
         <div class="discussion-chat-messages" id="discussionChatMessages"></div>
         <div class="discussion-chat-resize-handle" aria-label="Resize"></div>
+    </div>
+
+    <!-- Human movement controls (Checkpoint 4) -->
+    <div id="humanActionPanel" class="human-action-panel" style="display: none;">
+        <div class="human-action-header">Your Action</div>
+        <div id="humanActionStatus" class="human-action-status">Waiting for options...</div>
+        <div id="humanPrimaryActions" class="human-action-grid"></div>
+        <div id="humanSecondaryLabel" class="human-secondary-label" style="display: none;"></div>
+        <div id="humanSecondaryActions" class="human-action-grid human-action-grid-secondary"></div>
+        <button type="button" id="humanActionConfirmBtn" class="human-action-confirm-btn" disabled>Confirm</button>
+    </div>
+
+    <div id="humanDiscussionPanel" class="human-discussion-panel" style="display: none;">
+        <div class="human-action-header">Your Discussion Turn</div>
+        <div id="humanDiscussionStatus" class="human-action-status">Type your message, then confirm.</div>
+        <textarea
+            id="humanDiscussionInput"
+            class="human-discussion-input"
+            rows="4"
+            maxlength="400"
+            placeholder="Type your discussion message..."
+        ></textarea>
+        <div class="human-discussion-actions">
+            <button type="button" id="humanDiscussionSkipBtn" class="human-action-btn">Skip (empty)</button>
+            <button type="button" id="humanDiscussionConfirmBtn" class="human-action-confirm-btn" disabled>Confirm</button>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/game.js') }}"></script>

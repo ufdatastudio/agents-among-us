@@ -34,9 +34,32 @@
                             value="6"
                             required
                         >
-                        <button type="button" id="confirmAgentsBtn">Confirm</button>
                     </div>
                     <small class="form-hint">Minimum 4, Maximum 12</small>
+                </div>
+                <div class="form-group">
+                    <label style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <strong>Human Experiment</strong>
+                        <input type="checkbox" id="human_experiment" name="human_experiment" value="true" aria-label="Human Experiment">
+                    </label>
+                </div>
+                <div class="form-group" id="humanByzantineCountGroup" style="display: none;">
+                    <label for="num_byzantines">Number of Byzantines (Human Experiment)</label>
+                    <input
+                        type="number"
+                        id="num_byzantines"
+                        name="num_byzantines"
+                        min="1"
+                        step="1"
+                        value="1"
+                    >
+                    <small class="form-hint">Roles will be randomized at game start when Human Experiment is enabled.</small>
+                </div>
+                <div class="form-group">
+                    <button type="button" id="confirmAgentsBtn">Confirm</button>
+                    <div>
+                        <span id="confirmHumanStatus" class="confirm-prompts-status" aria-live="polite"></span>
+                    </div>
                 </div>
             </div>
             
