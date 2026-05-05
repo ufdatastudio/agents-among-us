@@ -146,32 +146,33 @@ if LW_FLAG:
             
 if MW_FLAG:
     COMPOSITION.append({
-        "name": "MixedWeight_0_c2",
+        "name": "MixedWeight_NoDiscuss",
         "honest_count": 8,
         "byzantine_count": 2,
         "byzantine_model": [MIXTRAL_8X7B], 
         "honest_model": [QWEN3_14B],       
-        "hybrid_count": 0                  
+        "hybrid_count": 0,
+        "skip_discussion": True                 
     })
 
     # Composition 2: 2 Mixtral Imposters, 8 Qwen3 Crewmates (4 Hybrid)
-    COMPOSITION.append({
-        "name": "MixedWeight_Full_Hybrid_c2",
-        "honest_count": 8,
-        "byzantine_count": 2,
-        "byzantine_model": [MIXTRAL_8X7B],
-        "honest_model": [QWEN3_14B],
-        "hybrid_count": 8                
-    })
+    # COMPOSITION.append({
+    #     "name": "MixedWeight_Full_Hybrid_c0",
+    #     "honest_count": 8,
+    #     "byzantine_count": 2,
+    #     "byzantine_model": [MIXTRAL_8X7B],
+    #     "honest_model": [QWEN3_14B],
+    #     "hybrid_count": 8                
+    # })
 
-    COMPOSITION.append({
-        "name": "MixedWeight_Half_Hybrid_c2",
-        "honest_count": 8,
-        "byzantine_count": 2,
-        "byzantine_model": [MIXTRAL_8X7B],
-        "honest_model": [QWEN3_14B],
-        "hybrid_count": 4                
-    })
+    # COMPOSITION.append({
+    #     "name": "MixedWeight_Half_Hybrid_c0",
+    #     "honest_count": 8,
+    #     "byzantine_count": 2,
+    #     "byzantine_model": [MIXTRAL_8X7B],
+    #     "honest_model": [QWEN3_14B],
+    #     "hybrid_count": 4                
+    # })
 
     # # Composition 3 : Mix of models with specific hybrid flags
     # COMPOSITION.append({
@@ -183,5 +184,180 @@ if MW_FLAG:
     #     "honest_hybrid": [True, False]           # Maps True to Qwen, False to Llama
     # })
 
+    # =========================================================
+    # EXPERIMENT 2A: All Hybrid (hybrid_count=8), Vary Context
+    # =========================================================
+    
+    # --- C = 2 ---
+    COMPOSITION.append({
+        "name": "Exp2A_Hybrid_C2_Control",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 8,
+        "context_windows": [0, 0, 0, 0, 0, 0, 0, 0],
+        "byz_context_windows": [2, 2]
+    })
+    COMPOSITION.append({
+        "name": "Exp2A_Hybrid_C2_SplitA_2Agents",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 8,
+        "context_windows": [2, 2, 0, 0, 0, 0, 0, 0],
+        "byz_context_windows": [2, 2]
+    })
+    COMPOSITION.append({
+        "name": "Exp2A_Hybrid_C2_SplitB_4Agents",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 8,
+        "context_windows": [2, 2, 2, 2, 0, 0, 0, 0],
+        "byz_context_windows": [2, 2]
+    })
+    COMPOSITION.append({
+        "name": "Exp2A_Hybrid_C2_SplitC_6Agents",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 8,
+        "context_windows": [2, 2, 2, 2, 2, 2, 0, 0],
+        "byz_context_windows": [2, 2]
+    })
+    # COMPOSITION.append({
+    #     "name": "Exp2A_Hybrid_C2_Full_8Agents",
+    #     "honest_count": 8, "byzantine_count": 2,
+    #     "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+    #     "hybrid_count": 8,
+    #     "context_windows": [2, 2, 2, 2, 2, 2, 2, 2],
+    #     "byz_context_windows": [2, 2]
+    # })
+
+    # --- C = 1 ---
+    # COMPOSITION.append({
+    #     "name": "Exp2A_Hybrid_C1_Control",
+    #     "honest_count": 8, "byzantine_count": 2,
+    #     "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+    #     "hybrid_count": 8,
+    #     "context_windows": [0, 0, 0, 0, 0, 0, 0, 0],
+    #     "byz_context_windows": [2, 2]
+    # })
+    COMPOSITION.append({
+        "name": "Exp2A_Hybrid_C1_SplitA_2Agents",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 8,
+        "context_windows": [1, 1, 0, 0, 0, 0, 0, 0],
+        "byz_context_windows": [2, 2]
+    })
+    COMPOSITION.append({
+        "name": "Exp2A_Hybrid_C1_SplitB_4Agents",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 8,
+        "context_windows": [1, 1, 1, 1, 0, 0, 0, 0],
+        "byz_context_windows": [2, 2]
+    })
+    COMPOSITION.append({
+        "name": "Exp2A_Hybrid_C1_SplitC_6Agents",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 8,
+        "context_windows": [1, 1, 1, 1, 1, 1, 0, 0],
+        "byz_context_windows": [2, 2]
+    })
+    COMPOSITION.append({
+        "name": "Exp2A_Hybrid_C1_Full_8Agents",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 8,
+        "context_windows": [1, 1, 1, 1, 1, 1, 1, 1],
+        "byz_context_windows": [2, 2]
+    })
+
+    # =========================================================
+    # EXPERIMENT 2B: All Default (hybrid_count=0), Vary Context
+    # =========================================================
+    
+    # --- C = 2 ---
+    COMPOSITION.append({
+        "name": "Exp2B_Default_C2_Control",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 0,
+        "context_windows": [0, 0, 0, 0, 0, 0, 0, 0],
+        "byz_context_windows": [2, 2]
+    })
+    COMPOSITION.append({
+        "name": "Exp2B_Default_C2_SplitA_2Agents",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 0,
+        "context_windows": [2, 2, 0, 0, 0, 0, 0, 0],
+        "byz_context_windows": [2, 2]
+    })
+    COMPOSITION.append({
+        "name": "Exp2B_Default_C2_SplitB_4Agents",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 0,
+        "context_windows": [2, 2, 2, 2, 0, 0, 0, 0],
+        "byz_context_windows": [2, 2]
+    })
+    COMPOSITION.append({
+        "name": "Exp2B_Default_C2_SplitC_6Agents",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 0,
+        "context_windows": [2, 2, 2, 2, 2, 2, 0, 0],
+        "byz_context_windows": [2, 2]
+    })
+    # COMPOSITION.append({
+    #     "name": "Exp2B_Default_C2_Full_8Agents",
+    #     "honest_count": 8, "byzantine_count": 2,
+    #     "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+    #     "hybrid_count": 0,
+    #     "context_windows": [2, 2, 2, 2, 2, 2, 2, 2],
+    #     "byz_context_windows": [2, 2]
+    # })
+
+    # --- C = 1 ---
+    # COMPOSITION.append({
+    #     "name": "Exp2B_Default_C1_Control",
+    #     "honest_count": 8, "byzantine_count": 2,
+    #     "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+    #     "hybrid_count": 0,
+    #     "context_windows": [0, 0, 0, 0, 0, 0, 0, 0],
+    #     "byz_context_windows": [2, 2]
+    # })
+    COMPOSITION.append({
+        "name": "Exp2B_Default_C1_SplitA_2Agents",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 0,
+        "context_windows": [1, 1, 0, 0, 0, 0, 0, 0],
+        "byz_context_windows": [2, 2]
+    })
+    COMPOSITION.append({
+        "name": "Exp2B_Default_C1_SplitB_4Agents",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 0,
+        "context_windows": [1, 1, 1, 1, 0, 0, 0, 0],
+        "byz_context_windows": [2, 2]
+    })
+    COMPOSITION.append({
+        "name": "Exp2B_Default_C1_SplitC_6Agents",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 0,
+        "context_windows": [1, 1, 1, 1, 1, 1, 0, 0],
+        "byz_context_windows": [2, 2]
+    })
+    COMPOSITION.append({
+        "name": "Exp2B_Default_C1_Full_8Agents",
+        "honest_count": 8, "byzantine_count": 2,
+        "byzantine_model": [MIXTRAL_8X7B], "honest_model": [QWEN3_14B],
+        "hybrid_count": 0,
+        "context_windows": [1, 1, 1, 1, 1, 1, 1, 1],
+        "byz_context_windows": [2, 2]
+    })
 
 
