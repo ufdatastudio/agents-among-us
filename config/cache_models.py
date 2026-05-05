@@ -10,6 +10,7 @@ print = functools.partial(print, flush=True)
 models_to_cache = [
     # Add model names of models to cache for faster loading
     # Names should match those used in model_composition.py
+    "openai/gpt-oss-120b"
 ]
 
 def flush_memory():
