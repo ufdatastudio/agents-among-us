@@ -1,0 +1,42 @@
+# Containerfile.navigator
+# Lightweight Podman build for UF PubApps deployment.
+# Navigator API only; no CUDA, torch, or HuggingFace deps.
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=UTC \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/root/.local/bin:${PATH}" \
+    APP_MODE=navigator \
+    LLM_MODE=LOCAL \
+    PORT=8080
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl git build-essential cmake libgomp1 \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock /app/
+RUN uv python install 3.10 \
+ && uv sync --extra api --no-install-project
+
+COPY agents    /app/agents
+COPY config    /app/config
+COPY core      /app/core
+COPY frontend  /app/frontend
+COPY main.py   /app/main.py
+COPY worker.py /app/worker.py
+
+RUN mkdir -p /app/logs /app/logs/game_configs /app/frontend/data
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -fsS "http://localhost:${PORT:-8080}/api/health" || exit 1
+
+# frontend.app's __main__ hardcodes 8080, so we bypass it and honor PORT.
+CMD ["sh", "-lc", "exec uv run python -c 'import os; from frontend.app import app; app.run(host=\"0.0.0.0\", port=int(os.environ.get(\"PORT\",8080)), debug=False)'"]

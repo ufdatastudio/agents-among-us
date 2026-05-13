@@ -201,7 +201,34 @@ uv run python main.py --composition_name MyComp \
 
 ### 5. HiPerGator PubApps Deployment
 
-For hosting on UF Research Computing's [PubApps](https://docs.rc.ufl.edu/services/web_hosting/) infrastructure. PubApps VMs do not have GPUs, so use the lightweight navigator container.
+For hosting on UF Research Computing's [PubApps](https://docs.rc.ufl.edu/services/web_hosting/) infrastructure. The live demo at **[agents-among-us.rc.ufl.edu](https://agents-among-us.rc.ufl.edu)** uses the navigator-only Podman flow (5a) on `pubufdatastudios1`. The original Apptainer/Globus flow (5b) remains supported for GPU-enabled allocations.
+
+#### 5a. Navigator-only (current live deployment)
+
+A rootless Podman container managed by a systemd Quadlet unit. Build from `Containerfile.navigator`, operate via `container/pubapps-navigator-deploy.sh`. No GPU, no baked-in `.env`; visitors enter their own UF Navigator API key in the UI.
+
+**Quick deploy** on a freshly provisioned PubApps VM:
+
+```bash
+git clone https://github.com/ufdatastudio/agents-among-us.git ~/agents-among-us
+cd ~/agents-among-us
+./container/pubapps-navigator-deploy.sh setup --port 8080
+```
+
+**Daily operations** (run from `~/agents-among-us`):
+
+```bash
+./container/pubapps-navigator-deploy.sh status     # systemctl --user status
+./container/pubapps-navigator-deploy.sh logs       # podman logs -f
+./container/pubapps-navigator-deploy.sh rebuild    # after a git pull
+./container/pubapps-navigator-deploy.sh uninstall  # remove the Quadlet (image stays)
+```
+
+The full runbook, covering prerequisites, monitoring, updating, troubleshooting, and the RC support workflow, lives in [docs/pubapps-deployment.md](docs/pubapps-deployment.md).
+
+#### 5b. Apptainer + `pubapps-deploy.sh` (GPU and Globus paths)
+
+The earlier deployment flow remains available. PubApps VMs do not have GPUs, so the lightweight navigator container is used by default; `--gpu` and `--globus` are available for GPU-allocated nodes.
 
 **Prerequisites:**
 1. Open a support ticket with UF Research Computing to request a PubApps instance
