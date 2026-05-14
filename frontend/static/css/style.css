@@ -65,6 +65,24 @@ body {
     text-align: center;
 }
 
+.home-logo-link {
+    display: inline-block;
+    line-height: 0;
+    margin-bottom: 1rem;
+    transition: opacity 0.15s;
+}
+
+.home-logo-link:hover {
+    opacity: 0.8;
+}
+
+.home-logo {
+    width: auto;
+    height: clamp(96px, 14vw, 140px);
+    display: block;
+    border-radius: 4px;
+}
+
 .home-title {
     font-size: clamp(2.25rem, 5vw, 3.25rem);
     font-weight: 600;
@@ -126,6 +144,32 @@ body {
     background: #333;
     border-color: #333;
     color: var(--bg-card);
+}
+
+.home-links {
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.home-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.home-links a:hover {
+    color: var(--text);
+    border-bottom-color: var(--text-light);
+}
+
+.home-links-sep {
+    color: var(--text-light);
 }
 
 /* =============================================================================

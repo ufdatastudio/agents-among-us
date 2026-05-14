@@ -5,17 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agents Among Us</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
 </head>
 <body class="page-home">
     <main class="home-hero">
         <div class="home-content">
             <div class="home-inner">
+                <a href="https://ufdatastudio.com/" target="_blank" rel="noopener" class="home-logo-link" aria-label="UF Data Studio">
+                    <img src="{{ url_for('static', filename='images/ufdatastudio-logo.png') }}"
+                         alt="UF Data Studio"
+                         class="home-logo">
+                </a>
                 <h1 class="home-title">Agents Among Us</h1>
                 <span class="home-title-line" aria-hidden="true"></span>
                 <nav class="home-actions">
                     <a href="/game" class="home-btn home-btn-primary">Start Simulation</a>
                     <a href="/config" class="home-btn">Configure</a>
                     <a href="/stats" class="home-btn">View Statistics</a>
+                </nav>
+                <nav class="home-links" aria-label="Project links">
+                    <a href="https://ufdatastudio.com/projects/agents-among-us/" target="_blank" rel="noopener">Project page</a>
+                    <span class="home-links-sep" aria-hidden="true">·</span>
+                    <a href="https://github.com/ufdatastudio/agents-among-us" target="_blank" rel="noopener">GitHub</a>
                 </nav>
             </div>
         </div>

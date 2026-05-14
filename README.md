@@ -389,14 +389,6 @@ The preprocessed dataset containing over 10,000 parsed game logs and approximate
 | `frontend/` | Flask routes (`app.py`), HTML templates, and live state visualizers. |
 | `results/` | Machine learning pipeline for the offline observers and metric calculation. |
 
-## Paper
-
-This demo is based on the system demonstration paper:
-
-**Agents Among Us: Identifying Deceptive Agents in a Multi-Agent Social Deduction Environment**
-
-*Under Review: ACL 2026 System Demonstrations*
-
 ## Citation
 
 If you use this framework or dataset in your research, please cite:
