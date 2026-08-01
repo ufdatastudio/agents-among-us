@@ -2,6 +2,7 @@
 import os
 import shutil
 import csv
+import json
 
 class LogManager:
     def __init__(self, game_id, agents, scenario_name=None):
@@ -25,11 +26,14 @@ class LogManager:
             "discussion": os.path.join(self.base_dir, "discussion.log"),
             "stats_csv": os.path.join(self.base_dir, "stats.csv"),
             "discussion_chat": os.path.join(self.base_dir, "discussion_chat.csv"),
+            # Private chain-of-thought only — never read by agents/observers.
+            "thought": os.path.join(self.base_dir, "thought.log"),
         }
 
         # Create Root Logs
         self._create_file(self.paths["round_results"], "=== Round Results Log ===\n")
         self._create_file(self.paths["discussion"], "=== Discussion Log ===\n")
+        self._create_file(self.paths["thought"], "")
         self._init_discussion_chat_csv()
 
         # Create Agent Directories based on Role
@@ -73,6 +77,42 @@ class LogManager:
                 writer.writerow([discussion_num, reason, agent_num, model_name, role_label, message])
         except Exception as e:
             print(f"Error logging discussion chat: {e}")
+
+    def log_thought(
+        self,
+        round,
+        phase,
+        tick,
+        agent,
+        role,
+        model,
+        think,
+        output,
+        had_tags,
+        parse_ok,
+    ):
+        """Append one private thought record to thought.log (JSONL).
+
+        Writes only to thought.log — never touches discussion/action/vote/stats
+        logs that agents or the observer pipeline read from.
+        """
+        record = {
+            "round": round,
+            "phase": phase,
+            "tick": tick,
+            "agent": agent,
+            "role": role,
+            "model": model,
+            "think": think if think is not None else "",
+            "output": output if output is not None else "",
+            "had_tags": bool(had_tags),
+            "parse_ok": bool(parse_ok),
+        }
+        try:
+            with open(self.paths["thought"], "a", encoding="utf-8") as f:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        except Exception as e:
+            print(f"Error logging thought: {e}")
 
     def write_log(self, log_type, agent_name=None, content=""):
         """
