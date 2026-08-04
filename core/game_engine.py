@@ -112,7 +112,15 @@ class GameEngine:
         # double check this, add n = 5
         importance_thresholds = {10: 0.2210, 9: 0.2516, 8: 0.2600, 7: 0.2625, 6: 0.2720, 5: 0.2828, 4:0.2718, 'fallback': 0.2661}
         model_file = "results/classifiers/models/mlp_net.joblib"
-        self.pruner.load_live_model(model_file, importance_thresholds)
+        try:
+            self.pruner.load_live_model(model_file, importance_thresholds)
+        except Exception as e:
+            # NumPy/sklearn version skew can make the pickled hybrid pruner unloadable.
+            # Non-hybrid games should still run; hybrid vote pruning is disabled until fixed.
+            print(
+                f"[Warning] Context pruner model failed to load ({e}). "
+                "Hybrid context pruning disabled for this run."
+            )
 
         
         # ML Classifier config (will be set during setup)
@@ -253,6 +261,7 @@ class GameEngine:
         self.state.world_data["global"]["require_think_tags"] = self.require_think_tags
         for agent in self.agents:
             agent.logger = self.logger
+            agent.game_state = self.state
             agent.capture_thoughts = self.capture_thoughts
             agent.require_think_tags = self.require_think_tags
         print(

@@ -11,7 +11,14 @@ from globus_compute_sdk import Client, Executor
 from loguru import logger as log
 
 
-def remote_inference(model_name, system_prompt, user_prompt, temperature, max_tokens=160):
+def remote_inference(
+    model_name,
+    system_prompt,
+    user_prompt,
+    temperature,
+    max_tokens=160,
+    preserve_think_tags=False,
+):
     """Standalone function executed on the Globus Compute endpoint worker.
 
     This function runs in an isolated process on the remote compute node.
@@ -26,6 +33,8 @@ def remote_inference(model_name, system_prompt, user_prompt, temperature, max_to
         max_tokens: Max new tokens to generate. Callers may pass 384 when
             capture_thoughts is on (increased due to agent thoughts
             implementation; original value = 160).
+        preserve_think_tags: when True, leave <think> blocks intact for
+            thought-capture parsing.
 
     Returns:
         The generated text response as a string.
@@ -156,15 +165,16 @@ def remote_inference(model_name, system_prompt, user_prompt, temperature, max_to
     decoded = tokenizer.decode(response, skip_special_tokens=True).strip()
 
     # Post-processing (same as ModelManager._postprocess_response)
-    if "<think>" in decoded:
+    if "<think>" in decoded and not preserve_think_tags:
         decoded = re.sub(r"<think>.*?</think>", "", decoded, flags=re.DOTALL)
     if "assistantfinal" in decoded:
         decoded = decoded.split("assistantfinal")[-1].strip()
-    if decoded.count('"') % 2 != 0:
-        decoded += '"'
-    quotes = re.findall(r'"([^"]*)"', decoded)
-    if quotes:
-        decoded = quotes[-1]
+    if not preserve_think_tags:
+        if decoded.count('"') % 2 != 0:
+            decoded += '"'
+        quotes = re.findall(r'"([^"]*)"', decoded)
+        if quotes:
+            decoded = quotes[-1]
 
     return decoded.strip()
 
@@ -184,7 +194,15 @@ class GlobusInferenceExecutor:
         self.gce = Executor(endpoint_id=endpoint_id, client=self.gcc)
         log.info("Globus Compute executor connected to endpoint: {}", endpoint_id)
 
-    def submit(self, model_name, system_prompt, user_prompt, temperature):
+    def submit(
+        self,
+        model_name,
+        system_prompt,
+        user_prompt,
+        temperature,
+        max_tokens=160,
+        preserve_think_tags=False,
+    ):
         """Submit an inference task and return the future."""
         future = self.gce.submit(
             remote_inference,
@@ -192,6 +210,8 @@ class GlobusInferenceExecutor:
             system_prompt,
             user_prompt,
             temperature,
+            max_tokens,
+            preserve_think_tags,
         )
         return future
 

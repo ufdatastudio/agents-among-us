@@ -521,6 +521,11 @@ let humanVoteContext = {
 let latestGlobalState = {};
 let knownFinalInfoAgents = new Set();
 let knownFinalInfoGameId = "";
+let thoughtsFilterAgent = "ALL";
+let thoughtsFilterPhase = "ALL";
+let thoughtsAgentOptionsKey = "";
+let latestThoughtsPanelData = null;
+let lastThoughtsHistoryLen = 0;
 
 function isDebugRevealEnabled() {
     return !!debugOverlayVisible;
@@ -555,6 +560,228 @@ function shouldRevealByzantineTeamRole(agentKey, agent, agents) {
     if (humanRole !== "byzantine") return false;
     if (!agent || agentKey === humanName) return false;
     return String(agent.role || "").toLowerCase() === "byzantine";
+}
+
+function escapeHtml(text) {
+    return String(text == null ? "" : text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function syncThoughtsAgentFilterOptions(agentNames) {
+    const select = document.getElementById("thoughtsFilterAgent");
+    if (!select) return;
+    const names = (agentNames || []).slice().sort(function (a, b) {
+        const na = parseInt(String(a).replace(/\D/g, ""), 10);
+        const nb = parseInt(String(b).replace(/\D/g, ""), 10);
+        if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) return na - nb;
+        return String(a).localeCompare(String(b));
+    });
+    const key = names.join("|");
+    if (key === thoughtsAgentOptionsKey) return;
+    thoughtsAgentOptionsKey = key;
+    const prev = thoughtsFilterAgent || select.value || "ALL";
+    select.innerHTML = "";
+    const allOpt = document.createElement("option");
+    allOpt.value = "ALL";
+    allOpt.textContent = "All agents";
+    select.appendChild(allOpt);
+    names.forEach(function (name) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+    });
+    select.value = names.indexOf(prev) >= 0 ? prev : "ALL";
+    thoughtsFilterAgent = select.value;
+}
+
+function formatThoughtPhaseContext(phase, roundNum, tick) {
+    const roundLabel = "Round " + (roundNum != null ? roundNum : "?");
+    const phaseUpper = String(phase || "").toUpperCase();
+    if (phaseUpper === "MOVEMENT") {
+        return roundLabel + " · Movement action " + (tick != null ? tick : "?");
+    }
+    if (phaseUpper === "DISCUSSION") {
+        return roundLabel + " · Discussion turn " + (tick != null ? tick : "?");
+    }
+    if (phaseUpper === "VOTING") {
+        return roundLabel + " · Voting";
+    }
+    return roundLabel + " · " + (phase || "Unknown phase");
+}
+
+function formatThoughtOutputLabel(phase) {
+    const phaseUpper = String(phase || "").toUpperCase();
+    if (phaseUpper === "DISCUSSION") return "Says";
+    if (phaseUpper === "VOTING") return "Votes";
+    if (phaseUpper === "MOVEMENT") return "Moves";
+    return "Output";
+}
+
+function formatThoughtRoleLabel(role) {
+    const r = String(role || "").toLowerCase();
+    if (r === "byzantine") return "Byzantine";
+    if (r === "honest") return "Honest";
+    return role || "";
+}
+
+function collectThoughtEntries(data) {
+    const history = (data && Array.isArray(data.thought_history)) ? data.thought_history : null;
+    if (history && history.length) {
+        return history.map(function (row, index) {
+            return {
+                agent: row.agent || "",
+                round: row.round,
+                phase: String(row.phase || "").toUpperCase(),
+                tick: row.tick,
+                role: row.role || "",
+                think: row.think || "",
+                output: row.output || "",
+                had_tags: !!row.had_tags,
+                parse_ok: row.parse_ok !== false,
+                seq: row.seq != null ? row.seq : index + 1
+            };
+        });
+    }
+
+    // Fallback for older live_state that only has latest-per-agent.
+    const latest = (data && data.latest_thoughts && typeof data.latest_thoughts === "object")
+        ? data.latest_thoughts
+        : {};
+    return Object.keys(latest).map(function (agentName) {
+        const row = latest[agentName] || {};
+        return {
+            agent: agentName,
+            round: row.round,
+            phase: String(row.phase || "").toUpperCase(),
+            tick: row.tick,
+            role: row.role || "",
+            think: row.think || "",
+            output: row.output || "",
+            had_tags: !!row.had_tags,
+            parse_ok: row.parse_ok !== false,
+            seq: row.seq != null ? row.seq : 0
+        };
+    });
+}
+
+function updateThoughtsPanel(data) {
+    const list = document.getElementById("thoughtsList");
+    if (!list) return;
+    if (data) latestThoughtsPanelData = data;
+    data = data || latestThoughtsPanelData;
+    if (!data) {
+        list.innerHTML = "<div class=\"thoughts-empty\">No thoughts yet.</div>";
+        return;
+    }
+
+    const captureOn = !!(data && data.global && data.global.capture_thoughts);
+    const entriesAll = collectThoughtEntries(data);
+    const agentNamesFromState = data && data.agents ? Object.keys(data.agents) : [];
+    const agentNamesFromThoughts = entriesAll.map(function (e) { return e.agent; }).filter(Boolean);
+    const agentNames = agentNamesFromState.length
+        ? agentNamesFromState
+        : Array.from(new Set(agentNamesFromThoughts));
+    syncThoughtsAgentFilterOptions(agentNames);
+
+    if (!captureOn) {
+        list.innerHTML = "<div class=\"thoughts-disabled\">Thought capture was off for this simulation. Start a new simulation and enable <strong>Capture Thoughts</strong> on the config page to populate this panel.</div>";
+        return;
+    }
+
+    const agentFilter = thoughtsFilterAgent || "ALL";
+    const phaseFilter = (thoughtsFilterPhase || "ALL").toUpperCase();
+    const entries = entriesAll
+        .filter(function (entry) {
+            if (agentFilter !== "ALL" && entry.agent !== agentFilter) return false;
+            if (phaseFilter !== "ALL" && entry.phase !== phaseFilter) return false;
+            return true;
+        })
+        .sort(function (a, b) {
+            const sa = a.seq || 0;
+            const sb = b.seq || 0;
+            if (sa !== sb) return sa - sb;
+            const ra = a.round != null ? a.round : 0;
+            const rb = b.round != null ? b.round : 0;
+            if (ra !== rb) return ra - rb;
+            return String(a.agent).localeCompare(String(b.agent));
+        });
+
+    if (!entries.length) {
+        list.innerHTML = "<div class=\"thoughts-empty\">No thoughts yet.</div>";
+        lastThoughtsHistoryLen = 0;
+        return;
+    }
+
+    const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+    const grew = entriesAll.length > lastThoughtsHistoryLen;
+    lastThoughtsHistoryLen = entriesAll.length;
+
+    list.innerHTML = entries.map(function (entry) {
+        const roleLabel = formatThoughtRoleLabel(entry.role);
+        const contextLine = formatThoughtPhaseContext(entry.phase, entry.round, entry.tick);
+        const warnBits = [];
+        if (!entry.had_tags) warnBits.push("missing think tags");
+        if (!entry.parse_ok) warnBits.push("parse warning");
+        const thinkText = entry.think
+            ? escapeHtml(entry.think)
+            : "<em>(empty think)</em>";
+        const outputLabel = formatThoughtOutputLabel(entry.phase);
+        const outputLine = entry.output
+            ? "<div class=\"thought-card-output\"><strong>" + escapeHtml(outputLabel) + ":</strong> " + escapeHtml(entry.output) + "</div>"
+            : "";
+        const agentState = (data.agents && data.agents[entry.agent]) || {};
+        const colorSlug = getColorSlug(agentState.color);
+        const isAlive = agentState.status === "active" || agentState.status === "alive" || !agentState.status;
+        const spriteUrl = isAlive
+            ? (LIVING_SPRITES[colorSlug] || LIVING_SPRITES.red)
+            : (DEAD_SPRITES[colorSlug] || DEAD_SPRITES.red);
+        const metaWarn = warnBits.length
+            ? "<span class=\"thought-card-meta\">" + escapeHtml(warnBits.join(" · ")) + "</span>"
+            : "";
+        return (
+            "<div class=\"thought-card\">" +
+            "<img class=\"thought-card-sprite\" src=\"" + spriteUrl + "\" alt=\"" + escapeHtml(entry.agent) + "\" title=\"" + escapeHtml(entry.agent) + "\">" +
+            "<div class=\"thought-card-main\">" +
+            "<div class=\"thought-card-header\">" +
+            "<span class=\"thought-card-agent\">" + escapeHtml(entry.agent) + "</span>" +
+            (roleLabel ? "<span class=\"thought-card-role\">" + escapeHtml(roleLabel) + "</span>" : "") +
+            metaWarn +
+            "</div>" +
+            "<span class=\"thought-card-context\">" + escapeHtml(contextLine) + "</span>" +
+            "<div class=\"thought-card-body\">" + thinkText + "</div>" +
+            outputLine +
+            "</div>" +
+            "</div>"
+        );
+    }).join("");
+
+    if (grew && nearBottom) {
+        list.scrollTop = list.scrollHeight;
+    }
+}
+
+function fitStatusTableToSidebar() {
+    const wrapper = document.querySelector(".status-table-wrapper");
+    const scaler = document.getElementById("statusTableScaler");
+    const table = scaler && scaler.querySelector(".status-table");
+    if (!wrapper || !scaler || !table) return;
+
+    scaler.style.transform = "none";
+    wrapper.style.height = "";
+
+    const available = wrapper.clientWidth;
+    const natural = table.scrollWidth;
+    if (!available || !natural) return;
+
+    const scale = natural > available ? available / natural : 1;
+    scaler.style.transformOrigin = "top left";
+    scaler.style.transform = "scale(" + scale + ")";
+    wrapper.style.height = Math.ceil(table.offsetHeight * scale) + "px";
 }
 
 function updateKnownFinalInfoFromCurrentView(agents) {
@@ -1151,6 +1378,8 @@ function updateStatusTable(agents) {
         skipRow.appendChild(rightPad);
         tbody.appendChild(skipRow);
     }
+
+    requestAnimationFrame(fitStatusTableToSidebar);
 }
 
 function updateLiveFeed(events, isPaused) {
@@ -1634,6 +1863,9 @@ async function updateGameState() {
         const phase = (g.current_phase || "").toUpperCase();
         const mode = (opts.mode || "").toLowerCase();
         const gameId = data && data.game_id ? data.game_id : "";
+        if (gameId && knownFinalInfoGameId && gameId !== knownFinalInfoGameId) {
+            lastThoughtsHistoryLen = 0;
+        }
         const waitingAgent = g.awaiting_human_agent || "";
         const waitingRound = Number(g.awaiting_human_round || g.round || 0);
         const waitingTick = Number(g.awaiting_human_tick || 0);
@@ -1676,6 +1908,7 @@ async function updateGameState() {
                 updateSuspicionScores(data.suspicion);
             }
         }
+        updateThoughtsPanel(data);
         updateHumanActionPanel(data);
         updateHumanDiscussionPanel(data);
         
@@ -1742,6 +1975,20 @@ function exitToHome() {
 
 window.addEventListener("DOMContentLoaded", function() {
     createDebugCanvas();
+    const thoughtsAgentSelect = document.getElementById("thoughtsFilterAgent");
+    const thoughtsPhaseSelect = document.getElementById("thoughtsFilterPhase");
+    if (thoughtsAgentSelect) {
+        thoughtsAgentSelect.addEventListener("change", function () {
+            thoughtsFilterAgent = thoughtsAgentSelect.value || "ALL";
+            updateThoughtsPanel(null);
+        });
+    }
+    if (thoughtsPhaseSelect) {
+        thoughtsPhaseSelect.addEventListener("change", function () {
+            thoughtsFilterPhase = thoughtsPhaseSelect.value || "ALL";
+            updateThoughtsPanel(null);
+        });
+    }
     document.addEventListener("keydown", (e) => {
         const activeEl = document.activeElement;
         const isTypingTarget = !!(
@@ -1767,6 +2014,7 @@ window.addEventListener("DOMContentLoaded", function() {
                 debugCanvas.height = rect.height;
                 drawDebugOverlay();
             }
+            fitStatusTableToSidebar();
             updateGameState();
         }, 250);
     });

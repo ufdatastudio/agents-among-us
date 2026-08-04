@@ -22,12 +22,21 @@ class _FakeLLM:
         self.responses = list(responses)
         self.calls = []
 
-    def generate(self, model_name, system_prompt, user_prompt, temperature=0.1, max_tokens=160):
+    def generate(
+        self,
+        model_name,
+        system_prompt,
+        user_prompt,
+        temperature=0.1,
+        max_tokens=160,
+        preserve_think_tags=False,
+    ):
         self.calls.append(
             {
                 "user_prompt": user_prompt,
                 "max_tokens": max_tokens,
                 "temperature": temperature,
+                "preserve_think_tags": preserve_think_tags,
             }
         )
         if not self.responses:
@@ -81,6 +90,7 @@ class TestThoughtCaptureHelper(unittest.TestCase):
         )
         self.assertEqual(public, "Cafeteria")
         self.assertEqual(llm.calls[0]["max_tokens"], MAX_TOKENS_WITH_THOUGHTS)
+        self.assertTrue(llm.calls[0]["preserve_think_tags"])
 
         with open(self.logger.paths["thought"], encoding="utf-8") as f:
             rows = [json.loads(line) for line in f if line.strip()]

@@ -76,6 +76,7 @@ def generate_with_optional_thoughts(
         prompt,
         temperature=temperature,
         max_tokens=max_tokens,
+        preserve_think_tags=True,
     )
 
     if not capture_enabled(agent, world_view):
@@ -91,6 +92,7 @@ def generate_with_optional_thoughts(
             retry_prompt,
             temperature=temperature,
             max_tokens=max_tokens,
+            preserve_think_tags=True,
         )
         think, public, meta = split_think_and_output(raw)
 
@@ -108,5 +110,25 @@ def generate_with_optional_thoughts(
             had_tags=meta.get("had_tags", False),
             parse_ok=meta.get("parse_ok", False),
         )
+
+    # Publish thought snapshot immediately so the live UI shows private
+    # reasoning before the matching public discussion line / vote is logged.
+    game_state = getattr(agent, "game_state", None)
+    if game_state is not None and hasattr(game_state, "publish_latest_thought"):
+        game_state.publish_latest_thought(
+            {
+                "round": round_num,
+                "phase": phase,
+                "tick": tick,
+                "agent": agent.name,
+                "role": getattr(agent, "role", ""),
+                "model": getattr(agent, "model_name", ""),
+                "think": think,
+                "output": public,
+                "had_tags": meta.get("had_tags", False),
+                "parse_ok": meta.get("parse_ok", False),
+            }
+        )
+        game_state.save_json()
 
     return public

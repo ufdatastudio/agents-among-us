@@ -469,7 +469,7 @@ select[name*="_color"] {
 
 .game-container {
     display: grid;
-    grid-template-columns: 520px 1fr;
+    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr) minmax(280px, 360px);
     grid-template-rows: auto 1fr 180px;
     height: 100vh;
     overflow: hidden;
@@ -556,15 +556,169 @@ select[name*="_color"] {
     border-bottom: 1px solid var(--border);
 }
 
+/* Right sidebar: private thought history (same width track as agent status) */
+.thoughts-sidebar {
+    grid-column: 3;
+    grid-row: 2;
+    border-left: 1px solid var(--border);
+    padding: 0.75rem;
+    overflow: hidden;
+    background: var(--bg-card);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.thoughts-sidebar h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.thoughts-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.65rem;
+    flex-shrink: 0;
+}
+
+.thoughts-filter-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.thoughts-filter-select {
+    width: 100%;
+    font-family: var(--font);
+    font-size: 0.82rem;
+    padding: 0.35rem 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+}
+
+.thoughts-list {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.thoughts-empty {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    padding: 0.5rem 0;
+}
+
+.thoughts-disabled {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    padding: 0.5rem 0;
+    line-height: 1.4;
+}
+
+.thought-card {
+    position: relative;
+    display: flex;
+    gap: 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.55rem 0.6rem;
+    background: var(--bg);
+}
+
+.thought-card-sprite {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    margin-top: 0.1rem;
+}
+
+.thought-card-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.thought-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.6rem;
+    margin-bottom: 0.2rem;
+}
+
+.thought-card-agent {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.thought-card-context {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+    line-height: 1.35;
+}
+
+.thought-card-meta {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.thought-card-role {
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: capitalize;
+    color: var(--text-muted);
+}
+
+.thought-card-body {
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.thought-card-output {
+    margin-top: 0.4rem;
+    padding-top: 0.35rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.thought-card-output strong {
+    font-weight: 600;
+    color: var(--text);
+}
+
 .status-table-wrapper {
-    overflow-x: hidden;
-    overflow-y: hidden;
+    overflow: hidden;
     max-width: 100%;
+    width: 100%;
+}
+
+.status-table-scaler {
+    transform-origin: top left;
+    width: max-content;
+    max-width: none;
 }
 
 .status-table {
-    width: 100%;
-    max-width: 100%;
+    width: max-content;
+    max-width: none;
     table-layout: auto;
     border-collapse: collapse;
     font-size: clamp(0.64rem, 0.75vw, 0.74rem);
@@ -1633,7 +1787,7 @@ hr {
 
     .game-container {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto 1fr 160px;
+        grid-template-rows: auto auto 1fr auto 160px;
     }
 
     .agent-sidebar {
@@ -1641,12 +1795,24 @@ hr {
         grid-row: 2;
         border-right: none;
         border-bottom: 1px solid var(--border);
-        max-height: 280px;
+        max-height: 220px;
     }
 
     .map-container {
         grid-column: 1;
         grid-row: 3;
+    }
+
+    .thoughts-sidebar {
+        grid-column: 1;
+        grid-row: 4;
+        border-left: none;
+        border-top: 1px solid var(--border);
+        max-height: 220px;
+    }
+
+    .live-feed {
+        grid-row: 5;
     }
 
     .game-params {

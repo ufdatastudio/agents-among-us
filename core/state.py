@@ -37,7 +37,10 @@ class GameState:
                 "awaiting_human_options": {},
             },
             "agents": {},
-            "rooms": {room_name: {"occupants": [], "bodies": []} for room_name in ROOMS}
+            "rooms": {room_name: {"occupants": [], "bodies": []} for room_name in ROOMS},
+            # Latest private thought per agent (convenience); full timeline in thought_history.
+            "latest_thoughts": {},
+            "thought_history": [],
         }
 
         # Initialize Data
@@ -350,6 +353,47 @@ class GameState:
         
         self.logger.write_log("results", None, f"EJECTION: {agent_name} was ejected.")
         self.add_ui_event(f"{agent_name} was EJECTED.", "eject")
+
+    def publish_latest_thought(self, record):
+        """Append a thought to the live history and refresh latest-per-agent.
+
+        Thoughts are published as soon as they are captured (before the public
+        discussion line or vote is recorded), so the timeline stays in order.
+        """
+        if not isinstance(record, dict):
+            return
+        agent_name = record.get("agent")
+        if not agent_name:
+            return
+        entry = {
+            "agent": agent_name,
+            "round": record.get("round"),
+            "phase": record.get("phase"),
+            "tick": record.get("tick"),
+            "role": record.get("role"),
+            "model": record.get("model"),
+            "think": record.get("think") or "",
+            "output": record.get("output") or "",
+            "had_tags": bool(record.get("had_tags")),
+            "parse_ok": bool(record.get("parse_ok")),
+        }
+        history = self.world_data.setdefault("thought_history", [])
+        entry["seq"] = len(history) + 1
+        history.append(entry)
+
+        thoughts = self.world_data.setdefault("latest_thoughts", {})
+        thoughts[agent_name] = {
+            "round": entry["round"],
+            "phase": entry["phase"],
+            "tick": entry["tick"],
+            "role": entry["role"],
+            "model": entry["model"],
+            "think": entry["think"],
+            "output": entry["output"],
+            "had_tags": entry["had_tags"],
+            "parse_ok": entry["parse_ok"],
+            "seq": entry["seq"],
+        }
     
     def save_json(self):
         """Exports the current state to a JSON file for the Live Map."""

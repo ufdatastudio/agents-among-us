@@ -40,6 +40,7 @@
         <aside class="agent-sidebar">
             <h3>Agent Status</h3>
             <div class="status-table-wrapper">
+                <div class="status-table-scaler" id="statusTableScaler">
                 <table class="status-table">
                     <thead>
                         <tr>
@@ -60,6 +61,7 @@
                         <!-- Populated by JavaScript -->
                     </tbody>
                 </table>
+                </div>
             </div>
         </aside>
 
@@ -72,6 +74,27 @@
                 </div>
             </div>
         </main>
+
+        <!-- Right Sidebar: Agent thoughts history -->
+        <aside class="thoughts-sidebar" id="thoughtsSidebar">
+            <h3>Agent Thoughts</h3>
+            <div class="thoughts-filters">
+                <label class="thoughts-filter-label" for="thoughtsFilterAgent">Agent</label>
+                <select id="thoughtsFilterAgent" class="thoughts-filter-select" aria-label="Filter thoughts by agent">
+                    <option value="ALL">All agents</option>
+                </select>
+                <label class="thoughts-filter-label" for="thoughtsFilterPhase">Phase</label>
+                <select id="thoughtsFilterPhase" class="thoughts-filter-select" aria-label="Filter thoughts by phase">
+                    <option value="ALL">All phases</option>
+                    <option value="MOVEMENT">Movement</option>
+                    <option value="DISCUSSION">Discussion</option>
+                    <option value="VOTING">Voting</option>
+                </select>
+            </div>
+            <div class="thoughts-list" id="thoughtsList">
+                <div class="thoughts-empty">No thoughts yet.</div>
+            </div>
+        </aside>
 
         <!-- Bottom: Live Feed -->
         <section class="live-feed">

@@ -136,22 +136,29 @@ class ModelManager:
         return provider, model_id
 
     @staticmethod
-    def _postprocess_response(text):
-        """Shared post-processing for both local and API responses."""
-        if "<think>" in text:
+    def _postprocess_response(text, preserve_think_tags=False):
+        """Shared post-processing for both local and API responses.
+
+        When preserve_think_tags is True (thought-capture path), leave
+        <think>...</think> intact so callers can parse private reasoning.
+        """
+        if "<think>" in text and not preserve_think_tags:
             text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
         if "assistantfinal" in text:
             text = text.split("assistantfinal")[-1].strip()
 
-        if text.count('"') % 2 != 0:
-            text += '"'
-        quotes = re.findall(r'"([^"]*)"', text)
-        if quotes:
-            text = quotes[-1]
+        # Quote collapsing breaks structured think+answer outputs; skip when
+        # preserving think tags.
+        if not preserve_think_tags:
+            if text.count('"') % 2 != 0:
+                text += '"'
+            quotes = re.findall(r'"([^"]*)"', text)
+            if quotes:
+                text = quotes[-1]
 
         return text.strip()
 
-    def _generate_api(self, model_name, system_prompt, user_prompt, temperature, max_tokens=160):
+    def _generate_api(self, model_name, system_prompt, user_prompt, temperature, max_tokens=160, preserve_think_tags=False):
         """Generate a response using an external API provider."""
         from core.api_clients import get_client
 
@@ -173,7 +180,9 @@ class ModelManager:
             self.token_usage[model_name]["input_tokens"] += response.input_tokens
             self.token_usage[model_name]["output_tokens"] += response.output_tokens
 
-            return self._postprocess_response(response.text)
+            return self._postprocess_response(
+                response.text, preserve_think_tags=preserve_think_tags
+            )
 
         except Exception as e:
             log.error("[API ERROR on {}]: {}", model_name, e)
@@ -314,7 +323,7 @@ class ModelManager:
             except:
                 pass
 
-    def generate(self, model_name, system_prompt, user_prompt, temperature=0.1, max_tokens=160):
+    def generate(self, model_name, system_prompt, user_prompt, temperature=0.1, max_tokens=160, preserve_think_tags=False):
         """Polymorphic generate dispatching to the active backend.
 
         Modes:
@@ -325,21 +334,39 @@ class ModelManager:
 
         max_tokens default 160. Callers may pass 384 when capture_thoughts is on
         (increased due to agent thoughts implementation; original value = 160).
+
+        preserve_think_tags: when True, do not strip <think> blocks in
+        post-processing (required for thought-capture parsing).
         """
         if self._is_api_model(model_name):
             return self._generate_api(
-                model_name, system_prompt, user_prompt, temperature, max_tokens=max_tokens
+                model_name,
+                system_prompt,
+                user_prompt,
+                temperature,
+                max_tokens=max_tokens,
+                preserve_think_tags=preserve_think_tags,
             )
         if self.mode == "GLOBUS":
             return self._generate_globus(
-                model_name, system_prompt, user_prompt, temperature, max_tokens=max_tokens
+                model_name,
+                system_prompt,
+                user_prompt,
+                temperature,
+                max_tokens=max_tokens,
+                preserve_think_tags=preserve_think_tags,
             )
         if self.mode == "CONTROLLER":
             return self._generate_remote(
                 model_name, system_prompt, user_prompt, temperature, max_tokens=max_tokens
             )
         return self._generate_local(
-            model_name, system_prompt, user_prompt, temperature, max_tokens=max_tokens
+            model_name,
+            system_prompt,
+            user_prompt,
+            temperature,
+            max_tokens=max_tokens,
+            preserve_think_tags=preserve_think_tags,
         )
 
 
@@ -395,7 +422,15 @@ class ModelManager:
 
         return response_text
 
-    def _generate_globus(self, model_name, system_prompt, user_prompt, temperature, max_tokens=160):
+    def _generate_globus(
+        self,
+        model_name,
+        system_prompt,
+        user_prompt,
+        temperature,
+        max_tokens=160,
+        preserve_think_tags=False,
+    ):
         """Submit inference to the Globus Compute endpoint and wait for result."""
         if not self._globus_executor:
             raise RuntimeError(
@@ -404,7 +439,12 @@ class ModelManager:
 
         try:
             future = self._globus_executor.submit(
-                model_name, system_prompt, user_prompt, temperature, max_tokens
+                model_name,
+                system_prompt,
+                user_prompt,
+                temperature,
+                max_tokens=max_tokens,
+                preserve_think_tags=preserve_think_tags,
             )
             result = future.result(timeout=300)
             return result
@@ -412,7 +452,7 @@ class ModelManager:
             log.error("[Globus Compute ERROR on {}]: {}", model_name, e)
             return "move"
 
-    def _generate_local(self, model_name, system_prompt, user_prompt, temperature=0.1, max_tokens=160):
+    def _generate_local(self, model_name, system_prompt, user_prompt, temperature=0.1, max_tokens=160, preserve_think_tags=False):
         """
         Generates response using the specified model.
         """
@@ -474,7 +514,9 @@ class ModelManager:
             response = outputs[0][input_len:]
             decoded_response = tokenizer.decode(response, skip_special_tokens=True).strip()
 
-            return self._postprocess_response(decoded_response)
+            return self._postprocess_response(
+                decoded_response, preserve_think_tags=preserve_think_tags
+            )
             
         except Exception as e:
             log.error("[LLM ERROR on {}]: {}", model_name, e)

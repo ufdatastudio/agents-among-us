@@ -462,7 +462,7 @@ class ContextPruner:
         """
         if not self.best_pipeline:
             print("Pruner not trained/loaded. Returning raw log.")
-            return raw_log
+            return raw_log, {}, set()
 
         lines = raw_log.strip().split('\n')
         pruned_lines = []
