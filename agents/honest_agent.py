@@ -4,6 +4,7 @@ import re
 from agents.base_agent import BaseAgent
 from agents.prompts import (
     HONEST_DEFAULT_MOVE_INSTRUCTIONS,
+    HONEST_MOVE_INSTRUCTIONS_WITH_THOUGHTS,
     HONEST_DEFAULT_VOTE_INSTRUCTIONS,
     HONEST_DISCUSSION_INSTRUCTIONS_PREFIX,
     HONEST_DISCUSSION_INSTRUCTIONS_SUFFIX,
@@ -11,6 +12,7 @@ from agents.prompts import (
     honest_system_prompt,
     honest_system_prompt_skip_discussion,
 )
+from agents.thought_capture import capture_enabled, generate_with_optional_thoughts
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
 class HonestAgent(BaseAgent):
@@ -107,7 +109,11 @@ class HonestAgent(BaseAgent):
                 {"round_num": str(round_num)},
             )
         else:
-            move_body = HONEST_DEFAULT_MOVE_INSTRUCTIONS
+            move_body = (
+                HONEST_MOVE_INSTRUCTIONS_WITH_THOUGHTS
+                if capture_enabled(self, world_view)
+                else HONEST_DEFAULT_MOVE_INSTRUCTIONS
+            )
 
         prompt = f"""
 {results_log}
@@ -121,7 +127,16 @@ Options:
 
 {move_body}
 """
-        response = self.llm.generate(self.model_name, self._system_prompt(), prompt, temperature=0.1)
+        response = generate_with_optional_thoughts(
+            self,
+            self._system_prompt(),
+            prompt,
+            temperature=0.1,
+            phase="MOVEMENT",
+            round_num=round_num,
+            tick=world_view.get("tick", 0),
+            world_view=world_view,
+        )
         clean_resp = response.strip().upper()
         
         if "REPORT" in clean_resp and bodies:

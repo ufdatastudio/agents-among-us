@@ -15,6 +15,15 @@ INSTRUCTIONS:
 4. Do NOT output markdown or punctuation. One word or phrase only.
 """
 
+HONEST_MOVE_INSTRUCTIONS_WITH_THOUGHTS = """
+INSTRUCTIONS:
+1. Choose ONE action from the lists above.
+2. First write private reasoning inside <think>...</think>.
+3. After the closing </think> tag, output ONLY the action keyword or room name.
+4. Do NOT put the final action inside the think block.
+5. Do NOT write "Action:", "I will", markdown, or punctuation after </think>. One word or phrase only.
+"""
+
 # orignal prompt kept for reference:
 # default_discussion_instructions = """
 # INSTRUCTIONS:
@@ -152,6 +161,16 @@ INSTRUCTIONS:
 3. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak.
 4. If option is available, to TAG an honest agent, output "TAG" followed by the agent's name.
 5. Do NOT write "Action:", "I will", or explain your reasoning. One word or phrase only.
+"""
+
+BYZANTINE_MOVE_INSTRUCTIONS_WITH_THOUGHTS = """
+INSTRUCTIONS:
+1. Choose ONE action from the lists above.
+2. First write private reasoning inside <think>...</think>.
+3. After the closing </think> tag, output ONLY the action keyword or room name (or TAG <agent> if tagging).
+4. If option is available, to TAG an honest agent, output "TAG" followed by the agent's name after </think>.
+5. Do NOT put the final action inside the think block.
+6. Do NOT write "Action:", "I will", markdown, or punctuation after </think>. One word or phrase only.
 """
 
 # original prompt for reference:

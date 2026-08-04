@@ -151,7 +151,7 @@ class ModelManager:
 
         return text.strip()
 
-    def _generate_api(self, model_name, system_prompt, user_prompt, temperature):
+    def _generate_api(self, model_name, system_prompt, user_prompt, temperature, max_tokens=160):
         """Generate a response using an external API provider."""
         from core.api_clients import get_client
 
@@ -162,7 +162,11 @@ class ModelManager:
                 self.api_clients[provider] = get_client(provider, self.api_keys)
 
             client = self.api_clients[provider]
-            response = client.generate(model_id, system_prompt, user_prompt, temperature)
+            # Increased due to agent thoughts implementation when caller requests it
+            # (original value = 160).
+            response = client.generate(
+                model_id, system_prompt, user_prompt, temperature, max_tokens=max_tokens
+            )
 
             if model_name not in self.token_usage:
                 self.token_usage[model_name] = {"input_tokens": 0, "output_tokens": 0}
@@ -310,7 +314,7 @@ class ModelManager:
             except:
                 pass
 
-    def generate(self, model_name, system_prompt, user_prompt, temperature=0.1):
+    def generate(self, model_name, system_prompt, user_prompt, temperature=0.1, max_tokens=160):
         """Polymorphic generate dispatching to the active backend.
 
         Modes:
@@ -318,17 +322,28 @@ class ModelManager:
             GLOBUS: Submits task to Globus Compute endpoint.
             CONTROLLER: Writes to file, waits for response (SLURM IPC).
             LOCAL: Runs torch directly.
+
+        max_tokens default 160. Callers may pass 384 when capture_thoughts is on
+        (increased due to agent thoughts implementation; original value = 160).
         """
         if self._is_api_model(model_name):
-            return self._generate_api(model_name, system_prompt, user_prompt, temperature)
+            return self._generate_api(
+                model_name, system_prompt, user_prompt, temperature, max_tokens=max_tokens
+            )
         if self.mode == "GLOBUS":
-            return self._generate_globus(model_name, system_prompt, user_prompt, temperature)
+            return self._generate_globus(
+                model_name, system_prompt, user_prompt, temperature, max_tokens=max_tokens
+            )
         if self.mode == "CONTROLLER":
-            return self._generate_remote(model_name, system_prompt, user_prompt, temperature)
-        return self._generate_local(model_name, system_prompt, user_prompt, temperature)
+            return self._generate_remote(
+                model_name, system_prompt, user_prompt, temperature, max_tokens=max_tokens
+            )
+        return self._generate_local(
+            model_name, system_prompt, user_prompt, temperature, max_tokens=max_tokens
+        )
 
 
-    def _generate_remote(self, model_name, system_prompt, user_prompt, temperature):
+    def _generate_remote(self, model_name, system_prompt, user_prompt, temperature, max_tokens=160):
         """Writes request to disk and polls for response."""
         if not self.game_id:
             raise ValueError("Game ID not set in ModelManager. Call set_game_context first.")
@@ -343,6 +358,9 @@ class ModelManager:
             "system_prompt": system_prompt,
             "user_prompt": user_prompt,
             "temperature": temperature,
+            # Increased due to agent thoughts implementation when caller requests it
+            # (original value = 160).
+            "max_tokens": max_tokens,
             "id": request_id
         }
 
@@ -377,7 +395,7 @@ class ModelManager:
 
         return response_text
 
-    def _generate_globus(self, model_name, system_prompt, user_prompt, temperature):
+    def _generate_globus(self, model_name, system_prompt, user_prompt, temperature, max_tokens=160):
         """Submit inference to the Globus Compute endpoint and wait for result."""
         if not self._globus_executor:
             raise RuntimeError(
@@ -386,7 +404,7 @@ class ModelManager:
 
         try:
             future = self._globus_executor.submit(
-                model_name, system_prompt, user_prompt, temperature
+                model_name, system_prompt, user_prompt, temperature, max_tokens
             )
             result = future.result(timeout=300)
             return result
@@ -394,7 +412,7 @@ class ModelManager:
             log.error("[Globus Compute ERROR on {}]: {}", model_name, e)
             return "move"
 
-    def _generate_local(self, model_name, system_prompt, user_prompt, temperature=0.1):
+    def _generate_local(self, model_name, system_prompt, user_prompt, temperature=0.1, max_tokens=160):
         """
         Generates response using the specified model.
         """
@@ -443,7 +461,9 @@ class ModelManager:
             with torch.no_grad():
                 outputs = model.generate(
                     **inputs,
-                    max_new_tokens=160,
+                    # Increased due to agent thoughts implementation when caller requests it
+                    # (original value = 160).
+                    max_new_tokens=max_tokens,
                     do_sample=True,
                     temperature=temperature,
                     eos_token_id=tokenizer.eos_token_id,

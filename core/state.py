@@ -203,7 +203,9 @@ class GameState:
             "known_bodies": agent_data["known_bodies"],
             "log_path": self.logger.get_agent_log_path(agent_name),
             "discussion_log_path": self.logger.get_discussion_log_path(agent_data["role"]),
-            "results_log_path": self.logger.get_results_log_path()
+            "results_log_path": self.logger.get_results_log_path(),
+            "capture_thoughts": bool(self.world_data["global"].get("capture_thoughts", True)),
+            "require_think_tags": bool(self.world_data["global"].get("require_think_tags", False)),
         }
         return view
 

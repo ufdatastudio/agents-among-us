@@ -11,7 +11,7 @@ from globus_compute_sdk import Client, Executor
 from loguru import logger as log
 
 
-def remote_inference(model_name, system_prompt, user_prompt, temperature):
+def remote_inference(model_name, system_prompt, user_prompt, temperature, max_tokens=160):
     """Standalone function executed on the Globus Compute endpoint worker.
 
     This function runs in an isolated process on the remote compute node.
@@ -23,6 +23,9 @@ def remote_inference(model_name, system_prompt, user_prompt, temperature):
         system_prompt: System prompt for the model.
         user_prompt: User prompt for the model.
         temperature: Sampling temperature.
+        max_tokens: Max new tokens to generate. Callers may pass 384 when
+            capture_thoughts is on (increased due to agent thoughts
+            implementation; original value = 160).
 
     Returns:
         The generated text response as a string.
@@ -139,7 +142,9 @@ def remote_inference(model_name, system_prompt, user_prompt, temperature):
     with torch.no_grad():
         outputs = model.generate(
             **inputs,
-            max_new_tokens=160,
+            # Increased due to agent thoughts implementation when caller requests it
+            # (original value = 160).
+            max_new_tokens=max_tokens,
             do_sample=True,
             temperature=temperature,
             eos_token_id=tokenizer.eos_token_id,

@@ -4,6 +4,7 @@ import re
 from agents.base_agent import BaseAgent
 from agents.prompts import (
     BYZANTINE_DEFAULT_MOVE_INSTRUCTIONS,
+    BYZANTINE_MOVE_INSTRUCTIONS_WITH_THOUGHTS,
     BYZANTINE_DEFAULT_VOTE_INSTRUCTIONS,
     BYZANTINE_DISCUSSION_INSTRUCTIONS_PREFIX,
     BYZANTINE_DISCUSSION_INSTRUCTIONS_SUFFIX,
@@ -11,6 +12,7 @@ from agents.prompts import (
     byzantine_system_prompt,
     byzantine_system_prompt_skip_discussion,
 )
+from agents.thought_capture import capture_enabled, generate_with_optional_thoughts
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
 class ByzantineAgent(BaseAgent):
@@ -110,7 +112,11 @@ class ByzantineAgent(BaseAgent):
                 {"round_num": str(round_num)},
             )
         else:
-            move_body = BYZANTINE_DEFAULT_MOVE_INSTRUCTIONS
+            move_body = (
+                BYZANTINE_MOVE_INSTRUCTIONS_WITH_THOUGHTS
+                if capture_enabled(self, world_view)
+                else BYZANTINE_DEFAULT_MOVE_INSTRUCTIONS
+            )
 
         teammates_str = ", ".join(self.teammates) if self.teammates else ""
         prompt = f"""
@@ -128,7 +134,16 @@ Options
 
 {move_body}
 """
-        response = self.llm.generate(self.model_name, self._system_prompt(), prompt, temperature=0.1)
+        response = generate_with_optional_thoughts(
+            self,
+            self._system_prompt(),
+            prompt,
+            temperature=0.1,
+            phase="MOVEMENT",
+            round_num=round_num,
+            tick=world_view.get("tick", 0),
+            world_view=world_view,
+        )
         clean_resp = response.strip().upper()
         
         # Check for TAG action first, safeguard to avoid consecutive tags in case hallucination
@@ -146,7 +161,7 @@ Options
         for room in adj:
             if room.upper() in clean_resp:
                 return "move", room, response
-            
+
         return "move", loc, response
 
     def participate_in_discussion(self, conversation_history, world_view, round_num):

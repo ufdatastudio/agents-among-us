@@ -251,6 +251,10 @@ class GameEngine:
         self.state.world_data["global"]["human_agent"] = human_agent
         self.state.world_data["global"]["capture_thoughts"] = self.capture_thoughts
         self.state.world_data["global"]["require_think_tags"] = self.require_think_tags
+        for agent in self.agents:
+            agent.logger = self.logger
+            agent.capture_thoughts = self.capture_thoughts
+            agent.require_think_tags = self.require_think_tags
         print(
             f"Thought capture: {'ON' if self.capture_thoughts else 'OFF'} "
             f"(require_think_tags={self.require_think_tags})"
@@ -280,6 +284,10 @@ class GameEngine:
             decisions = []
             for agent in active_agents:
                 view = self.state.get_agent_view(agent.name, round_num, log_to_file=True)
+                view["tick"] = phase_tick
+                view["phase"] = "MOVEMENT"
+                view["capture_thoughts"] = self.capture_thoughts
+                view["require_think_tags"] = self.require_think_tags
                 if getattr(agent, "is_human", False):
                     decision = self._await_human_movement_action(agent, view, round_num, phase_tick, timeout_s=25)
                 else:

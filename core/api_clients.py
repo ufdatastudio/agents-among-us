@@ -49,6 +49,8 @@ class OpenAICompatibleClient:
                         {"role": "user", "content": user_prompt},
                     ],
                     temperature=temperature,
+                    # Increased due to agent thoughts implementation when caller requests it
+                    # (original value = 160). Default remains 160 when capture_thoughts is off.
                     max_tokens=max_tokens,
                     timeout=60,
                 )
@@ -104,6 +106,8 @@ class AnthropicClient:
                     system=system_prompt,
                     messages=[{"role": "user", "content": user_prompt}],
                     temperature=temperature,
+                    # Increased due to agent thoughts implementation when caller requests it
+                    # (original value = 160). Default remains 160 when capture_thoughts is off.
                     max_tokens=max_tokens,
                     timeout=60,
                 )
