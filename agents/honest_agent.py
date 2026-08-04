@@ -6,13 +6,20 @@ from agents.prompts import (
     HONEST_DEFAULT_MOVE_INSTRUCTIONS,
     HONEST_MOVE_INSTRUCTIONS_WITH_THOUGHTS,
     HONEST_DEFAULT_VOTE_INSTRUCTIONS,
+    HONEST_DEFAULT_VOTE_INSTRUCTIONS_WITH_THOUGHTS,
     HONEST_DISCUSSION_INSTRUCTIONS_PREFIX,
     HONEST_DISCUSSION_INSTRUCTIONS_SUFFIX,
+    HONEST_DISCUSSION_THINK_APPENDIX,
     HONEST_VOTE_INSTRUCTIONS_SKIP_DISCUSSION,
+    HONEST_VOTE_INSTRUCTIONS_SKIP_DISCUSSION_WITH_THOUGHTS,
     honest_system_prompt,
     honest_system_prompt_skip_discussion,
 )
-from agents.thought_capture import capture_enabled, generate_with_optional_thoughts
+from agents.thought_capture import (
+    capture_enabled,
+    generate_with_optional_thoughts,
+    with_think_format_if_capturing,
+)
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
 class HonestAgent(BaseAgent):
@@ -169,11 +176,19 @@ Options:
             + chances_line
             + HONEST_DISCUSSION_INSTRUCTIONS_SUFFIX
         )
+        if capture_enabled(self, world_view):
+            default_discussion_instructions = (
+                default_discussion_instructions + HONEST_DISCUSSION_THINK_APPENDIX
+            )
         overrides = getattr(self, "prompt_overrides", {}) or {}
         discussion_override = overrides.get("discussion")
         extra = {"round_num": str(round_num), "max_discussion_messages": str(self.max_discussion_messages)}
         if discussion_override:
-            discussion_body = self._substitute_placeholders(discussion_override, extra)
+            discussion_body = with_think_format_if_capturing(
+                self._substitute_placeholders(discussion_override, extra),
+                self,
+                world_view,
+            )
         else:
             discussion_body = self._substitute_placeholders(default_discussion_instructions, extra)
 
@@ -192,7 +207,16 @@ You are in a discussion phase.
 
 {discussion_body}
 """
-        return self.llm.generate(self.model_name, self._system_prompt(), prompt, temperature=1.0)
+        return generate_with_optional_thoughts(
+            self,
+            self._system_prompt(),
+            prompt,
+            temperature=1.0,
+            phase="DISCUSSION",
+            round_num=round_num,
+            tick=world_view.get("tick", 0),
+            world_view=world_view,
+        )
 
     def vote(self, world_view, candidates, round_num, pruner=None):
         discussion_log = self._read_file(world_view["discussion_log_path"])
@@ -217,16 +241,27 @@ You are in a discussion phase.
         overrides = getattr(self, "prompt_overrides", {}) or {}
         vote_override = overrides.get("voting")
         if vote_override:
-            vote_body = self._substitute_placeholders(
-                vote_override,
-                {"round_num": str(round_num), "candidates": candidates},
+            vote_body = with_think_format_if_capturing(
+                self._substitute_placeholders(
+                    vote_override,
+                    {"round_num": str(round_num), "candidates": candidates},
+                ),
+                self,
+                world_view,
             )
         else:
-            vote_tmpl = (
-                HONEST_VOTE_INSTRUCTIONS_SKIP_DISCUSSION
-                if skip_discussion
-                else HONEST_DEFAULT_VOTE_INSTRUCTIONS
-            )
+            if capture_enabled(self, world_view):
+                vote_tmpl = (
+                    HONEST_VOTE_INSTRUCTIONS_SKIP_DISCUSSION_WITH_THOUGHTS
+                    if skip_discussion
+                    else HONEST_DEFAULT_VOTE_INSTRUCTIONS_WITH_THOUGHTS
+                )
+            else:
+                vote_tmpl = (
+                    HONEST_VOTE_INSTRUCTIONS_SKIP_DISCUSSION
+                    if skip_discussion
+                    else HONEST_DEFAULT_VOTE_INSTRUCTIONS
+                )
             vote_body = self._substitute_placeholders(
                 vote_tmpl,
                 {"round_num": str(round_num), "candidates": candidates},
@@ -244,7 +279,16 @@ Note: Be aware of total player count to ensure Byzantines do not equal or outnum
 
 {vote_body}
 """
-        response = self.llm.generate(self.model_name, self._system_prompt(), prompt)
+        response = generate_with_optional_thoughts(
+            self,
+            self._system_prompt(),
+            prompt,
+            temperature=0.1,
+            phase="VOTING",
+            round_num=round_num,
+            tick=world_view.get("tick", 0),
+            world_view=world_view,
+        )
         clean_resp = response.strip()
         
         for cand in candidates:

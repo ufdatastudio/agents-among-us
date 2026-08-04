@@ -136,6 +136,99 @@ class TestThoughtCaptureHelper(unittest.TestCase):
         self.assertEqual(llm.calls[0]["max_tokens"], MAX_TOKENS_DEFAULT)
         self.assertEqual(os.path.getsize(self.logger.paths["thought"]), 0)
 
+    def test_discussion_public_never_leaks_into_discussion_log(self):
+        """Observer / discussion.log must only ever see public_output."""
+        secret = "PRIVATE_PLAN_VOTE_OUT_AGENT_2"
+        spoken = "Agent_1 was near the body in Medbay."
+        llm = _FakeLLM([f"<think>\n{secret}\n</think>\n{spoken}"])
+        agent = self._agent(llm, capture=True)
+
+        public = generate_with_optional_thoughts(
+            agent,
+            "sys",
+            "discussion prompt",
+            temperature=1.0,
+            phase="DISCUSSION",
+            round_num=2,
+            tick=3,
+            world_view={"capture_thoughts": True, "require_think_tags": False},
+        )
+        self.assertEqual(public, spoken)
+        self.assertNotIn(secret, public)
+        self.assertNotIn("<think>", public)
+
+        # Same path game_engine uses for public discussion visibility.
+        formatted_msg = f"{agent.name}: {public}"
+        self.logger.write_log("discussion", None, formatted_msg)
+        self.logger.log_discussion_chat(
+            discussion_num=2,
+            reason="body report",
+            agent_name=agent.name,
+            model_name=agent.model_name,
+            role=agent.role,
+            message=public,
+        )
+
+        with open(self.logger.paths["discussion"], encoding="utf-8") as f:
+            discussion_text = f.read()
+        with open(self.logger.paths["discussion_chat"], encoding="utf-8") as f:
+            chat_csv = f.read()
+        with open(self.logger.paths["thought"], encoding="utf-8") as f:
+            thought_rows = [json.loads(line) for line in f if line.strip()]
+
+        self.assertIn(spoken, discussion_text)
+        self.assertNotIn(secret, discussion_text)
+        self.assertNotIn("<think>", discussion_text)
+        self.assertIn(spoken, chat_csv)
+        self.assertNotIn(secret, chat_csv)
+
+        self.assertEqual(len(thought_rows), 1)
+        self.assertEqual(thought_rows[0]["phase"], "DISCUSSION")
+        self.assertEqual(thought_rows[0]["think"], secret)
+        self.assertEqual(thought_rows[0]["output"], spoken)
+
+        # Observer input shape: only public Text field.
+        round_statements = [
+            {
+                "Agent": agent.name,
+                "Text": public,
+                "Reported": 0,
+                "S_Num": 1,
+            }
+        ]
+        self.assertNotIn(secret, round_statements[0]["Text"])
+
+    def test_voting_matches_public_not_think_content(self):
+        # Think mentions SKIP; public vote is Agent_1 — matching must use public.
+        llm = _FakeLLM(
+            ["<think>\nMaybe I should SKIP to look innocent.\n</think>\nAgent_1"]
+        )
+        agent = self._agent(llm, capture=True)
+        public = generate_with_optional_thoughts(
+            agent,
+            "sys",
+            "vote prompt",
+            temperature=0.1,
+            phase="VOTING",
+            round_num=3,
+            tick=1,
+            world_view={"capture_thoughts": True},
+        )
+        self.assertEqual(public, "Agent_1")
+        candidates = ["Agent_1", "Agent_2", "SKIP"]
+        vote = "SKIP"
+        for cand in candidates:
+            if cand in public:
+                vote = cand
+                break
+        self.assertEqual(vote, "Agent_1")
+
+        with open(self.logger.paths["thought"], encoding="utf-8") as f:
+            row = json.loads(f.readline())
+        self.assertEqual(row["phase"], "VOTING")
+        self.assertIn("SKIP", row["think"])
+        self.assertEqual(row["output"], "Agent_1")
+
 
 if __name__ == "__main__":
     unittest.main()

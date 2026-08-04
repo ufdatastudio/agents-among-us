@@ -14,6 +14,15 @@ THINK_TAG_RETRY_REMINDER = (
     "after the closing tag."
 )
 
+# Appended when capture_thoughts is on but a custom prompt override is used.
+THINK_FORMAT_APPENDIX = """
+
+THINKING FORMAT:
+1. First write private reasoning inside <think>...</think>.
+2. After the closing </think> tag, output ONLY the public answer.
+3. Do NOT put the final answer inside the think block.
+"""
+
 
 def capture_enabled(agent, world_view=None) -> bool:
     world_view = world_view or {}
@@ -27,6 +36,13 @@ def require_tags_enabled(agent, world_view=None) -> bool:
     if "require_think_tags" in world_view:
         return bool(world_view["require_think_tags"])
     return bool(getattr(agent, "require_think_tags", False))
+
+
+def with_think_format_if_capturing(body: str, agent, world_view=None) -> str:
+    """Append the shared think-format appendix for custom prompt overrides."""
+    if capture_enabled(agent, world_view):
+        return f"{body.rstrip()}{THINK_FORMAT_APPENDIX}"
+    return body
 
 
 def tokens_for_turn(agent, world_view=None) -> int:

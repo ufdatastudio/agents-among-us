@@ -699,6 +699,10 @@ class GameEngine:
                 for agent in discussion_order:
                     discussion_turn_idx += 1
                     view = self.state.get_agent_view(agent.name, round_num, log_to_file=False)
+                    view["tick"] = discussion_turn_idx
+                    view["phase"] = "DISCUSSION"
+                    view["capture_thoughts"] = self.capture_thoughts
+                    view["require_think_tags"] = self.require_think_tags
                     if getattr(agent, "is_human", False):
                         msg = self._await_human_discussion_message(
                             agent,
@@ -758,6 +762,10 @@ class GameEngine:
             vote_turn_idx += 1
             view = self.state.get_agent_view(agent.name, round_num, log_to_file=False)
             view["skip_discussion"] = self.skip_discussion
+            view["tick"] = vote_turn_idx
+            view["phase"] = "VOTING"
+            view["capture_thoughts"] = self.capture_thoughts
+            view["require_think_tags"] = self.require_think_tags
             candidates = [a.name for a in active_agents if a.name != agent.name] + ["SKIP"]
             if getattr(agent, "is_human", False):
                 vote = self._await_human_vote(
