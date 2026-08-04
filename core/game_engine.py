@@ -13,6 +13,7 @@ import pandas as pd
 
 from core.stopwords import ENGLISH_STOP_WORDS
 from results.context_pruner import ContextPruner
+from core.thought_flags import thought_capture_flags_from_composition
 
 class Observer:
     def __init__(self, model_dir="results/classifiers/models/"):
@@ -117,10 +118,17 @@ class GameEngine:
         # ML Classifier config (will be set during setup)
         self.enabled_classifiers = {}
 
+        # Thought-capture flags (overridden from composition in setup)
+        self.capture_thoughts = True
+        self.require_think_tags = False
+
     def setup(self, composition):
         scen_name = composition.get("name", "Unknown_Scenario")
         human_experiment = bool(composition.get("human_experiment", False))
         human_agent = composition.get("human_agent", "Agent_0" if human_experiment else None)
+        self.capture_thoughts, self.require_think_tags = (
+            thought_capture_flags_from_composition(composition)
+        )
         
         # check if composition has exact agent configuration
         if "agents" in composition:
@@ -241,6 +249,12 @@ class GameEngine:
         self.state = GameState(self.agents, self.logger)
         self.state.world_data["global"]["human_experiment"] = human_experiment
         self.state.world_data["global"]["human_agent"] = human_agent
+        self.state.world_data["global"]["capture_thoughts"] = self.capture_thoughts
+        self.state.world_data["global"]["require_think_tags"] = self.require_think_tags
+        print(
+            f"Thought capture: {'ON' if self.capture_thoughts else 'OFF'} "
+            f"(require_think_tags={self.require_think_tags})"
+        )
         
         # Set up ML classifiers from composition
         if "enabled_classifiers" in composition:

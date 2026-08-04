@@ -330,6 +330,13 @@ def start_game():
         human_agent = "Agent_0" if human_experiment else None
         requested_num_byzantines = None
         randomized_byzantines = set()
+
+        # Thought-capture flags (defaults until Piece 8 exposes UI toggles).
+        # Missing form fields keep the Piece-3 defaults: capture ON, require OFF.
+        capture_raw = request.form.get('capture_thoughts')
+        capture_thoughts = True if capture_raw is None else capture_raw == 'true'
+        require_raw = request.form.get('require_think_tags')
+        require_think_tags = False if require_raw is None else require_raw == 'true'
         
         # === NEW: Get ML Classifier selections ===
         classifier_sgd = request.form.get('classifier_sgd') == 'true'
@@ -395,6 +402,8 @@ def start_game():
             "enabled_classifiers": enabled_classifiers,
             "human_experiment": human_experiment,
             "human_agent": human_agent,
+            "capture_thoughts": capture_thoughts,
+            "require_think_tags": require_think_tags,
         }
         if human_experiment:
             composition["roles_randomized"] = True
@@ -436,6 +445,7 @@ def start_game():
         print(f"Human experiment: {'ON (Agent_0)' if human_experiment else 'OFF'}")
         if human_experiment:
             print(f"Human hidden-role mode: ON (randomized Byzantine count = {requested_num_byzantines})")
+        print(f"Thought capture: {'ON' if capture_thoughts else 'OFF'} (require_think_tags={require_think_tags})")
 
         print("\nAgent lineup:")
         for agent in agents:
