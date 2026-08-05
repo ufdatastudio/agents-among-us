@@ -736,10 +736,8 @@ function updateThoughtsPanel(data) {
             : "";
         const agentState = (data.agents && data.agents[entry.agent]) || {};
         const colorSlug = getColorSlug(agentState.color);
-        const isAlive = agentState.status === "active" || agentState.status === "alive" || !agentState.status;
-        const spriteUrl = isAlive
-            ? (LIVING_SPRITES[colorSlug] || LIVING_SPRITES.red)
-            : (DEAD_SPRITES[colorSlug] || DEAD_SPRITES.red);
+        // Keep living sprite in thoughts panel for identity, even after death.
+        const spriteUrl = LIVING_SPRITES[colorSlug] || LIVING_SPRITES.red;
         const metaWarn = warnBits.length
             ? "<span class=\"thought-card-meta\">" + escapeHtml(warnBits.join(" · ")) + "</span>"
             : "";
@@ -763,25 +761,6 @@ function updateThoughtsPanel(data) {
     if (grew && nearBottom) {
         list.scrollTop = list.scrollHeight;
     }
-}
-
-function fitStatusTableToSidebar() {
-    const wrapper = document.querySelector(".status-table-wrapper");
-    const scaler = document.getElementById("statusTableScaler");
-    const table = scaler && scaler.querySelector(".status-table");
-    if (!wrapper || !scaler || !table) return;
-
-    scaler.style.transform = "none";
-    wrapper.style.height = "";
-
-    const available = wrapper.clientWidth;
-    const natural = table.scrollWidth;
-    if (!available || !natural) return;
-
-    const scale = natural > available ? available / natural : 1;
-    scaler.style.transformOrigin = "top left";
-    scaler.style.transform = "scale(" + scale + ")";
-    wrapper.style.height = Math.ceil(table.offsetHeight * scale) + "px";
 }
 
 function updateKnownFinalInfoFromCurrentView(agents) {
@@ -1378,8 +1357,6 @@ function updateStatusTable(agents) {
         skipRow.appendChild(rightPad);
         tbody.appendChild(skipRow);
     }
-
-    requestAnimationFrame(fitStatusTableToSidebar);
 }
 
 function updateLiveFeed(events, isPaused) {
@@ -2014,7 +1991,6 @@ window.addEventListener("DOMContentLoaded", function() {
                 debugCanvas.height = rect.height;
                 drawDebugOverlay();
             }
-            fitStatusTableToSidebar();
             updateGameState();
         }, 250);
     });
