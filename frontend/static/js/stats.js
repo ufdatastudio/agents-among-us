@@ -507,6 +507,12 @@ function downloadDiscussionCSV() {
   window.location.href = url;
 }
 
+function downloadThoughtsCSV() {
+  if (!currentGameId) return;
+  const url = `/api/stats/export_thoughts?game_id=${encodeURIComponent(currentGameId)}`;
+  window.location.href = url;
+}
+
 // Clear all data (frontend_stats.csv) via backend
 async function clearAllData() {
   if (!confirm("Delete ALL statistics? This cannot be undone!")) return;
@@ -548,6 +554,17 @@ function showTab(tabName, evt) {
   }
 }
 
+// Silent background sync so finished sims appear without clicking Refresh.
+async function silentStatsSync() {
+  try {
+    const res = await fetch("/api/stats/refresh", { method: "POST" });
+    if (!res.ok) return;
+    await loadStats();
+  } catch (err) {
+    console.warn("Silent stats sync failed:", err);
+  }
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   const searchEl = document.getElementById("agent-summary-search");
   const sortEl = document.getElementById("agent-summary-sort");
@@ -558,4 +575,6 @@ window.addEventListener("DOMContentLoaded", () => {
     sortEl.addEventListener("change", updateAgentSummary);
   }
   loadStats();
+  // Keep list current while this page stays open; Refresh remains a manual backup.
+  setInterval(silentStatsSync, 8000);
 });

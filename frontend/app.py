@@ -90,6 +90,136 @@ def read_stats_csv(csv_path=None):
     return out
 
 
+STATS_CSV_GLOB = os.path.join(BACKEND_PATH, "logs", "*", "Game_*_Run0", "stats.csv")
+THOUGHT_FIELDNAMES = [
+    "round",
+    "phase",
+    "tick",
+    "agent",
+    "role",
+    "model",
+    "think",
+    "output",
+    "had_tags",
+    "parse_ok",
+]
+
+
+def _game_id_from_stats_path(csv_file):
+    """logs/<composition>/Game_<id>_Run0/stats.csv -> (<composition>, <id>)."""
+    parts = csv_file.split(os.sep)
+    composition = parts[-3]
+    game_folder = parts[-2]
+    game_id = game_folder.replace("Game_", "").replace("_Run0", "")
+    return composition, game_id
+
+
+def resolve_game_ended_at(stats_csv_path):
+    """Prefer meta.json ended_at written at finalize; fallback to stats.csv mtime."""
+    meta_path = os.path.join(os.path.dirname(stats_csv_path), "meta.json")
+    if os.path.isfile(meta_path):
+        try:
+            with open(meta_path, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+            ended_at = meta.get("ended_at")
+            if ended_at:
+                return str(ended_at)
+        except Exception as e:
+            print(f"WARNING: Could not read {meta_path}: {e}")
+    try:
+        return datetime.fromtimestamp(os.path.getmtime(stats_csv_path)).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+    except Exception:
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def find_game_log_file(game_id, filename):
+    """Locate a per-game log/csv under logs/ using the common path layouts."""
+    possible_paths = [
+        os.path.join(BACKEND_PATH, "logs", f"Game_{game_id}", filename),
+        os.path.join(BACKEND_PATH, "logs", "*", f"Game_{game_id}_Run0", filename),
+        os.path.join(BACKEND_PATH, "logs", "*", f"Game_{game_id}", filename),
+    ]
+    for pattern in possible_paths:
+        matches = glob.glob(pattern)
+        if matches:
+            return matches[0]
+    return None
+
+
+def import_new_games_from_logs():
+    """Scan finished games under logs/ and append any missing rows to frontend_stats.csv.
+
+    Also backfills/corrects the timestamp column for existing games using each
+    run's meta.json ended_at (or stats.csv mtime), so Refresh never stamps 'now'.
+
+    Returns:
+        int: number of newly imported games.
+    """
+    existing_data = read_stats_csv(MASTER_CSV)
+    existing_game_ids = set(r.get("game_id") for r in existing_data if r.get("game_id"))
+
+    csv_files = glob.glob(STATS_CSV_GLOB)
+    ended_at_by_game = {}
+    for csv_file in csv_files:
+        _, game_id = _game_id_from_stats_path(csv_file)
+        ended_at_by_game[game_id] = resolve_game_ended_at(csv_file)
+
+    print("\nScanning for new games...")
+    print(f"Found {len(csv_files)} total stats.csv files")
+    print(f"Already have {len(existing_game_ids)} games in database")
+
+    new_games = 0
+    new_data = []
+
+    for csv_file in csv_files:
+        composition, game_id = _game_id_from_stats_path(csv_file)
+        if game_id in existing_game_ids:
+            continue
+        try:
+            df = pd.read_csv(csv_file)
+            df.insert(0, "composition", composition)
+            df.insert(1, "game_id", game_id)
+            df["timestamp"] = ended_at_by_game.get(
+                game_id, resolve_game_ended_at(csv_file)
+            )
+            new_data.append(df)
+            new_games += 1
+            print(f"  Added: {game_id} ({composition}) @ {df['timestamp'].iloc[0]}")
+        except Exception as e:
+            print(f"ERROR reading {csv_file}: {e}")
+
+    if new_data:
+        combined = pd.concat(new_data, ignore_index=True)
+        if os.path.exists(MASTER_CSV):
+            combined.to_csv(MASTER_CSV, mode="a", header=False, index=False)
+        else:
+            combined.to_csv(MASTER_CSV, mode="w", header=True, index=False)
+        print(f"\nAdded {new_games} new games to database\n")
+    else:
+        print("\nNo new games found\n")
+
+    # Correct timestamps for all known games (new + previously imported).
+    all_rows = read_stats_csv(MASTER_CSV)
+    if all_rows and ended_at_by_game:
+        changed = False
+        for row in all_rows:
+            gid = row.get("game_id")
+            if gid in ended_at_by_game and row.get("timestamp") != ended_at_by_game[gid]:
+                row["timestamp"] = ended_at_by_game[gid]
+                changed = True
+        if changed:
+            keys = list(all_rows[0].keys())
+            with open(MASTER_CSV, "w", encoding="utf-8", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=keys)
+                writer.writeheader()
+                writer.writerows(all_rows)
+            print("Updated simulation end timestamps from game meta/mtime\n")
+
+    return new_games
+
+
 def _json_error(http_status: int, code: str, message: str, details=None):
     payload = {"ok": False, "error": {"code": code, "message": message}}
     if details is not None:
@@ -533,7 +663,23 @@ def start_game():
             except Exception as e:
                 print(f"ERROR streaming output: {e}")
             finally:
-                process.stdout.close()
+                try:
+                    process.stdout.close()
+                except Exception:
+                    pass
+                # Wait for finalize_stats / stats.csv to flush, then auto-import.
+                try:
+                    process.wait(timeout=30)
+                except Exception:
+                    pass
+                try:
+                    import time as _time
+                    _time.sleep(0.75)
+                    added = import_new_games_from_logs()
+                    if added:
+                        print(f"Auto-imported {added} finished game(s) into stats")
+                except Exception as e:
+                    print(f"WARNING: Auto stats import failed: {e}")
         
         output_thread = threading.Thread(target=stream_output, args=(current_game_process,), daemon=True)
         output_thread.start()
@@ -639,61 +785,8 @@ def get_all_stats():
 def refresh_stats():
     """Scan logs/ folder for new games and append to frontend_stats.csv"""
     try:
-        # load existing game IDs to avoid duplicates (use tolerant reader)
-        existing_data = read_stats_csv(MASTER_CSV)
-        existing_game_ids = set(r.get("game_id") for r in existing_data if r.get("game_id"))
-        
-        # find all stats.csv files in logs
-        pattern = os.path.join(BACKEND_PATH, 'logs', '*', 'Game_*_Run0', 'stats.csv')
-        csv_files = glob.glob(pattern)
-        
-        print(f"\nScanning for new games...")
-        print(f"Found {len(csv_files)} total stats.csv files")
-        print(f"Already have {len(existing_game_ids)} games in database")
-        
-        new_games = 0
-        new_data = []
-        
-        for csv_file in csv_files:
-            # extract metadata from path: logs/tiny_test/Game_test_005_Run0/stats.csv
-            parts = csv_file.split(os.sep)
-            composition = parts[-3]
-            game_folder = parts[-2]
-            game_id = game_folder.replace('Game_', '').replace('_Run0', '')
-            
-            if game_id in existing_game_ids:
-                continue
-            
-            try:
-                df = pd.read_csv(csv_file)
-                
-                # add metadata columns
-                df.insert(0, 'composition', composition)
-                df.insert(1, 'game_id', game_id)
-                df['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                
-                new_data.append(df)
-                new_games += 1
-                print(f"  Added: {game_id} ({composition})")
-                
-            except Exception as e:
-                print(f"ERROR reading {csv_file}: {e}")
-        
-        # append new data to master CSV
-        if new_data:
-            combined = pd.concat(new_data, ignore_index=True)
-            
-            if os.path.exists(MASTER_CSV):
-                combined.to_csv(MASTER_CSV, mode='a', header=False, index=False)
-            else:
-                combined.to_csv(MASTER_CSV, mode='w', header=True, index=False)
-            
-            print(f"\nAdded {new_games} new games to database\n")
-        else:
-            print(f"\nNo new games found\n")
-        
+        new_games = import_new_games_from_logs()
         return jsonify({'new_games': new_games})
-        
     except Exception as e:
         print(f"ERROR refreshing stats: {e}")
         import traceback
@@ -754,18 +847,7 @@ def export_discussion():
         if not game_id:
             return "game_id parameter required", 400
         
-        # Find the discussion_chat.csv file for this game
-        possible_paths = [
-            os.path.join(BACKEND_PATH, 'logs', f'Game_{game_id}', 'discussion_chat.csv'),
-            os.path.join(BACKEND_PATH, 'logs', '*', f'Game_{game_id}_Run0', 'discussion_chat.csv')
-        ]
-        
-        discussion_file = None
-        for pattern in possible_paths:
-            matches = glob.glob(pattern)
-            if matches:
-                discussion_file = matches[0]
-                break
+        discussion_file = find_game_log_file(game_id, "discussion_chat.csv")
         
         if not discussion_file or not os.path.exists(discussion_file):
             return f"No discussion data found for game: {game_id}", 404
@@ -775,6 +857,58 @@ def export_discussion():
             mimetype='text/csv',
             as_attachment=True,
             download_name=f'discussion_{game_id}.csv'
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/stats/export_thoughts')
+def export_thoughts():
+    """Download agent thought capture data for a game as CSV."""
+    try:
+        game_id = request.args.get('game_id')
+        if not game_id:
+            return "game_id parameter required", 400
+
+        thought_file = find_game_log_file(game_id, "thought.log")
+        if not thought_file or not os.path.exists(thought_file):
+            return f"No thoughts data found for game: {game_id}", 404
+
+        rows = []
+        with open(thought_file, "r", encoding="utf-8") as f:
+            for line_no, line in enumerate(f, start=1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError as e:
+                    print(f"WARNING: Skipping malformed thought line {line_no}: {e}")
+                    continue
+                rows.append({
+                    "round": rec.get("round", ""),
+                    "phase": rec.get("phase", ""),
+                    "tick": rec.get("tick", ""),
+                    "agent": rec.get("agent", ""),
+                    "role": rec.get("role", ""),
+                    "model": rec.get("model", ""),
+                    "think": rec.get("think", ""),
+                    "output": rec.get("output", ""),
+                    "had_tags": rec.get("had_tags", ""),
+                    "parse_ok": rec.get("parse_ok", ""),
+                })
+
+        temp_file = os.path.join(DATA_DIR, f'temp_thoughts_{game_id}.csv')
+        with open(temp_file, "w", encoding="utf-8", newline="") as out:
+            writer = csv.DictWriter(out, fieldnames=THOUGHT_FIELDNAMES)
+            writer.writeheader()
+            writer.writerows(rows)
+
+        return send_file(
+            temp_file,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=f'thoughts_{game_id}.csv'
         )
     except Exception as e:
         return jsonify({'error': str(e)}), 500

@@ -3,6 +3,8 @@ import os
 import shutil
 import csv
 import json
+from datetime import datetime
+
 
 class LogManager:
     def __init__(self, game_id, agents, scenario_name=None):
@@ -167,6 +169,18 @@ class LogManager:
                     row = data["stats"].copy()
                     row["agent_name"] = agent_name
                     writer.writerow(row)
+
+            # Exact wall-clock end time for the stats UI (not refresh/import time).
+            meta_path = os.path.join(self.base_dir, "meta.json")
+            with open(meta_path, "w", encoding="utf-8") as meta_file:
+                json.dump(
+                    {
+                        "ended_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "game_id": self.game_id,
+                    },
+                    meta_file,
+                    indent=2,
+                )
         except Exception as e:
             print(f"Error exporting CSV stats: {e}")
 

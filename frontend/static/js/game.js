@@ -1827,6 +1827,13 @@ async function updateGameState() {
                 } else if (winMessage.includes("BYZANTINE") || winMessage.includes("Byzantine")) {
                     showWinScreen("byzantine");
                 }
+
+                // Backup: ensure finished game is imported into stats automatically.
+                setTimeout(function () {
+                    fetch("/api/stats/refresh", { method: "POST" }).catch(function (err) {
+                        console.warn("Auto stats refresh failed:", err);
+                    });
+                }, 1200);
             }
         }
         
