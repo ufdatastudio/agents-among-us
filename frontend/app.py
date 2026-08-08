@@ -461,20 +461,14 @@ def start_game():
         requested_num_byzantines = None
         randomized_byzantines = set()
 
-        # Thought-capture flags from config UI (defaults: capture ON, require OFF).
-        # Use getlist + last value so hidden "false" + checked "true" both work.
+        # Thought-capture master switch from config UI.
+        # Require-tag retry is always enabled whenever capture is on.
         capture_vals = request.form.getlist("capture_thoughts")
         if capture_vals:
             capture_thoughts = capture_vals[-1] == "true"
         else:
             capture_thoughts = True
-        require_vals = request.form.getlist("require_think_tags")
-        if require_vals:
-            require_think_tags = require_vals[-1] == "true"
-        else:
-            require_think_tags = False
-        if not capture_thoughts:
-            require_think_tags = False
+        require_think_tags = capture_thoughts
         
         # === NEW: Get ML Classifier selections ===
         classifier_sgd = request.form.get('classifier_sgd') == 'true'

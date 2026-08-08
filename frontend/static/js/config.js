@@ -707,21 +707,6 @@ function setConfirmHumanStatus(message, isError) {
     el.className = "confirm-prompts-status" + (message ? (isError ? " confirm-prompts-status--error" : " confirm-prompts-status--ok") : "");
 }
 
-function updateThoughtCaptureControls() {
-    var captureCb = document.getElementById("capture_thoughts");
-    var requireCb = document.getElementById("require_think_tags");
-    var requireGroup = document.getElementById("requireThinkTagsGroup");
-    if (!captureCb || !requireCb) return;
-    var captureOn = !!captureCb.checked;
-    requireCb.disabled = !captureOn;
-    if (!captureOn) {
-        requireCb.checked = false;
-    }
-    if (requireGroup) {
-        requireGroup.style.opacity = captureOn ? "1" : "0.55";
-    }
-}
-
 /**
  * Validates Byzantine count: at least 1, and at most getMaxByzantines(numAgents).
  * Called on form submit.
@@ -1023,11 +1008,6 @@ window.addEventListener("DOMContentLoaded", function () {
             updateHumanExperimentControls();
             generateAgentTable();
         });
-    }
-    var captureThoughtsCb = document.getElementById("capture_thoughts");
-    if (captureThoughtsCb) {
-        captureThoughtsCb.addEventListener("change", updateThoughtCaptureControls);
-        updateThoughtCaptureControls();
     }
     var numAgentsInput = document.getElementById("num_agents");
     if (numAgentsInput) {

@@ -203,14 +203,7 @@
                         <strong>Capture Thoughts</strong>
                         <input type="checkbox" id="capture_thoughts" name="capture_thoughts" value="true" aria-label="Capture Thoughts">
                     </label>
-                    <small class="form-hint">When enabled, agents write private &lt;think&gt; reasoning before move/talk/vote (saved to thought.log).</small>
-                </div>
-                <div class="form-group" id="requireThinkTagsGroup">
-                    <label style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer;">
-                        <strong>Require Think Tags</strong>
-                        <input type="checkbox" id="require_think_tags" name="require_think_tags" value="true" aria-label="Require Think Tags">
-                    </label>
-                    <small class="form-hint">If a model skips &lt;think&gt; tags, retry once with a reminder. Never halts the game (may cost an extra API call on failures).</small>
+                    <small class="form-hint">When enabled, agents write private &lt;think&gt; reasoning before move/talk/vote (saved to thought.log). If tags are missing, the model is reminded once automatically.</small>
                 </div>
             </div>
 

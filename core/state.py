@@ -29,7 +29,7 @@ class GameState:
                 "human_experiment": False,
                 "human_agent": None,
                 "capture_thoughts": True,
-                "require_think_tags": False,
+                "require_think_tags": True,
                 "awaiting_human_action": False,
                 "awaiting_human_agent": None,
                 "awaiting_human_round": 0,

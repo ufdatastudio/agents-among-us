@@ -9,26 +9,26 @@ class TestThoughtCaptureFlags(unittest.TestCase):
     def test_defaults_when_keys_missing(self):
         capture, require = thought_capture_flags_from_composition({})
         self.assertTrue(capture)
-        self.assertFalse(require)
+        self.assertTrue(require)
 
     def test_defaults_when_composition_not_a_dict(self):
         capture, require = thought_capture_flags_from_composition(None)
         self.assertTrue(capture)
-        self.assertFalse(require)
+        self.assertTrue(require)
 
-    def test_explicit_overrides(self):
+    def test_require_follows_capture_on(self):
+        capture, require = thought_capture_flags_from_composition(
+            {"capture_thoughts": True, "require_think_tags": False}
+        )
+        self.assertTrue(capture)
+        self.assertTrue(require)
+
+    def test_require_off_when_capture_off(self):
         capture, require = thought_capture_flags_from_composition(
             {"capture_thoughts": False, "require_think_tags": True}
         )
         self.assertFalse(capture)
-        self.assertTrue(require)
-
-    def test_partial_override_keeps_other_default(self):
-        capture, require = thought_capture_flags_from_composition(
-            {"require_think_tags": True}
-        )
-        self.assertTrue(capture)
-        self.assertTrue(require)
+        self.assertFalse(require)
 
 
 if __name__ == "__main__":

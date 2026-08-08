@@ -9,10 +9,11 @@ def thought_capture_flags_from_composition(composition):
 
     Defaults:
       - capture_thoughts: True   (master switch for prompt/parse/log)
-      - require_think_tags: False  (strict mode; retry wiring comes later)
+      - require_think_tags: mirrors capture_thoughts (retry once on missing tags)
     """
     if not isinstance(composition, dict):
         composition = {}
     capture_thoughts = bool(composition.get("capture_thoughts", True))
-    require_think_tags = bool(composition.get("require_think_tags", False))
+    # Strict tag retry is always on whenever capture is on (no separate toggle).
+    require_think_tags = capture_thoughts
     return capture_thoughts, require_think_tags
