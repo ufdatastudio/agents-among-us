@@ -395,6 +395,8 @@ function toggleDebug() {
     debugOverlayVisible = !debugOverlayVisible;
     if (debugCanvas) debugCanvas.style.display = debugOverlayVisible ? "block" : "none";
     drawDebugOverlay();
+    // Human experiments: revealing/hiding private thoughts follows debug mode.
+    updateThoughtsPanel(null);
     console.log(debugOverlayVisible ? "Debug ON" : "Debug OFF");
 }
 
@@ -520,6 +522,7 @@ let humanVoteContext = {
 };
 let latestGlobalState = {};
 let knownFinalInfoAgents = new Set();
+let pendingKillRevealAgents = new Set();
 let knownFinalInfoGameId = "";
 let thoughtsFilterAgent = "ALL";
 let thoughtsFilterPhase = "ALL";
@@ -693,6 +696,12 @@ function updateThoughtsPanel(data) {
         return;
     }
 
+    const isHumanExperiment = !!(data.global && data.global.human_experiment);
+    if (isHumanExperiment && !isDebugRevealEnabled()) {
+        list.innerHTML = "<div class=\"thoughts-disabled\">During human experiments, agent thoughts are unavailable. Press <strong>D</strong> to open debug and reveal them.</div>";
+        return;
+    }
+
     const agentFilter = thoughtsFilterAgent || "ALL";
     const phaseFilter = (thoughtsFilterPhase || "ALL").toUpperCase();
     const entries = entriesAll
@@ -763,26 +772,40 @@ function updateThoughtsPanel(data) {
     }
 }
 
+function flushPendingKillReveals() {
+    pendingKillRevealAgents.forEach(function (agentKey) {
+        knownFinalInfoAgents.add(agentKey);
+    });
+    pendingKillRevealAgents.clear();
+}
+
 function updateKnownFinalInfoFromCurrentView(agents) {
     if (!agents) return;
     const gameId = String((latestGlobalState && latestGlobalState.game_id) || "");
     if (gameId && knownFinalInfoGameId !== gameId) {
         knownFinalInfoGameId = gameId;
         knownFinalInfoAgents = new Set();
+        pendingKillRevealAgents = new Set();
     }
-    const phase = String((latestGlobalState && latestGlobalState.current_phase) || "").toUpperCase();
-    const visibleRooms = computeHumanVisibleRooms(agents);
+    // Human-mode reveal rules:
+    // - Ejected: reveal as soon as vote ejects them (end of that meeting).
+    // - Eliminated/killed: keep masked until AFTER the discussion for that body
+    //   (flushed on DISCUSSION -> VOTING/MOVEMENT, or on VOTING entry if discussion skipped).
+    if (!latestGlobalState || !latestGlobalState.human_experiment) {
+        return;
+    }
     Object.keys(agents).forEach(function (agentKey) {
         const a = agents[agentKey];
         if (!a) return;
-        const deadLike = (a.status === "eliminated" || a.status === "ejected");
-        if (!deadLike) return;
-        if (phase === "DISCUSSION") {
+        if (a.status === "ejected") {
             knownFinalInfoAgents.add(agentKey);
+            pendingKillRevealAgents.delete(agentKey);
             return;
         }
-        if (isVisibleToHumanMask(a, visibleRooms)) {
-            knownFinalInfoAgents.add(agentKey);
+        if (a.status === "eliminated") {
+            if (!knownFinalInfoAgents.has(agentKey)) {
+                pendingKillRevealAgents.add(agentKey);
+            }
         }
     });
 }
@@ -792,6 +815,8 @@ function shouldRevealFinalInfoNow(agentKey, agent) {
     const isDeadLike = (agent.status === "eliminated" || agent.status === "ejected");
     if (!isDeadLike) return false;
     if (isDebugRevealEnabled()) return true;
+    // Non-human experiments: always show final dead/ejected info.
+    if (!latestGlobalState || !latestGlobalState.human_experiment) return true;
     return knownFinalInfoAgents.has(agentKey);
 }
 
@@ -1078,13 +1103,12 @@ function updateStatusTable(agents) {
     const tbody = document.getElementById("statusTableBody");
     if (!tbody) return;
     const statusTable = document.querySelector(".status-table");
-    const isVotingWait = !!humanVoteContext.active;
     const visibleRooms = computeHumanVisibleRooms(agents);
     updateKnownFinalInfoFromCurrentView(agents);
     const voteHeader = document.getElementById("humanVoteHeader");
     if (voteHeader) voteHeader.style.display = "none";
     if (statusTable) {
-        statusTable.classList.toggle("status-table--voting-controls", isVotingWait);
+        statusTable.classList.remove("status-table--voting-controls");
     }
     
     const cachedScores = {};
@@ -1221,28 +1245,6 @@ function updateStatusTable(agents) {
         votesCount.className = "votes-count";
         votesCount.textContent = String(votesValue || 0);
         votesWrap.appendChild(votesCount);
-        if (isVotingWait) {
-            const isSelf = agentKey === humanVoteContext.agentName;
-            const isActive = (agent.status === "active" || agent.status === "alive");
-            const canVoteForRow = humanVoteContext.candidates.indexOf(agentKey) !== -1;
-            if (!isSelf && isActive && canVoteForRow) {
-                const voteBtn = document.createElement("button");
-                voteBtn.type = "button";
-                voteBtn.className = "human-vote-btn";
-                if (humanSelectedVoteTarget === agentKey) {
-                    voteBtn.classList.add("human-vote-btn-selected");
-                    voteBtn.textContent = "Selected";
-                } else {
-                    voteBtn.textContent = "Vote";
-                }
-                voteBtn.disabled = humanVotePending;
-                voteBtn.addEventListener("click", function () {
-                    humanSelectedVoteTarget = agentKey;
-                    updateStatusTable(agents);
-                });
-                votesWrap.appendChild(voteBtn);
-            }
-        }
         votesCell.appendChild(votesWrap);
         row.appendChild(votesCell);
         
@@ -1303,60 +1305,6 @@ function updateStatusTable(agents) {
         tbody.appendChild(row);
     });
 
-    if (isVotingWait && humanVoteContext.candidates.indexOf("SKIP") !== -1) {
-        const totalCols = 7 + (enabledClassifiers.sgd ? 1 : 0) + (enabledClassifiers.svm ? 1 : 0) + (enabledClassifiers.lr ? 1 : 0);
-        const skipRow = document.createElement("tr");
-        skipRow.className = "vote-skip-row";
-
-        const leftPad = document.createElement("td");
-        leftPad.colSpan = 5;
-        leftPad.textContent = "";
-        skipRow.appendChild(leftPad);
-
-        const skipCell = document.createElement("td");
-        const actionsWrap = document.createElement("div");
-        actionsWrap.className = "human-vote-actions-row";
-        const skipBtn = document.createElement("button");
-        skipBtn.type = "button";
-        skipBtn.className = "human-vote-skip-btn";
-        skipBtn.textContent = (humanSelectedVoteTarget === "SKIP") ? "Skip selected" : "Skip";
-        skipBtn.disabled = humanVotePending;
-        skipBtn.addEventListener("click", function () {
-            humanSelectedVoteTarget = "SKIP";
-            updateStatusTable(agents);
-        });
-        actionsWrap.appendChild(skipBtn);
-        const confirmBtn = document.createElement("button");
-        confirmBtn.type = "button";
-        confirmBtn.className = "human-vote-confirm-btn";
-        confirmBtn.textContent = humanVotePending ? "Submitting..." : "Confirm";
-        confirmBtn.disabled = humanVotePending || !humanSelectedVoteTarget;
-        confirmBtn.addEventListener("click", async function () {
-            if (!humanSelectedVoteTarget) return;
-            confirmBtn.classList.add("is-submitting");
-            confirmBtn.textContent = "Submitting...";
-            confirmBtn.disabled = true;
-            await submitHumanVote({
-                game_id: humanVoteContext.gameId,
-                agent_name: humanVoteContext.agentName,
-                phase: humanVoteContext.phase,
-                round: humanVoteContext.round,
-                tick: humanVoteContext.tick,
-                action: "vote",
-                target: humanSelectedVoteTarget
-            });
-            updateStatusTable(agents);
-        });
-        actionsWrap.appendChild(confirmBtn);
-        skipCell.appendChild(actionsWrap);
-        skipRow.appendChild(skipCell);
-
-        const rightPad = document.createElement("td");
-        rightPad.colSpan = Math.max(1, totalCols - 6);
-        rightPad.textContent = "";
-        skipRow.appendChild(rightPad);
-        tbody.appendChild(skipRow);
-    }
 }
 
 function updateLiveFeed(events, isPaused) {
@@ -1486,10 +1434,10 @@ async function submitHumanVote(payload) {
         const data = await res.json();
         if (!res.ok || !data.ok) {
             const msg = (data && data.error && data.error.message) ? data.error.message : "Vote failed";
-            setHumanActionStatus("Vote rejected: " + msg, true);
+            setHumanVoteStatus("Vote rejected: " + msg, true);
             return false;
         }
-        setHumanActionStatus("Vote submitted. Waiting for game update...", false);
+        setHumanVoteStatus("Vote submitted. Waiting for game update...", false);
         return true;
     } catch (e) {
         setHumanActionStatus("Network error submitting vote.", true);
@@ -1681,11 +1629,11 @@ function updateHumanActionPanel(data) {
 }
 
 function updateHumanDiscussionPanel(data) {
-    const panel = document.getElementById("humanDiscussionPanel");
+    const compose = document.getElementById("discussionHumanCompose");
     const input = document.getElementById("humanDiscussionInput");
     const confirmBtn = document.getElementById("humanDiscussionConfirmBtn");
     const skipBtn = document.getElementById("humanDiscussionSkipBtn");
-    if (!panel || !input || !confirmBtn || !skipBtn) return;
+    if (!compose || !input || !confirmBtn || !skipBtn) return;
 
     const g = (data && data.global) ? data.global : {};
     const awaiting = !!g.awaiting_human_action;
@@ -1699,7 +1647,7 @@ function updateHumanDiscussionPanel(data) {
 
     const isDiscussionWait = awaiting && phase === "DISCUSSION" && mode === "discussion" && !!agentName && !!tick;
     if (!isDiscussionWait) {
-        panel.style.display = "none";
+        compose.style.display = "none";
         humanDiscussionSubmitKey = "";
         humanDiscussionDraft = "";
         input.value = "";
@@ -1707,13 +1655,17 @@ function updateHumanDiscussionPanel(data) {
         return;
     }
 
-    panel.style.display = "block";
+    openDiscussionChat();
+    compose.style.display = "flex";
     const key = [gameId, agentName, phase, round, tick].join("|");
     if (humanDiscussionSubmitKey !== key) {
         humanDiscussionSubmitKey = key;
         humanDiscussionDraft = "";
         input.value = "";
-        setHumanDiscussionStatus("Your turn to speak. Type a message and press Confirm.", false);
+        setHumanDiscussionStatus("Your turn to speak. Type below and press Confirm.", false);
+        setTimeout(function () {
+            try { input.focus(); } catch (e) {}
+        }, 0);
     } else if (input.value !== humanDiscussionDraft) {
         input.value = humanDiscussionDraft;
     }
@@ -1755,6 +1707,79 @@ function updateHumanDiscussionPanel(data) {
     };
 
     updateHumanDiscussionConfirmState();
+}
+
+function setHumanVoteStatus(text, isError) {
+    const el = document.getElementById("humanVoteStatus");
+    if (!el) return;
+    el.textContent = text || "";
+    el.classList.toggle("is-error", !!isError);
+}
+
+function updateHumanVotePopup(data) {
+    const popup = document.getElementById("humanVotePopup");
+    const list = document.getElementById("humanVoteCandidates");
+    const skipBtn = document.getElementById("humanVoteSkipBtn");
+    const confirmBtn = document.getElementById("humanVoteConfirmBtn");
+    if (!popup || !list || !skipBtn || !confirmBtn) return;
+
+    if (!humanVoteContext.active) {
+        popup.style.display = "none";
+        list.innerHTML = "";
+        confirmBtn.disabled = true;
+        return;
+    }
+
+    popup.style.display = "block";
+    const candidates = (humanVoteContext.candidates || []).slice();
+    const agentCandidates = candidates.filter(function (c) { return c !== "SKIP"; });
+    const allowSkip = candidates.indexOf("SKIP") !== -1;
+
+    skipBtn.style.display = allowSkip ? "inline-block" : "none";
+    skipBtn.classList.toggle("is-selected", humanSelectedVoteTarget === "SKIP");
+    skipBtn.textContent = humanSelectedVoteTarget === "SKIP" ? "Skip selected" : "Skip";
+    skipBtn.disabled = humanVotePending;
+    skipBtn.onclick = function () {
+        humanSelectedVoteTarget = "SKIP";
+        updateHumanVotePopup(data);
+    };
+
+    list.innerHTML = "";
+    agentCandidates.forEach(function (name) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "human-vote-candidate-btn";
+        if (humanSelectedVoteTarget === name) btn.classList.add("is-selected");
+        btn.textContent = name;
+        btn.disabled = humanVotePending;
+        btn.addEventListener("click", function () {
+            humanSelectedVoteTarget = name;
+            updateHumanVotePopup(data);
+        });
+        list.appendChild(btn);
+    });
+
+    confirmBtn.disabled = humanVotePending || !humanSelectedVoteTarget;
+    confirmBtn.textContent = humanVotePending ? "Submitting..." : "Confirm";
+    confirmBtn.onclick = async function () {
+        if (!humanSelectedVoteTarget || humanVotePending) return;
+        confirmBtn.classList.add("is-submitting");
+        confirmBtn.textContent = "Submitting...";
+        confirmBtn.disabled = true;
+        const ok = await submitHumanVote({
+            game_id: humanVoteContext.gameId,
+            agent_name: humanVoteContext.agentName,
+            phase: humanVoteContext.phase,
+            round: humanVoteContext.round,
+            tick: humanVoteContext.tick,
+            action: "vote",
+            target: humanSelectedVoteTarget
+        });
+        if (ok) {
+            setHumanVoteStatus("Vote submitted. Waiting for game update...", false);
+        }
+        updateHumanVotePopup(data);
+    };
 }
 
 async function updateGameState() {
@@ -1880,7 +1905,7 @@ async function updateGameState() {
             if (humanVoteSubmitKey !== voteKey) {
                 humanVoteSubmitKey = voteKey;
                 humanSelectedVoteTarget = "";
-                setHumanActionStatus("Voting open. Click a red Vote button in the table.", false);
+                setHumanVoteStatus("Voting open. Choose a candidate, then Confirm.", false);
             }
         }
 
@@ -1895,6 +1920,7 @@ async function updateGameState() {
         updateThoughtsPanel(data);
         updateHumanActionPanel(data);
         updateHumanDiscussionPanel(data);
+        updateHumanVotePopup(data);
         
         if (data) {
             const currentPhase = (data.global && data.global.current_phase) || "";
@@ -1913,6 +1939,17 @@ async function updateGameState() {
             if (currentPhase && currentPhase !== lastPhase) {
                 if (lastPhase !== "") {
                     tickEvents.push({ msg: "Phase: " + currentPhase, type: "tick" });
+                }
+
+                const prevPhase = String(lastPhase || "").toUpperCase();
+                const nextPhase = String(currentPhase || "").toUpperCase();
+
+                // After the discussion that followed a kill (or if discussion was skipped
+                // and we enter voting), reveal killed agents' final info.
+                if (prevPhase === "DISCUSSION" && nextPhase !== "DISCUSSION") {
+                    flushPendingKillReveals();
+                } else if (nextPhase === "VOTING" && prevPhase !== "DISCUSSION" && prevPhase !== "VOTING") {
+                    flushPendingKillReveals();
                 }
                 
                 if (currentPhase === "DISCUSSION") {
@@ -1975,12 +2012,16 @@ window.addEventListener("DOMContentLoaded", function() {
     }
     document.addEventListener("keydown", (e) => {
         const activeEl = document.activeElement;
+        const tag = activeEl && activeEl.tagName ? activeEl.tagName.toUpperCase() : "";
         const isTypingTarget = !!(
             activeEl &&
             (
-                activeEl.tagName === "INPUT" ||
-                activeEl.tagName === "TEXTAREA" ||
-                activeEl.isContentEditable
+                tag === "INPUT" ||
+                tag === "TEXTAREA" ||
+                tag === "SELECT" ||
+                activeEl.isContentEditable ||
+                (typeof activeEl.closest === "function" &&
+                    activeEl.closest("#humanDiscussionInput, #discussionHumanCompose, #humanVotePopup, textarea, input"))
             )
         );
         if (isTypingTarget) return;

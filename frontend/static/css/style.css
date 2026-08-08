@@ -935,6 +935,7 @@ select[name*="_color"] {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
 }
 
 .map-wrapper {
@@ -1215,19 +1216,18 @@ select[name*="_color"] {
     border-color: var(--text-light);
 }
 
-/* Human movement action panel */
+/* Human movement action panel — bottom-right of the map panel */
 .human-action-panel {
-    position: fixed;
-    right: 16px;
-    bottom: 236px; /* keep above bottom agent status bar (~220px) */
-    width: 320px;
-    max-width: calc(100vw - 24px);
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    width: min(320px, calc(100% - 24px));
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     padding: 0.7rem;
-    z-index: 5000;
+    z-index: 40;
 }
 
 .human-action-header {
@@ -1297,30 +1297,43 @@ select[name*="_color"] {
 }
 
 .human-discussion-panel {
-    position: fixed;
-    right: 16px;
-    bottom: 24px;
-    width: 320px;
-    max-width: calc(100vw - 24px);
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 0.7rem;
-    z-index: 5000;
+    display: none !important;
 }
 
+.discussion-human-compose {
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    padding: 0.55rem 0.65rem 0.65rem;
+    background: var(--bg-card);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.discussion-human-compose .human-discussion-input,
 .human-discussion-input {
     width: 100%;
-    min-height: 92px;
     resize: vertical;
-    margin-top: 0.35rem;
-    padding: 0.45rem;
-    border-radius: 8px;
+    min-height: 2.6rem;
+    max-height: 7rem;
+    font-family: var(--font);
+    font-size: 0.85rem;
+    padding: 0.4rem 0.5rem;
     border: 1px solid var(--border);
-    background: #fff;
-    font: inherit;
-    font-size: 0.84rem;
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    margin-top: 0;
+}
+
+.discussion-human-compose-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+}
+
+.discussion-human-compose-actions .human-action-confirm-btn {
+    margin-top: 0;
 }
 
 .human-discussion-actions {
@@ -1328,6 +1341,70 @@ select[name*="_color"] {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.45rem;
+}
+
+.human-vote-popup {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(380px, calc(100vw - 24px));
+    max-height: min(70vh, 520px);
+    overflow: auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 0.85rem;
+    z-index: 10000;
+}
+
+.human-vote-popup-header {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+}
+
+.human-vote-candidates {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin: 0.55rem 0 0.7rem;
+}
+
+.human-vote-candidate-btn {
+    width: 100%;
+    text-align: left;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.86rem;
+    font-family: var(--font);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+}
+
+.human-vote-candidate-btn:hover {
+    background: var(--bg-alt);
+}
+
+.human-vote-candidate-btn.is-selected {
+    background: #fde2e2;
+    border-color: #f0b4b4;
+    color: #7d2a2a;
+    font-weight: 600;
+}
+
+.human-vote-popup-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+}
+
+.human-vote-popup-actions .human-vote-confirm-btn,
+.human-vote-popup-actions .human-vote-skip-btn {
+    width: 100%;
 }
 
 /* =============================================================================
@@ -1861,8 +1938,8 @@ hr {
 
     .human-action-panel {
         right: 8px;
-        left: 8px;
-        width: auto;
-        bottom: 232px;
+        left: auto;
+        width: min(300px, calc(100% - 16px));
+        bottom: 8px;
     }
 }

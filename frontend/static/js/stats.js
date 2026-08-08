@@ -58,6 +58,7 @@ function abbreviateAgentName(agentName) {
 // Abbreviate model name for display
 function abbreviateModelName(fullName) {
   if (!fullName) return "";
+  if (String(fullName).toLowerCase() === "human") return "Human";
   if (fullName.indexOf(":") !== -1) {
     var parts = fullName.split(":");
     var provider = parts[0];
@@ -401,7 +402,8 @@ function showGameDetails(gameId) {
     .forEach((row) => {
       const tr = document.createElement("tr");
       const agentNum = Number(abbreviateAgentName(row.agent_name));
-      const displayIndex = Number.isNaN(agentNum) ? row.agent_name : agentNum + 1;
+      // Match in-game agent IDs (Agent_0 -> 0), not 1-based spreadsheet indexing.
+      const displayIndex = Number.isNaN(agentNum) ? row.agent_name : agentNum;
 
       tr.appendChild(cell(displayIndex));
       tr.appendChild(cell(abbreviateModelName(row.model_name)));

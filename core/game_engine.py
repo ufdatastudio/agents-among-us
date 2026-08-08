@@ -166,6 +166,8 @@ class GameEngine:
                         skip_discussion=self.skip_discussion,
                     )
                     setattr(agent_obj, "is_human", is_human)
+                    if is_human:
+                        agent_obj.model_name = "Human"
                     self.agents.append(agent_obj)
                 else:
                     agent_obj = HonestAgent(
@@ -178,6 +180,8 @@ class GameEngine:
                         skip_discussion=self.skip_discussion,
                     )
                     setattr(agent_obj, "is_human", is_human)
+                    if is_human:
+                        agent_obj.model_name = "Human"
                     self.agents.append(agent_obj)
             
             print(f"Created {len(self.agents)} agents with EXACT configuration from frontend")
@@ -211,6 +215,8 @@ class GameEngine:
                     context_window=cw,
                 )
                 setattr(agent_obj, "is_human", bool(human_experiment and name == human_agent))
+                if getattr(agent_obj, "is_human", False):
+                    agent_obj.model_name = "Human"
                 self.agents.append(agent_obj)
 
             start_index = n_byz
@@ -236,6 +242,8 @@ class GameEngine:
                     context_window=cw,
                 )
                 setattr(agent_obj, "is_human", bool(human_experiment and name == human_agent))
+                if getattr(agent_obj, "is_human", False):
+                    agent_obj.model_name = "Human"
                 self.agents.append(agent_obj)
 
         # random.shuffle(self.agents)  # commented out bc we don't want to shuffle agents
@@ -876,6 +884,9 @@ class GameEngine:
 
         for agent_name, data in self.state.world_data["agents"].items():
             stats = data["stats"]
+
+            if data.get("is_human"):
+                stats["model_name"] = "Human"
 
             if data["role"] == winning_team_role:
                 stats["won_game"] = 1

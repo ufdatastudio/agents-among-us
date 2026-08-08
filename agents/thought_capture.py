@@ -68,6 +68,10 @@ def generate_with_optional_thoughts(
     Returns:
         public_output (str): text for action matching / public logging.
     """
+    # Human players never run through the LLM / thought-capture path.
+    if getattr(agent, "is_human", False):
+        return ""
+
     world_view = world_view or {}
     max_tokens = tokens_for_turn(agent, world_view)
     raw = agent.llm.generate(
