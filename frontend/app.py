@@ -4,6 +4,7 @@ Complete backend integration with all API routes + ML Classifiers
 """
 
 import csv
+import copy
 import json
 import os
 import random
@@ -733,6 +734,12 @@ def get_game_state():
         
         with open(LIVE_STATE_FILE, 'r') as f:
             state = json.load(f)
+
+        # Human experiments: never send private CoT to the browser unless the
+        # researcher explicitly enables reveal (debug overlay / ?reveal_thoughts=1).
+        # Thoughts remain on disk in live_state.json / thought.log for analysis.
+        if _should_redact_thoughts_for_client(state):
+            state = _redact_thoughts_from_client_state(state)
         
         return jsonify(state)
         
@@ -746,6 +753,23 @@ def get_game_state():
             'status': 'error',
             'message': str(e)
         }), 500
+
+
+def _should_redact_thoughts_for_client(state):
+    global_state = (state or {}).get("global") or {}
+    if not global_state.get("human_experiment"):
+        return False
+    reveal = str(request.args.get("reveal_thoughts", "")).strip().lower()
+    return reveal not in ("1", "true", "yes")
+
+
+def _redact_thoughts_from_client_state(state):
+    redacted = copy.deepcopy(state)
+    redacted["thought_history"] = []
+    redacted["latest_thoughts"] = {}
+    global_state = redacted.setdefault("global", {})
+    global_state["thoughts_redacted"] = True
+    return redacted
 
 
 @app.route('/api/game_status')

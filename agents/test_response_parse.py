@@ -2,7 +2,7 @@
 
 import unittest
 
-from agents.response_parse import split_think_and_output
+from agents.response_parse import split_think_and_output, strip_think_markup
 
 
 class TestSplitThinkAndOutput(unittest.TestCase):
@@ -59,28 +59,38 @@ class TestSplitThinkAndOutput(unittest.TestCase):
         self.assertTrue(meta["parse_ok"])
         self.assertFalse(meta["rescued_from_think"])
 
-    def test_multiple_think_blocks_honors_first_only(self):
+    def test_multiple_think_blocks_strips_residual_from_public(self):
         raw = (
             "<think>first reasoning</think>\n"
             "SKIP\n"
-            "<think>second should be public text</think>"
+            "<think>second should NOT be public</think>"
         )
         think, public, meta = split_think_and_output(raw)
         self.assertEqual(think, "first reasoning")
-        self.assertIn("SKIP", public)
-        self.assertIn("<think>second should be public text</think>", public)
+        self.assertEqual(public, "SKIP")
+        self.assertNotIn("<think>", public)
+        self.assertNotIn("second should NOT be public", public)
         self.assertTrue(meta["had_tags"])
         self.assertTrue(meta["parse_ok"])
         self.assertFalse(meta["rescued_from_think"])
 
-    def test_unclosed_think_tag(self):
-        raw = "<think>\nI never closed this\nCafeteria"
+    def test_unclosed_think_keeps_reasoning_private(self):
+        raw = "<think>\nI never closed this\nsecret plan\nCafeteria"
         think, public, meta = split_think_and_output(raw)
-        self.assertEqual(think, "")
-        self.assertEqual(public, raw.strip())
+        self.assertIn("secret plan", think)
+        self.assertNotIn("secret plan", public)
+        self.assertNotIn("<think>", public)
+        self.assertEqual(public, "")
         self.assertTrue(meta["had_tags"])
         self.assertFalse(meta["parse_ok"])
         self.assertFalse(meta["rescued_from_think"])
+
+    def test_strip_think_markup_removes_blocks_and_unclosed(self):
+        cleaned = strip_think_markup("hello <think>private</think> world")
+        self.assertEqual(" ".join(cleaned.split()), "hello world")
+        self.assertEqual(strip_think_markup("<think>all private forever"), "")
+        self.assertEqual(strip_think_markup("public only"), "public only")
+        self.assertNotIn("<think>", strip_think_markup("a</think>b"))
 
     def test_none_input_does_not_raise(self):
         think, public, meta = split_think_and_output(None)  # type: ignore[arg-type]

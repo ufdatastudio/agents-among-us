@@ -15,6 +15,22 @@ _THINK_BLOCK_RE = re.compile(
 )
 _OPEN_THINK_RE = re.compile(r"<think>", re.IGNORECASE)
 _CLOSE_THINK_RE = re.compile(r"</think>", re.IGNORECASE)
+# Unclosed open tag through end-of-string (defense for public channels).
+_UNCLOSED_THINK_RE = re.compile(r"<think>.*\Z", re.DOTALL | re.IGNORECASE)
+
+
+def strip_think_markup(text: str) -> str:
+    """Remove all <think> markup from text destined for public channels.
+
+    Strips well-formed blocks, unclosed open-tag tails, and stray closers.
+    Never raises.
+    """
+    if not text:
+        return ""
+    out = _THINK_BLOCK_RE.sub("", text)
+    out = _UNCLOSED_THINK_RE.sub("", out)
+    out = _CLOSE_THINK_RE.sub("", out)
+    return out.strip()
 
 
 def split_think_and_output(raw: str) -> tuple[str, str, dict[str, Any]]:
@@ -27,7 +43,8 @@ def split_think_and_output(raw: str) -> tuple[str, str, dict[str, Any]]:
           - rescued_from_think (bool): public answer was pulled out of the think block
             because nothing followed the closing tag
 
-    Never raises on malformed input.
+    Never raises on malformed input. Public output is always sanitized so residual
+    think tags cannot leak into discussion / action / vote channels.
     """
     meta: dict[str, Any] = {
         "had_tags": False,
@@ -43,22 +60,27 @@ def split_think_and_output(raw: str) -> tuple[str, str, dict[str, Any]]:
 
     match = _THINK_BLOCK_RE.search(text)
     if match is None:
-        # Unclosed <think> with no closing tag: flag and keep full text as public
-        # so downstream action matching still has something to work with.
-        if _OPEN_THINK_RE.search(text) and not _CLOSE_THINK_RE.search(text):
+        # Unclosed <think>: keep content after the open tag private; do not
+        # expose the reasoning blob as public_output.
+        open_m = _OPEN_THINK_RE.search(text)
+        if open_m and not _CLOSE_THINK_RE.search(text):
             meta["had_tags"] = True
             meta["parse_ok"] = False
-            return "", text.strip(), meta
+            before = text[: open_m.start()].strip()
+            think = text[open_m.end() :].strip()
+            public = strip_think_markup(before)
+            return think, public, meta
 
         # No tags at all: entire string is the public output.
         meta["had_tags"] = False
         meta["parse_ok"] = True
-        return "", text.strip(), meta
+        return "", strip_think_markup(text), meta
 
-    # Honor only the first think block; everything after its close is public.
+    # Honor only the first think block; everything after its close is public
+    # (then scrub any further think markup from that public slice).
     meta["had_tags"] = True
     think = match.group(1).strip()
-    public = text[match.end() :].strip()
+    public = strip_think_markup(text[match.end() :])
 
     if public:
         meta["parse_ok"] = True
@@ -72,7 +94,7 @@ def split_think_and_output(raw: str) -> tuple[str, str, dict[str, Any]]:
             think_body, public_line = rescued
             meta["parse_ok"] = True
             meta["rescued_from_think"] = True
-            return think_body, public_line, meta
+            return think_body, strip_think_markup(public_line), meta
 
     meta["parse_ok"] = False
     return think, "", meta

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agents.response_parse import split_think_and_output
+from agents.response_parse import split_think_and_output, strip_think_markup
 
 # Increased due to agent thoughts implementation (original value = 160).
 MAX_TOKENS_WITH_THOUGHTS = 384
@@ -73,18 +73,22 @@ def generate_with_optional_thoughts(
         return ""
 
     world_view = world_view or {}
+    capturing = capture_enabled(agent, world_view)
     max_tokens = tokens_for_turn(agent, world_view)
+    # Preserve tags only when we will parse them; otherwise let LLM postprocess
+    # strip, then scrub again so tagged text never becomes a public action/line.
     raw = agent.llm.generate(
         agent.model_name,
         system_prompt,
         prompt,
         temperature=temperature,
         max_tokens=max_tokens,
-        preserve_think_tags=True,
+        preserve_think_tags=capturing,
     )
 
-    if not capture_enabled(agent, world_view):
-        return raw.strip() if isinstance(raw, str) else raw
+    if not capturing:
+        text = raw.strip() if isinstance(raw, str) else str(raw or "")
+        return strip_think_markup(text)
 
     think, public, meta = split_think_and_output(raw)
 
@@ -99,6 +103,9 @@ def generate_with_optional_thoughts(
             preserve_think_tags=True,
         )
         think, public, meta = split_think_and_output(raw)
+
+    # Defense-in-depth: public channels must never carry residual think markup.
+    public = strip_think_markup(public)
 
     logger = getattr(agent, "logger", None)
     if logger is not None:

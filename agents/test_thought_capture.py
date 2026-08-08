@@ -144,7 +144,49 @@ class TestThoughtCaptureHelper(unittest.TestCase):
         )
         self.assertEqual(public, "Cafeteria")
         self.assertEqual(llm.calls[0]["max_tokens"], MAX_TOKENS_DEFAULT)
+        self.assertFalse(llm.calls[0]["preserve_think_tags"])
         self.assertEqual(os.path.getsize(self.logger.paths["thought"]), 0)
+
+    def test_capture_off_strips_accidental_think_tags(self):
+        secret = "DO_NOT_LEAK_THIS_REASONING"
+        llm = _FakeLLM([f"<think>\n{secret}\n</think>\nCafeteria"])
+        agent = self._agent(llm, capture=False)
+        public = generate_with_optional_thoughts(
+            agent,
+            "sys",
+            "move prompt",
+            temperature=0.1,
+            phase="MOVEMENT",
+            round_num=1,
+            tick=1,
+            world_view={"capture_thoughts": False},
+        )
+        self.assertEqual(public, "Cafeteria")
+        self.assertNotIn(secret, public)
+        self.assertNotIn("<think>", public)
+        self.assertEqual(os.path.getsize(self.logger.paths["thought"]), 0)
+
+    def test_unclosed_think_does_not_leak_into_public(self):
+        secret = "UNCLOSED_PRIVATE_PLAN"
+        llm = _FakeLLM([f"<think>\n{secret}\nmaybe Cafeteria"])
+        agent = self._agent(llm, capture=True)
+        public = generate_with_optional_thoughts(
+            agent,
+            "sys",
+            "move prompt",
+            temperature=0.1,
+            phase="DISCUSSION",
+            round_num=1,
+            tick=1,
+            world_view={"capture_thoughts": True},
+        )
+        self.assertNotIn(secret, public)
+        self.assertNotIn("<think>", public)
+
+        with open(self.logger.paths["thought"], encoding="utf-8") as f:
+            row = json.loads(f.readline())
+        self.assertIn(secret, row["think"])
+        self.assertFalse(row["parse_ok"])
 
     def test_discussion_public_never_leaks_into_discussion_log(self):
         """Observer / discussion.log must only ever see public_output."""

@@ -1784,7 +1784,11 @@ function updateHumanVotePopup(data) {
 
 async function updateGameState() {
     try {
-        const response = await fetch("/api/game_state");
+        // Human experiments redact thoughts server-side unless debug reveal is on.
+        const revealQs = (typeof debugOverlayVisible !== "undefined" && debugOverlayVisible)
+            ? "?reveal_thoughts=1"
+            : "";
+        const response = await fetch("/api/game_state" + revealQs);
         if (!response.ok) return;
         const data = await response.json();
         
