@@ -398,16 +398,34 @@ const LOCKED_CONTEXT = {
 };
 
 /**
+ * Parses agent count from the input without alerts or rewriting the field.
+ * Use while the user is still typing.
+ * @returns {number|null} Valid count (4–12) or null if incomplete/invalid
+ */
+function parseAgentCount() {
+    const input = document.getElementById("num_agents");
+    if (!input) return null;
+    const raw = input.value.trim();
+    if (raw === "") return null;
+    const num = parseInt(raw, 10);
+    if (Number.isNaN(num) || num < 4 || num > 12) return null;
+    return num;
+}
+
+/**
  * Validates agent count: must be integer between 4 and 12.
+ * Shows an alert and resets the field — only call from Confirm / submit paths.
  * @returns {number|null} Valid count or null if invalid
  */
 function validateAgentCount() {
     const input = document.getElementById("num_agents");
-    const raw = input.value.trim();
-    const num = parseInt(raw, 10);
-    if (Number.isNaN(num) || num < 4 || num > 12) {
+    const num = parseAgentCount();
+    if (num === null) {
         alert("Number of agents must be between 4 and 12.");
-        input.value = "4";
+        if (input) {
+            input.value = "4";
+            input.focus();
+        }
         return null;
     }
     return num;
@@ -690,7 +708,8 @@ function isHumanExperimentEnabled() {
 function updateHumanExperimentControls() {
     var group = document.getElementById("humanByzantineCountGroup");
     var byzInput = document.getElementById("num_byzantines");
-    var count = validateAgentCount();
+    // Silent parse so deleting/replacing the agent count mid-edit does not alert.
+    var count = parseAgentCount();
     var enabled = isHumanExperimentEnabled();
     if (!group || !byzInput || count === null) return;
     group.style.display = enabled ? "" : "none";
