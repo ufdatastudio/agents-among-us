@@ -14,6 +14,24 @@ THINK_TAG_RETRY_REMINDER = (
     "after the closing tag."
 )
 
+DISCUSSION_MIN_WORDS = 45
+DISCUSSION_MAX_WORDS = 80
+DISCUSSION_LENGTH_RETRY_REMINDER = (
+    f"\n\nYour spoken meeting message was too short. Respond again with "
+    f"private reasoning in <think>...</think>, then AFTER </think> write a "
+    f"full meeting speech of at least {DISCUSSION_MIN_WORDS} words and at most "
+    f"{DISCUSSION_MAX_WORDS} words (2–4 sentences). No one-line "
+    f'"I saw X, what was Y doing?" templates. Include where you were, how you '
+    f"react to what was said, and who you currently suspect or want voted."
+)
+DISCUSSION_LENGTH_RETRY_REMINDER_NO_THINK = (
+    f"\n\nYour spoken meeting message was too short. Respond again with a "
+    f"full meeting speech of at least {DISCUSSION_MIN_WORDS} words and at most "
+    f"{DISCUSSION_MAX_WORDS} words (2–4 sentences). No one-line "
+    f'"I saw X, what was Y doing?" templates. Include where you were, how you '
+    f"react to what was said, and who you currently suspect or want voted."
+)
+
 # Appended when capture_thoughts is on but a custom prompt override is used.
 THINK_FORMAT_APPENDIX = """
 
@@ -52,6 +70,16 @@ def tokens_for_turn(agent, world_view=None) -> int:
     return MAX_TOKENS_DEFAULT
 
 
+def _word_count(text: str) -> int:
+    return len((text or "").split())
+
+
+def _needs_discussion_length_retry(phase, public: str) -> bool:
+    if str(phase or "").upper() != "DISCUSSION":
+        return False
+    return _word_count(public) < DISCUSSION_MIN_WORDS
+
+
 def generate_with_optional_thoughts(
     agent,
     system_prompt,
@@ -88,7 +116,19 @@ def generate_with_optional_thoughts(
 
     if not capturing:
         text = raw.strip() if isinstance(raw, str) else str(raw or "")
-        return strip_think_markup(text)
+        public = strip_think_markup(text)
+        if _needs_discussion_length_retry(phase, public):
+            raw = agent.llm.generate(
+                agent.model_name,
+                system_prompt,
+                prompt + DISCUSSION_LENGTH_RETRY_REMINDER_NO_THINK,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                preserve_think_tags=False,
+            )
+            text = raw.strip() if isinstance(raw, str) else str(raw or "")
+            public = strip_think_markup(text)
+        return public
 
     think, public, meta = split_think_and_output(raw)
 
@@ -106,6 +146,18 @@ def generate_with_optional_thoughts(
 
     # Defense-in-depth: public channels must never carry residual think markup.
     public = strip_think_markup(public)
+
+    if _needs_discussion_length_retry(phase, public):
+        raw = agent.llm.generate(
+            agent.model_name,
+            system_prompt,
+            prompt + DISCUSSION_LENGTH_RETRY_REMINDER,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            preserve_think_tags=True,
+        )
+        think, public, meta = split_think_and_output(raw)
+        public = strip_think_markup(public)
 
     logger = getattr(agent, "logger", None)
     if logger is not None:

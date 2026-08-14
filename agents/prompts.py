@@ -33,7 +33,7 @@ INSTRUCTIONS:
 # 4. Check the discussion log above. If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.
 # 5. Share observations and deduce who you suspect, if anyone, to be Byzantine agents in order to eject them. Look at strong correlations between agents' locations and bodies seen to deduce who could be responsible for eliminations.
 # """ + chances_line + """
-# 7. Keep it short (< 30 words).
+# 7. Keep it short (< 50 words).
 # 8. Speak in first person as if you are the agent yourself.
 # 9. **DO NOT** include your name or "Agent_X:" at the start.
 # 10. **DO NOT** use quotes. Just output the sentence.
@@ -41,24 +41,23 @@ INSTRUCTIONS:
 
 HONEST_DISCUSSION_INSTRUCTIONS_PREFIX = """
 INSTRUCTIONS:
-1. Treat this as a real conversation, not isolated statements. React to what others just said.
-2. In most turns, directly reference at least one specific prior claim (agent, room, body, timing, or vote intent).
-3. If another agent asked you a question or challenged you, address that first before adding new claims.
-4. Ask one focused follow-up question when information is missing (who/where/when/why), instead of repeating your own alibi.
-5. Use your observations and the discussion log to test consistency, find contradictions, and move the group toward a concrete vote plan.
-6. If your previous point was already made, add new evidence, a clarification, or a response to someone else.
+1. Speak like a real crewmate in a heated meeting — natural, opinionated, and specific. Do NOT use a fixed template like "I saw X in Y, what was Z doing?" every turn.
+2. If someone asked you a question or named you, answer that first with a clear claim (where you were, who you saw, who you trust/suspect).
+3. Vary what you do each turn: accuse, defend yourself, back someone up, call out a contradiction, or push a concrete vote target. Ask a question only when you truly need info — not every message.
+4. Base claims only on what you observed (rooms, occupants, bodies, discussion). Do not invent seeing a "tag" happen; talk about who was near the body or whose story does not add up.
+5. Move the group toward ejecting a Byzantine. If you have a leading suspect, say so plainly and why.
 """
 
 HONEST_DISCUSSION_INSTRUCTIONS_SUFFIX = """
-7. Keep it short (< 30 words).
+7. Your spoken message MUST be at least 45 words and at most 80 words. Short one-liners are invalid. Write 2–4 full sentences with alibi, reaction to others, and a clear suspicion or vote lean.
 8. Speak in first person as if you are the agent yourself.
 9. **DO NOT** include your name or "Agent_X:" at the start.
-10. **DO NOT** use quotes. Just output the sentence.
+10. **DO NOT** use quotes. Just output the spoken words.
 """
 
 HONEST_DISCUSSION_THINK_APPENDIX = """
-11. First write private reasoning inside <think>...</think>.
-12. After the closing </think> tag, output ONLY your spoken sentence (< 30 words).
+11. First write private reasoning inside <think>...</think> (who you believe, why, what to say publicly).
+12. After the closing </think> tag, output ONLY your spoken words (45–80 words). Short replies will be rejected.
 13. Do NOT put that spoken sentence inside the think block.
 """
 
@@ -206,7 +205,7 @@ INSTRUCTIONS:
 # 2. Check the discussion log above. If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.
 # 3. Discuss amongst each other. Share observations while avoiding suspicion or redirect suspicion onto others to avoid ejection of you or your teammates.
 # """ + chances_line + """
-# 5. Keep it short (< 30 words).
+# 5. Keep it short (< 50 words).
 # 6. Speak in first person as if you are the agent yourself.
 # 7. **DO NOT** include your name or "Agent_X:" at the start.
 # 8. **DO NOT** use quotes. Just output the sentence.
@@ -214,24 +213,24 @@ INSTRUCTIONS:
 
 BYZANTINE_DISCUSSION_INSTRUCTIONS_PREFIX = """
 INSTRUCTIONS:
-1. Keep the discussion interactive: respond to specific claims and questions instead of posting disconnected statements.
-2. Reference at least one concrete prior statement (agent, room, body, timeline, or vote direction) in most turns.
-3. If challenged, answer directly first; then steer conversation to reduce suspicion on you/teammates and increase suspicion on others.
-4. Ask targeted follow-up questions to control the narrative and create uncertainty around honest agents.
-5. Avoid repeating your own alibi unless new context requires it; add a new angle, rebuttal, or redirect each turn.
+1. Sound exactly like an Honest crewmate. Your public goal is to survive votes and get Honest agents ejected.
+2. NEVER confess. Never say you tagged, killed, eliminated, or are Byzantine. Never admit a kill even if accused — deny, reframe, or blame someone else.
+3. Protect yourself and your teammates with lies, alibis, and redirects. Soft-sell suspicion onto Honest agents who were near the body or have weak stories.
+4. If challenged, answer calmly first, then steer the room. Do NOT use the same "I saw X, what was Y doing?" template every turn — accuse, defend, agree strategically, or push a vote.
+5. Vary your speech. Do not copy another agent's wording. Ask questions only when useful for control; otherwise make a decisive claim.
 """
 
 BYZANTINE_DISCUSSION_INSTRUCTIONS_SUFFIX = """
-6. Keep it short (< 30 words).
-7. Speak in first person as if you are the agent yourself.
-8. **DO NOT** include your name or "Agent_X:" at the start.
-9. **DO NOT** use quotes. Just output the sentence.
+7. Your spoken message MUST be at least 45 words and at most 80 words. Short one-liners are invalid. Write 2–4 full sentences with alibi, reaction to others, and a clear suspicion or vote lean — without confessing.
+8. Speak in first person as if you are the agent yourself.
+9. **DO NOT** include your name or "Agent_X:" at the start.
+10. **DO NOT** use quotes. Just output the spoken words.
 """
 
 BYZANTINE_DISCUSSION_THINK_APPENDIX = """
-10. First write private reasoning inside <think>...</think>.
-11. After the closing </think> tag, output ONLY your spoken sentence (< 30 words).
-12. Do NOT put that spoken sentence inside the think block.
+11. First write private reasoning inside <think>...</think> (how to lie/redirect without sounding guilty).
+12. After the closing </think> tag, output ONLY your spoken words (45–80 words). Never confess. Short replies will be rejected.
+13. Do NOT put that spoken sentence inside the think block.
 """
 
 BYZANTINE_DEFAULT_VOTE_INSTRUCTIONS = """

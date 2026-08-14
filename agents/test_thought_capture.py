@@ -175,7 +175,7 @@ class TestThoughtCaptureHelper(unittest.TestCase):
             "sys",
             "move prompt",
             temperature=0.1,
-            phase="DISCUSSION",
+            phase="MOVEMENT",
             round_num=1,
             tick=1,
             world_view={"capture_thoughts": True},
@@ -191,7 +191,12 @@ class TestThoughtCaptureHelper(unittest.TestCase):
     def test_discussion_public_never_leaks_into_discussion_log(self):
         """Observer / discussion.log must only ever see public_output."""
         secret = "PRIVATE_PLAN_VOTE_OUT_AGENT_2"
-        spoken = "Agent_1 was near the body in Medbay."
+        spoken = (
+            "I was in Medbay before the meeting and saw Agent_1 lingering near the body, "
+            "which is the strongest lead so far. Nobody else has a clean alibi for that room, "
+            "and I want us to stop bouncing questions around and actually focus votes on Agent_1 "
+            "unless someone can prove they were elsewhere the whole round."
+        )
         llm = _FakeLLM([f"<think>\n{secret}\n</think>\n{spoken}"])
         agent = self._agent(llm, capture=True)
 
@@ -208,6 +213,7 @@ class TestThoughtCaptureHelper(unittest.TestCase):
         self.assertEqual(public, spoken)
         self.assertNotIn(secret, public)
         self.assertNotIn("<think>", public)
+        self.assertGreaterEqual(len(public.split()), 45)
 
         # Same path game_engine uses for public discussion visibility.
         formatted_msg = f"{agent.name}: {public}"
@@ -249,6 +255,32 @@ class TestThoughtCaptureHelper(unittest.TestCase):
             }
         ]
         self.assertNotIn(secret, round_statements[0]["Text"])
+
+    def test_discussion_short_reply_retries_once(self):
+        short = "<think>\nplan\n</think>\nI saw Agent_1 in MedBay, what was Agent_2 doing?"
+        long = (
+            "<think>\nNeed a fuller public take.\n</think>\n"
+            "I spent the round between Cafeteria and Admin with Agent_3, so I never saw UpperEngine. "
+            "Agent_6 being near the body is the strongest lead we have right now, and Agent_11's "
+            "story about only watching from far away does not clear them either. I want us to focus "
+            "votes on Agent_6 unless someone can prove they were nowhere near that room."
+        )
+        llm = _FakeLLM([short, long])
+        agent = self._agent(llm, capture=True)
+        public = generate_with_optional_thoughts(
+            agent,
+            "sys",
+            "discussion prompt",
+            temperature=1.0,
+            phase="DISCUSSION",
+            round_num=1,
+            tick=1,
+            world_view={"capture_thoughts": True, "require_think_tags": False},
+        )
+        self.assertEqual(len(llm.calls), 2)
+        self.assertIn("too short", llm.calls[1]["user_prompt"])
+        self.assertGreaterEqual(len(public.split()), 45)
+        self.assertIn("Agent_6", public)
 
     def test_voting_matches_public_not_think_content(self):
         # Think mentions SKIP; public vote is Agent_1 — matching must use public.

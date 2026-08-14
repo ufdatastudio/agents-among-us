@@ -180,11 +180,11 @@ Options
         n = self.max_discussion_messages
         if n < 3:
             if n == 1:
-                chances_line = "4. You get 1 chance to speak. Give your initial thought."
+                chances_line = "6. You get 1 chance to speak. Give your opening take (stay in character as Honest)."
             else:
-                chances_line = "4. You get 2 chances to speak. First is your initial thought, second is your follow-up after others speak."
+                chances_line = "6. You get 2 chances to speak. First is your opening take, second is your follow-up after others speak. Stay in character as Honest."
         else:
-            chances_line = f"4. You get {n} chances to speak: your first message is your opening statement, the middle messages are for interactive discussion (follow-ups, questions, answers), and your last message is your final stance."
+            chances_line = f"6. You get {n} chances to speak: your first message is your opening statement, the middle messages are for interactive discussion (follow-ups, questions, answers), and your last message is your final stance. Stay in character as Honest."
 
         default_discussion_instructions = (
             BYZANTINE_DISCUSSION_INSTRUCTIONS_PREFIX
