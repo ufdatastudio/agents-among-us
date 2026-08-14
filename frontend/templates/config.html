@@ -66,7 +66,14 @@
             
             <!-- Agent Configuration Table -->
             <div class="form-section">
-                <h2>Configure Each Agent</h2>
+                <div class="agent-table-header">
+                    <h2>Configure Each Agent</h2>
+                    <div class="set-all-agents">
+                        <label for="setAllAgentsModel">Set all agents to:</label>
+                        <select id="setAllAgentsModel" class="table-select set-all-agents-select" aria-label="Model to apply to all agents"></select>
+                        <button type="button" id="setAllAgentsBtn">Set all</button>
+                    </div>
+                </div>
                 <table id="agentTable">
                     <thead>
                         <tr>

@@ -218,6 +218,44 @@ h3 {
     box-shadow: var(--shadow-sm);
 }
 
+.agent-table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.agent-table-header h2 {
+    margin: 0;
+}
+
+.set-all-agents {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.set-all-agents label {
+    margin: 0;
+    white-space: nowrap;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.set-all-agents-select {
+    width: auto;
+    min-width: 220px;
+    max-width: min(420px, 55vw);
+}
+
+.set-all-agents button {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 .form-group {
     margin-bottom: 1.25rem;
 }

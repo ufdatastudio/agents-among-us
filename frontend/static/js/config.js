@@ -109,6 +109,9 @@ const DEFAULT_AGENTS_4 = [
 
 ];
 
+// Filtered at runtime by app mode (starts as full list until /api/app_mode returns).
+var AVAILABLE_MODELS = MODELS.slice();
+
 /**
  * Determines if a model value is a local (GPU) model (no ":" separator).
  */
@@ -149,10 +152,13 @@ function filterModelsByMode() {
             if (AVAILABLE_MODELS.length === 0) {
                 AVAILABLE_MODELS = MODELS;
             }
+            populateSetAllAgentsModelSelect();
             generateAgentTable();
         })
         .catch(function () {
             AVAILABLE_MODELS = MODELS;
+            populateSetAllAgentsModelSelect();
+            generateAgentTable();
         });
 }
 
@@ -209,16 +215,16 @@ const DEFAULT_PROMPTS = {
         ),
         discussion: (
             "INSTRUCTIONS:\n" +
-            "1. Use your memory to determine innocent, suspicious, or incrementing behavior. Look at what has been said to discuss (unless you are the opening statement) amongst each other. \n" +
-            "2. Build a consensus to eject a suspect.\n" +
-            "3. If you ({self.name}) saw someone safe, verify their alibi. If you saw something suspicious or incriminating, state it clearly. If you have no new info, state your location to help others build the timeline\n" +
-            "4. Check the discussion log above.  If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.\n" +
-            "5. Share observations and deduce who you suspect, if anyone, to be Byzantine agents in order to eject them. Look at strong correlations between agents' locations and bodies seen to deduce who could be responsible for eliminations. \n" +
+            "1. Speak like a real crewmate in a heated meeting — natural, opinionated, and specific. Do NOT use a fixed template like \"I saw X in Y, what was Z doing?\" every turn.\n" +
+            "2. If someone asked you a question or named you, answer that first with a clear claim (where you were, who you saw, who you trust/suspect).\n" +
+            "3. Vary what you do each turn: accuse, defend yourself, back someone up, call out a contradiction, or push a concrete vote target. Ask a question only when you truly need info — not every message.\n" +
+            "4. Base claims only on what you observed (rooms, occupants, bodies, discussion). Do not invent seeing a \"tag\" happen; talk about who was near the body or whose story does not add up.\n" +
+            "5. Move the group toward ejecting a Byzantine. If you have a leading suspect, say so plainly and why.\n" +
             "6. You get {max_discussion_messages} chances to speak: your first message is your opening statement, the middle messages are for interactive discussion (follow-ups, questions, answers), and your last message is your final stance.\n" +
-            "7. Keep it short (< 30 words).\n" +
+            "7. Your spoken message MUST be at least 45 words and at most 80 words. Short one-liners are invalid. Write 2–4 full sentences with alibi, reaction to others, and a clear suspicion or vote lean.\n" +
             "8. Speak in first person as if you are the agent yourself.\n" +
             "9. **DO NOT** include your name or \"Agent_X:\" at the start.\n" +
-            "10. **DO NOT** use quotes. Just output the sentence."
+            "10. **DO NOT** use quotes. Just output the spoken words."
         ),
         voting: (
             "INSTRUCTIONS:\n" +
@@ -274,14 +280,16 @@ const DEFAULT_PROMPTS = {
         ),
         discussion: (
             "INSTRUCTIONS:\n" +
-            "1. Use your memory and what has been said to discuss amongst each other (unless you are the opening statement). Provide useful, unique observations.\n" +
-            "2. Check the discussion log above.  If you ({self.name}) have ALREADY stated your location or alibi in this current discussion, DO NOT repeat it. Instead, provide a new observation or insight from your perspective.\n" +
-            "3. Discuss amongst each other. Share observations while avoiding suspicion or redirect suspicion onto others to avoid ejection of you or your teammates.\n" +
-            "4. You get {max_discussion_messages} chances to speak: your first message is your opening statement, the middle messages are for interactive discussion (follow-ups, questions, answers), and your last message is your final stance.\n" +
-            "5. Keep it short (< 30 words).\n" +
-            "6. Speak in first person as if you are the agent yourself.\n" +
-            "7. **DO NOT** include your name or \"Agent_X:\" at the start.\n" +
-            "8. **DO NOT** use quotes. Just output the sentence."
+            "1. Sound exactly like an Honest crewmate. Your public goal is to survive votes and get Honest agents ejected.\n" +
+            "2. NEVER confess. Never say you tagged, killed, eliminated, or are Byzantine. Never admit a kill even if accused — deny, reframe, or blame someone else.\n" +
+            "3. Protect yourself and your teammates with lies, alibis, and redirects. Soft-sell suspicion onto Honest agents who were near the body or have weak stories.\n" +
+            "4. If challenged, answer calmly first, then steer the room. Do NOT use the same \"I saw X, what was Y doing?\" template every turn — accuse, defend, agree strategically, or push a vote.\n" +
+            "5. Vary your speech. Do not copy another agent's wording. Ask questions only when useful for control; otherwise make a decisive claim.\n" +
+            "6. You get {max_discussion_messages} chances to speak: your first message is your opening statement, the middle messages are for interactive discussion (follow-ups, questions, answers), and your last message is your final stance. Stay in character as Honest.\n" +
+            "7. Your spoken message MUST be at least 45 words and at most 80 words. Short one-liners are invalid. Write 2–4 full sentences with alibi, reaction to others, and a clear suspicion or vote lean — without confessing.\n" +
+            "8. Speak in first person as if you are the agent yourself.\n" +
+            "9. **DO NOT** include your name or \"Agent_X:\" at the start.\n" +
+            "10. **DO NOT** use quotes. Just output the spoken words."
         ),
         voting: (
             "INSTRUCTIONS:\n" +
@@ -642,6 +650,52 @@ function generateAgentTable() {
         tbody.appendChild(createAgentRow(i));
     }
     updateHumanExperimentControls();
+}
+
+/**
+ * Fills the "Set all agents to" dropdown from AVAILABLE_MODELS.
+ */
+function populateSetAllAgentsModelSelect() {
+    var select = document.getElementById("setAllAgentsModel");
+    if (!select) return;
+    var previous = select.value;
+    select.innerHTML = "";
+    var models = AVAILABLE_MODELS.length ? AVAILABLE_MODELS : MODELS;
+    models.forEach(function (m) {
+        var opt = document.createElement("option");
+        opt.value = m.value;
+        opt.textContent = m.name;
+        select.appendChild(opt);
+    });
+    if (previous && models.some(function (m) { return m.value === previous; })) {
+        select.value = previous;
+    } else if (isModelAvailable(DEFAULT)) {
+        select.value = DEFAULT;
+    } else if (models[0]) {
+        select.value = models[0].value;
+    }
+}
+
+/**
+ * Applies the selected model to every AI agent row in the table.
+ * Leaves the Human seat (Agent_0 in human experiment) unchanged.
+ */
+function setAllAgentsToSelectedModel() {
+    var select = document.getElementById("setAllAgentsModel");
+    if (!select || !select.value) {
+        alert("Pick a model first.");
+        return;
+    }
+    var modelValue = select.value;
+    var updated = 0;
+    document.querySelectorAll("#agentTableBody select.model-select").forEach(function (sel) {
+        sel.value = modelValue;
+        updated += 1;
+    });
+    if (updated === 0) {
+        alert("No agent model dropdowns found. Confirm the agent table first.");
+        return;
+    }
 }
 
 /**
@@ -1020,6 +1074,11 @@ window.addEventListener("DOMContentLoaded", function () {
             setConfirmHumanStatus("Confirmed.");
         });
     }
+    var setAllAgentsBtn = document.getElementById("setAllAgentsBtn");
+    if (setAllAgentsBtn) {
+        setAllAgentsBtn.addEventListener("click", setAllAgentsToSelectedModel);
+    }
+    populateSetAllAgentsModelSelect();
     var humanCb = document.getElementById("human_experiment");
     if (humanCb) {
         humanCb.addEventListener("change", function () {
