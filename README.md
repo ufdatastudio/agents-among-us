@@ -18,6 +18,7 @@ Despite their impressive capabilities, LLMs struggle to effectively utilize text
 
 ## Links
 
+- [Read the paper (IVA 2026)](https://doi.org/10.1145/3806774.3827986)
 - [Watch the system demonstration video here](https://youtu.be/fQIflkO-zg4)
 - [Access live demo website here]()
 - [UF Data Studio](https://github.com/ufdatastudio)
@@ -391,20 +392,24 @@ The preprocessed dataset containing over 10,000 parsed game logs and approximate
 
 ## Citation
 
-If you use this framework or dataset in your research, please cite:
+If you use this framework or dataset in your research, please cite our IVA 2026 paper ([doi:10.1145/3806774.3827986](https://doi.org/10.1145/3806774.3827986)):
 
 ```bibtex
-@inproceedings{agentsamongus2026,
-    title = "Agents Among Us: Identifying Deceptive Agents in a Multi-Agent Social Deduction Environment",
-    author = "Anonymous",
-    booktitle = "",
+@inproceedings{kurian2026evaluating,
+    title = "Evaluating LLM Social Cognition Through Multi-Agentic Strategic Games",
+    author = "Kurian, Kevin  and
+      Scroggins, Kevin  and
+      Dorley, Emmanuel  and
+      Grant, Christan",
+    booktitle = "Proceedings of the International Conference on Intelligent Virtual Agents (IVA)",
+    month = sep,
     year = "2026",
-    publisher = ""
+    address = "Puebla, Mexico",
+    publisher = "Association for Computing Machinery",
+    doi = "10.1145/3806774.3827986",
+    url = "https://doi.org/10.1145/3806774.3827986"
 }
-
 ```
-
-*(Note: Citation details will be updated upon publication to reflect the full author list).*
 
 ## Issues and Contributions
 
