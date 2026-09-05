@@ -23,3 +23,12 @@ experiments/
 tmp_build/
 suspect.sh
 test.ipynb
+# macOS
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Stray editor files
+Untitled
+Untitled*.ipynb
