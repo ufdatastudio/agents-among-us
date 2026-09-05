@@ -30,6 +30,11 @@ COPY core      /app/core
 COPY frontend  /app/frontend
 COPY main.py   /app/main.py
 COPY worker.py /app/worker.py
+# core.game_engine imports results.context_pruner and loads the observer/pruner
+# models from results/classifiers/models at runtime. Copy only those pieces so
+# the large experiment data under results/ stays out of the image.
+COPY results/context_pruner.py  /app/results/context_pruner.py
+COPY results/classifiers/models /app/results/classifiers/models
 
 RUN mkdir -p /app/logs /app/logs/game_configs /app/frontend/data
 
