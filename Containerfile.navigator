@@ -97,6 +97,11 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -fsS "http://localhost:${PORT:-8080}/api/health" || exit 1
 
+# Python runs as PID 1 here and has no SIGTERM handler, so the kernel ignores
+# SIGTERM and podman waits for its timeout before sending SIGKILL. Python does
+# handle SIGINT (KeyboardInterrupt), so use it to stop the server promptly.
+STOPSIGNAL SIGINT
+
 # frontend.app's __main__ hardcodes 8080, so we bypass it and honor PORT.
 # Call the virtualenv interpreter directly; uv is not installed in this image.
 CMD ["/app/.venv/bin/python", "-c", "import os; from frontend.app import app; app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)), debug=False)"]
