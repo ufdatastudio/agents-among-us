@@ -147,7 +147,51 @@ A container is not patched by editing it. The Quadlet unit starts it from `local
 
 8. After a week without problems, remove the old tags and layers with `podman rmi localhost/agents-among-us-navigator:rollback` and `podman image prune -f`.
 
-Rebuild at least monthly even without a ticket, so the Ubuntu base and apt packages stay current.
+The base image and apt packages go stale without a rebuild. The next section schedules that rebuild.
+
+### Automatic updates
+
+`container/pubapps-navigator-update.sh` rebuilds the image on a schedule and restarts the service only when nobody is using it. Install the timer once on the VM:
+
+```bash
+cd ~/agents-among-us
+./container/pubapps-navigator-update.sh install
+```
+
+The timer is a systemd user timer, which suits this host better than cron. Cron jobs run without `XDG_RUNTIME_DIR`, so `systemctl --user` fails inside them unless the crontab sets it. Linger is enabled for `ufdatastudios`, so the timer runs without a login and catches up after downtime.
+
+How a run works:
+
+1. The timer starts the script daily at about 03:30. The script acts only when the last successful update is 14 days old (`--interval-days`). On other days it logs "not due" and exits.
+2. It defers when any file under `logs/` or `frontend/data/` was written in the last 60 minutes (`--idle-minutes`). A deferred run retries the next day. File writes are the signal because a hung game process can report as running for weeks, and it must not block security updates.
+3. It builds a candidate image with `--pull=newer --no-cache` and compares the OS and Python package lists, and the git commit, with the running image. If nothing differs, it keeps the running image and records a success.
+4. Otherwise it starts the candidate on port 18080 and checks the health endpoint and the `main.py` imports. A failure here leaves the live service unchanged.
+5. It checks for activity again, because the build takes a few minutes, then tags the running image as `rollback`, tags the candidate as `latest`, and restarts the service.
+6. If the restarted service is not healthy within 2 minutes, it restores the `rollback` image, restarts again, and exits with an error so the unit shows as failed.
+
+Day-to-day commands:
+
+```bash
+./container/pubapps-navigator-update.sh status                  # timer, last success, idle state, recent log
+./container/pubapps-navigator-update.sh check                   # due and idle report only
+./container/pubapps-navigator-update.sh run --dry-run --force   # build and verify, no swap
+./container/pubapps-navigator-update.sh run --force             # update now if idle
+./container/pubapps-navigator-update.sh uninstall               # remove the timer
+```
+
+The log is `~/.local/state/aau-navigator-update/update.log` and the last build output is `build.log` in the same directory. Pass `--interval-days` or `--idle-minutes` to `install` to change the schedule. Add `--git-pull` to `install` if the VM should run `git pull --ff-only` before each build. That deploys whatever is on `main`, so use it only when `main` is always deployable.
+
+What the timer does not cover:
+
+- Python packages are pinned in `uv.lock`. A rebuild picks up Ubuntu patches and a newer base image, but a Python fix needs the lock update from step 1 above, pushed to `main` and pulled on the VM.
+- A 14 day interval can miss the 14 day deadline for critical findings. For a ticket, run `./container/pubapps-navigator-update.sh run --force` or follow the manual steps above.
+- The host operating system, covered in the next section.
+
+If you prefer cron, a crontab entry needs `XDG_RUNTIME_DIR`. Run `mkdir -p ~/.local/state/aau-navigator-update` first.
+
+```
+30 3 * * * XDG_RUNTIME_DIR=/run/user/$(id -u) $HOME/agents-among-us/container/pubapps-navigator-update.sh run >> $HOME/.local/state/aau-navigator-update/cron.log 2>&1
+```
 
 ### Host operating system
 
