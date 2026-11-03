@@ -1,28 +1,82 @@
 # Containerfile.navigator
 # Lightweight Podman build for UF PubApps deployment.
 # Navigator API only; no CUDA, torch, or HuggingFace deps.
-FROM ubuntu:22.04
+#
+# Two stages: the builder installs the toolchain and resolves dependencies from
+# uv.lock, and the runtime stage copies only the interpreter and virtualenv.
+# Compilers, git, uv, pip, and setuptools stay out of the final image.
+#
+# Build with fresh layers so OS security updates are always applied:
+#   podman build --pull=newer --no-cache -t agents-among-us-navigator:latest -f Containerfile.navigator .
+ARG BASE_IMAGE=ubuntu:22.04
+ARG PYTHON_VERSION=3.12
+ARG UV_VERSION=0.13.7
+
+# ---------------------------------------------------------------------------
+# Builder
+# ---------------------------------------------------------------------------
+FROM ${BASE_IMAGE} AS builder
+ARG PYTHON_VERSION
+ARG UV_VERSION
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=UTC \
+    UV_PYTHON_INSTALL_DIR=/opt/python \
+    UV_PYTHON_PREFERENCE=only-managed \
+    UV_PROJECT_ENVIRONMENT=/app/.venv \
+    UV_LINK_MODE=copy \
+    UV_NO_CACHE=1
+
+RUN apt-get update \
+ && apt-get upgrade -y \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates curl git build-essential cmake \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" \
+  | env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock /app/
+RUN uv python install "${PYTHON_VERSION}" \
+ && uv sync --locked --extra api --no-install-project --python "${PYTHON_VERSION}"
+
+# The app never installs packages at runtime. pip and setuptools ship vendored
+# copies of urllib3, certifi, msgpack, and others that are not governed by
+# uv.lock and trigger scanner findings, so remove them from the interpreter.
+RUN find /opt/python -maxdepth 8 -type d -path '*/site-packages/*' \
+      \( -name pip -o -name 'pip-*.dist-info' -o -name setuptools \
+         -o -name 'setuptools-*.dist-info' -o -name pkg_resources \
+         -o -name _distutils_hack -o -name wheel -o -name 'wheel-*.dist-info' \) \
+      -prune -exec rm -rf {} + \
+ && find /opt/python \( -name 'distutils-precedence.pth' \
+      -o -path '*/bin/pip*' -o -path '*/bin/wheel*' \) -delete
+
+# ---------------------------------------------------------------------------
+# Runtime
+# ---------------------------------------------------------------------------
+FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=UTC \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/root/.local/bin:${PATH}" \
+    PATH="/app/.venv/bin:${PATH}" \
     APP_MODE=navigator \
     LLM_MODE=LOCAL \
     PORT=8080
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates curl git build-essential cmake libgomp1 \
+# libgomp1 is needed by scikit-learn and xgboost; curl is used by HEALTHCHECK.
+RUN apt-get update \
+ && apt-get upgrade -y \
+ && apt-get install -y --no-install-recommends ca-certificates curl libgomp1 \
  && rm -rf /var/lib/apt/lists/*
 
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+COPY --from=builder /opt/python /opt/python
+COPY --from=builder /app/.venv  /app/.venv
 
 WORKDIR /app
-
-COPY pyproject.toml uv.lock /app/
-RUN uv python install 3.10 \
- && uv sync --extra api --no-install-project
 
 COPY agents    /app/agents
 COPY config    /app/config
@@ -44,4 +98,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -fsS "http://localhost:${PORT:-8080}/api/health" || exit 1
 
 # frontend.app's __main__ hardcodes 8080, so we bypass it and honor PORT.
-CMD ["sh", "-lc", "exec uv run python -c 'import os; from frontend.app import app; app.run(host=\"0.0.0.0\", port=int(os.environ.get(\"PORT\",8080)), debug=False)'"]
+# Call the virtualenv interpreter directly; uv is not installed in this image.
+CMD ["/app/.venv/bin/python", "-c", "import os; from frontend.app import app; app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)), debug=False)"]

@@ -68,15 +68,19 @@ esac
 echo "=== Build context: $PROJECT_ROOT ==="
 cd "$PROJECT_ROOT"
 
+# --pull=newer fetches an updated base image and --no-cache re-runs apt-get
+# upgrade, so every build picks up the latest OS security fixes.
+BUILD_FLAGS=(--pull=newer --no-cache)
+
 if [ "$ACTION" = "rebuild" ]; then
-  podman build -t "$IMAGE_NAME" -f Containerfile.navigator .
+  podman build "${BUILD_FLAGS[@]}" -t "$IMAGE_NAME" -f Containerfile.navigator .
   systemctl --user restart "$SERVICE_NAME"
   systemctl --user status  "$SERVICE_NAME" --no-pager || true
   exit 0
 fi
 
 echo "=== Building $IMAGE_NAME ==="
-podman build -t "$IMAGE_NAME" -f Containerfile.navigator .
+podman build "${BUILD_FLAGS[@]}" -t "$IMAGE_NAME" -f Containerfile.navigator .
 
 echo "=== Preparing host dirs ==="
 mkdir -p "$HOME/agents-among-us/logs" \
