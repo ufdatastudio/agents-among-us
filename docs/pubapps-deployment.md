@@ -92,7 +92,9 @@ A container is not patched by editing it. The Quadlet unit starts it from `local
     uv lock --upgrade-package urllib3 --upgrade-package cryptography
     ```
 
-    Avoid a full `uv lock --upgrade`. It can change scikit-learn and xgboost, and the pickled classifiers in `results/classifiers/models` depend on those versions. Pillow 13 and later require Python 3.11 or newer, which is why the image uses Python 3.12 (`PYTHON_VERSION` in `Containerfile.navigator`).
+    A full `uv lock --upgrade` also works, but run the tests afterwards with `APP_MODE=navigator uv run --with pytest python -m pytest tests`. They compare the pickled classifiers in `results/classifiers/models` with predictions recorded under scikit-learn 1.8.0, so a library upgrade that changes the models fails them. The image uses Python 3.15 (`PYTHON_VERSION` in `Containerfile.navigator`), and scikit-learn 1.9.1 is the first release with Python 3.15 wheels. Release 1.9 stopped registering the `_loss` module name that `sgd.joblib` references, so `core/sklearn_compat.py` registers it before the models load.
+
+    The anthropic package stays below 1.0 in `pyproject.toml` because 1.0 removed the `temperature` argument that `core/api_clients.py` passes. The navigator image never calls that client.
 
 2. On the VM, pull the change, keep a rollback tag, and build under a temporary tag so the live service keeps running.
 
@@ -279,4 +281,4 @@ Thanks,
 
 PubApps VMs do not include GPUs. The `Dockerfile` at the repo root uses `nvidia/cuda:12.8.0-...` as a base, builds an ~11 GB image, and assumes `APP_MODE=full` at runtime. None of that fits a PubApps host.
 
-`Containerfile.navigator` uses `ubuntu:22.04` with Python 3.12, installs only the `api` extras, and sets `APP_MODE=navigator`. `config/app_mode.py` then disables `should_load_gpu()`, restricts providers to `{navigator}` only, and skips dotenv autoloading. The result is a ~1.3 GB image suitable for a public, bring-your-own-key demo.
+`Containerfile.navigator` uses `ubuntu:22.04` with Python 3.15, installs only the `api` extras, and sets `APP_MODE=navigator`. `config/app_mode.py` then disables `should_load_gpu()`, restricts providers to `{navigator}` only, and skips dotenv autoloading. The result is a ~1.3 GB image suitable for a public, bring-your-own-key demo.

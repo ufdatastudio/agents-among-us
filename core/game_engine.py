@@ -11,12 +11,14 @@ import os
 import joblib
 import pandas as pd
 
+from core.sklearn_compat import register_legacy_loss_module
 from core.stopwords import ENGLISH_STOP_WORDS
 from results.context_pruner import ContextPruner
 from core.thought_flags import thought_capture_flags_from_composition
 
 class Observer:
     def __init__(self, model_dir="results/classifiers/models/"):
+        register_legacy_loss_module()
         self.models = {}
         paths = {
             "LogisticRegression": os.path.join(model_dir, "lr.joblib"),

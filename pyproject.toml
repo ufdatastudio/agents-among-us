@@ -1,7 +1,7 @@
 [project]
 name = "agents-among-us"
 version = "0.1.0"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "flask>=3.1.0",
     "pandas>=2.2.3",
@@ -20,7 +20,9 @@ dependencies = [
 [project.optional-dependencies]
 api = [
     "openai>=1.0.0",
-    "anthropic>=0.30.0",
+    # anthropic 1.0 removed the temperature argument of messages.create(), which
+    # core/api_clients.py passes. Stay on 0.x until the client is updated.
+    "anthropic>=0.30.0,<1",
     "python-dotenv>=1.0.0",
 ]
 gpu = [
