@@ -2,7 +2,7 @@
 
 import pytest
 
-from config.eligible_models import BLOCKED, ELIGIBLE, EXCLUDED, OVERRIDE_PHRASE, check_eligible, main
+from config.eligible_models import BLOCKED, ELIGIBLE, EXCLUDED, OVERRIDE_PHRASE, STATUTE_URL, check_eligible, main
 
 
 def test_no_eligible_model_matches_a_blocked_family():
@@ -47,6 +47,8 @@ def test_a_qwen_model_gets_a_warning_that_names_the_override():
         check_eligible("Qwen/Qwen2.5-7B-Instruct")
     assert OVERRIDE_PHRASE in str(error.value)
     assert "Research Computing" in str(error.value)
+    assert "Florida Statute 288.860" in str(error.value)
+    assert STATUTE_URL in str(error.value)
 
 
 def test_the_typed_override_lets_a_qwen_model_through_with_a_warning():

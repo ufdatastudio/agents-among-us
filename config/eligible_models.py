@@ -64,11 +64,15 @@ BLOCKED_OTHER = re.compile(_OTHER_FAMILIES, re.IGNORECASE)
 # country of concern. The phrase is not accepted for any other blocked family.
 OVERRIDE_PHRASE = "I accept running a Qwen model from a country of concern"
 
+STATUTE_URL = "https://www.flsenate.gov/Laws/Statutes/2025/288.860"
+
 QWEN_WARNING = (
-    "WARNING: {model} is a Qwen model. Qwen comes from a country of concern, and the byzantine-agents "
-    "README records that UF Research Computing allows only models from outside those countries on "
-    "HiPerGator (Florida Statute 288.860, training module 4). Confirm with Research Computing "
-    "before you run it. To run it anyway, type the override: --override \"{phrase}\""
+    "WARNING: {model} is a Qwen model. Alibaba develops Qwen in the People's Republic of China, which "
+    "Florida Statute 288.860 defines as a foreign country of concern ({url}). The byzantine-agents "
+    "README records that UF Research Computing's acceptable-use policy (new user training, Module 4) "
+    "bars large language models from organizations in those countries on any UF computing resource. "
+    "Confirm with Research Computing before you run it. "
+    "To run it anyway, type the override: --override \"{phrase}\""
 )
 
 
@@ -93,7 +97,7 @@ def check_eligible(model: str, override: str | None = None) -> str:
         if BLOCKED_OTHER.search(model):
             raise ValueError(f"{model} belongs to a model family from a country of concern")
         if override is None:
-            raise ValueError(QWEN_WARNING.format(model=model, phrase=OVERRIDE_PHRASE))
+            raise ValueError(QWEN_WARNING.format(model=model, url=STATUTE_URL, phrase=OVERRIDE_PHRASE))
         if override != OVERRIDE_PHRASE:
             raise ValueError(
                 f"{model} is a Qwen model from a country of concern, and the override phrase does not match. "
