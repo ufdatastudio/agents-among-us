@@ -1,7 +1,7 @@
 # Situation Room
 
 Design for timed, simultaneous discussion in Agents Among Us, plus the experiments that use it.
-Status is design plus two HiPerGator pilots, one for vLLM concurrency and one for the audio stack. The room itself is not implemented yet. `core/audio/` and the benchmark scripts are. Work happens on the `situation-room` branch.
+Status is design plus two HiPerGator pilots, one for vLLM concurrency and one for the audio stack. Phase 0 is done. The room, the three text renderers, the tick loop, the vote tick, an in-process transport and a scripted adapter exist and are tested with no GPU, as do `core/audio/` and the benchmark scripts. The engine and agent integration and the `File` transport are still to do. Work happens on the `situation-room` branch.
 
 ## Goal
 
@@ -83,9 +83,10 @@ Voting becomes one more simultaneous tick. Every agent sees the final snapshot a
 The room is a grow-only map of per-author logs.
 
 ```
-Utterance  author, tick, start, words, text
+Utterance  author, tick, start_s, pace_s, words, intended, cursor, addressed_to
 Lane       append-only list of one author's utterances, written by that author only
-Room       lanes by author, free_at(author), append(), render(reader, t), close(t), ground_truth()
+Room       lanes by author, free_at(author), append(), percept(reader, t, tick), close(t),
+           statements(), ground_truth(), write_jsonl()
 ```
 
 - Each lane has a single writer, so merging lanes is a union and nothing conflicts. A read takes a frozen snapshot and merges the lanes by timestamp with `heapq.merge`.
@@ -127,7 +128,7 @@ AgentAdapter
 
 The composition JSON picks a backend per agent. When it does not, the model name decides as it does today, with a provider prefix meaning API and a Hugging Face id meaning local.
 
-Hearing is incremental. `hear` delivers only what is new since the adapter's cursor, the way a consumer offset works in a log. An adapter keeps its own running context, and a vLLM server can reuse the cached prefix.
+A percept is a snapshot of everything the reader has heard, and its `cursor` is the room time it covers. The `interleaved` and `noisy` renderings only grow from tick to tick, so each prompt extends the last and a vLLM server can reuse the cached prefix. The `clean` rendering rewrites an utterance as it grows and does not have that property. Delivering only what is new since the cursor is a later optimization.
 
 Each adapter receives only its own render. Other readers' renders, dropout masks and the ground truth stay with the controller.
 
@@ -239,7 +240,7 @@ A reader at time `t` sees the words in each lane with timestamp below `t`.
 Rules for every mode.
 
 - A reader's own words are marked `(you)`.
-- Simultaneous lines are shuffled per `(seed, reader, tick)`, so position bias averages out across games.
+- Simultaneous lines are shuffled per `(seed, reader, window)`, so position bias averages out across games and the order of earlier lines does not change from tick to tick.
 - Dropout masks come from `(seed, reader, utterance, word index)`. Words a reader missed at tick k stay missed at tick k+1.
 - Agents are told that everyone speaks at once, that words may be interleaved, and how much room time remains.
 
@@ -253,12 +254,12 @@ The SGD, SVM and LR classifiers were trained on sequential transcripts, so their
 
 | File | Change |
 |------|--------|
-| `core/situation_room.py` | New. `Utterance`, `Lane`, `Room`, the message types (`Percept`, `Tick`, `Reply`, `Vote`), and the three renderers |
-| `core/adapters/` | New package. `base.py` (the `AgentAdapter` protocol), `in_process.py`, `vllm.py`, `api.py`, `remote.py` |
+| `core/situation_room.py` | Done in Phase 0. `RoomConfig`, `Utterance`, `Lane`, `Room`, the message types (`Meeting`, `Tick`, `Percept`, `Reply`, `Vote`), `parse_reply`, and the `clean`, `interleaved` and `noisy` renderers |
+| `core/adapters/` | `base.py` (the `AgentAdapter` protocol) and `scripted.py` (a deterministic fake for tests and dry runs) are done. `in_process.py`, `vllm.py`, `api.py` and `remote.py` are still to write |
 | `core/adapters/ears.py`, `core/adapters/mouths.py` | New. `TextEar`, `SeparatedEar`, `MixEar`, `NativeEar`, `TextMouth`, `TtsMouth` |
 | `core/audio/` | Started in P1b. `mix.py` (per-reader mix, overlap, WAV), `metrics.py` (word error rate, recall), `tts.py` (Kokoro voices) and `asr.py` (Whisper) exist and are tested. `diarize.py` is still to write |
-| `core/transport.py` | New. `InProcess` and `File` transports, with `Network` left for later |
-| `core/timed_discussion.py` | New. Tick loop over adapters, simultaneous vote tick, and the sequential runner kept as the control |
+| `core/transport.py` | `InProcessTransport` is done. The `File` transport is still to write, with `Network` left for later |
+| `core/timed_discussion.py` | The tick loop over adapters and the simultaneous vote tick are done. The sequential runner stays in `core/game_engine.py` as the control |
 | `core/game_engine.py` | Pick the runner from `discussion_mode`, build one adapter per agent from the composition, accept `seed` |
 | `core/llm.py` | Unique request ids and timeouts for the in-process adapter, plus `LLM_MODE=VLLM` |
 | `core/state.py` | Seeded start rooms |
@@ -373,7 +374,7 @@ Speech and diarization models need the same country check.
 
 | Phase | Question | Setup | Games |
 |-------|----------|-------|-------|
-| P0 | Does the room behave correctly | Build and test locally with a fake generator | 0 |
+| P0 | Does the room behave correctly | Done. 46 tests with a scripted adapter and no GPU. Three deliberately injected bugs (always-ready agents, a shuffle that depends on the tick, a barge-in that does not cut) each made a test fail | 0 |
 | P1 | What does a game cost and does it read well | 1 GPU, 1 small model, 5 games per protocol. Measure minutes per game and parse failures, check that `interleaved` is legible, tune defaults. Run one game with each agent on its own GPU to confirm the barrier works across processes | about 25 |
 | P1b | Does the audio stack work | Done once on 1 RTX PRO 6000 with Kokoro and Whisper large-v3, see Measured audio stack. Still to do. Map word recall against overlap share with wider onsets, cap Whisper's generation length, and test a speech separation model once it is approved | 0 |
 | P2 | How much does the protocol matter | 3 models (small, medium, large), homogeneous. Sequential, timed `clean`, `interleaved` and `noisy` at budgets 60, 180 and 300 s, and no discussion. 11 cells per model, 50 games per cell | 1,650 |
