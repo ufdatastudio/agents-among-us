@@ -35,6 +35,8 @@ A wall-clock timer can be added later as its own scenario if inference latency b
 | `budget_s` | 60 | Length of the discussion in room time |
 | `tick_s` | 10 | Time between decision points |
 | `words_per_s` | 2.5 | Speaking rate in the `text` modality, about 150 words per minute. The `audio` modality uses the length of the synthesized speech |
+| `max_words` | 40 | Words per utterance. The prompt states the limit and the room drops any words beyond it |
+| `max_tokens` | 96 | Generation limit per reply, a guard against runaway output |
 | `onset_jitter_s` | 2 | Seeded delay before a speaker starts within a tick |
 | `quiet_close_ticks` | 2 | Close early after this many ticks with nobody speaking, 0 disables |
 | `overlap` | `clean` | `clean`, `interleaved` or `noisy` |
@@ -70,6 +72,7 @@ room.close(budget_s)
 - Words not yet spoken when the budget closes are dropped.
 - At tick 1 everyone has heard only the meeting report, so most agents speak at once. Later ticks are replies to what was heard.
 - Replying `<silent/>` keeps an agent quiet for that tick.
+- A tick lasts as long as its slowest reply, so `max_words` and `max_tokens` bound the tail.
 - A meeting costs at most `budget_s / tick_s` calls per active agent. With 10 agents and the defaults that is 60 calls against 20 today. Busy agents make no call and silent replies are short, and prefix caching reduces the prompt cost.
 
 Voting becomes one more simultaneous tick. Every agent sees the final snapshot and votes in parallel. The tally and ejection logic stay as they are.
@@ -293,6 +296,26 @@ The plan for this project.
 - The lightweight tier fits several models per GPU as in `submit_games.sh` today, with `gpu_memory_utilization` per server summing below 1. The heavy tier needs tensor parallelism across GPUs.
 - Experiment jobs set no Navigator, OpenAI or Anthropic keys, and those providers are disabled when `LLM_MODE=VLLM`.
 - Batch composition changes numerics, so regenerating a game gives different text. The logged transcripts are the record.
+- Prompt layout is fixed as system prompt, private memory, the append-only board, and the tick instruction last. Each tick then extends the previous prompt, which lets the prefix cache work.
+
+### Measured concurrency on one L4
+
+`scripts/bench_vllm_concurrency.py` sends the requests of a tick all at once to a vLLM 0.33.0 server running Llama 3.1 8B in bf16 on an NVIDIA L4 (24 GB, KV cache of 34,656 tokens). The prompts are synthetic and about 1.3k tokens, with temperature 1.0 and `max_tokens` 160. Each concurrency row is the median of 3 rounds whose prompts share almost no prefix with an earlier round (5% to 8% of tokens came from the cache), and the sequential row is a single run. The server logged no preemptions. The result file is `results/bench/meta-llama_Llama-3.1-8B-Instruct_50641907.json`.
+
+| Requests at once | Round time | Completion tokens per second |
+|------------------|-----------|------------------------------|
+| 1 | 0.6 s (a 4-token reply) | 7 |
+| 2 | 3.0 s | 18 |
+| 5 | 11.3 s (one reply ran to the 160-token limit) | 28 |
+| 10 | 6.6 s | 49 |
+| 20 | 14.0 s | 60 |
+| 10, one after another | 24.7 s | 14 |
+
+- Batching works. 10 simultaneous requests finish in 6.6 s, against 24.7 s one after another, and throughput is still rising at 20 requests, so 10 agents do not saturate an L4.
+- The tick lasts as long as its slowest reply. At 5 requests a single reply that ran to the limit stretched the round to 11.3 s. This is the reason for `max_words` and `max_tokens`.
+- The growing-board test uses 10 agents over 6 ticks, with the prompt growing from 563 to 1,753 tokens. The share of prompt tokens served from the prefix cache was 18%, 67%, 74%, 80%, 82% and 85% for ticks 1 to 6, and rounds took between 3.7 s and 6.7 s.
+- A 6-tick meeting of 10 agents therefore takes about 32 s of wall time on an L4 with an 8B model, plus a voting tick. The movement phase is still sequential and has not been measured. It is likely to dominate game time, and P1 will measure it.
+- The result covers one model, one GPU type and synthetic prompts. Larger models, other GPUs and reasoning models such as gpt-oss need their own runs.
 
 ### Model eligibility
 
