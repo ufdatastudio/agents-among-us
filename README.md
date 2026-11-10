@@ -295,7 +295,7 @@ The framework supports external API providers alongside local GPU inference. API
 | OpenAI | `openai:` | `openai:gpt-4o-mini` |
 | Anthropic | `anthropic:` | `anthropic:claude-sonnet-4-20250514` |
 
-UF Navigator provides free API credits ($25/month) and routes to models from multiple vendors (Llama, Gemma, Claude, GPT-4o, Gemini).
+UF Navigator provides free API credits ($25/month) and routes to models from multiple vendors (Llama, Gemma, Nemotron, GPT OSS, Claude, Gemini).
 
 ### Setup
 
@@ -322,7 +322,7 @@ uv run python -m frontend.app
 
 ### Mixed Games
 
-API and local models can coexist in the same game. For example, you could configure Agent 0 as a Byzantine running `navigator:gpt-4o` and Agents 1-3 as Honest running `google/gemma-2-9b-it` locally. The game engine routes each agent's generation call to the appropriate backend.
+API and local models can coexist in the same game. For example, you could configure Agent 0 as a Byzantine running `navigator:claude-sonnet-5.5` and Agents 1-3 as Honest running `google/gemma-2-9b-it` locally. The game engine routes each agent's generation call to the appropriate backend.
 
 ### Token Usage
 

@@ -39,12 +39,19 @@ const MODELS = [
     { value: "TinyLlama/TinyLlama-1.1B-Chat-v1.0", name: "TinyLlama 1.1B (TinyLlama/TinyLlama-1.1B-Chat-v1.0)" },
 
     // --- API Models: Navigator (UF) ---
+    // IDs follow https://docs.ai.it.ufl.edu/docs/navigator_models. The local models
+    // were checked against the live API; the Claude and Gemini entries are cloud
+    // models that depend on the visitor's key having access.
+    { value: "navigator:nemotron-3-super-120b-a12b", name: "[Navigator] Nemotron 3 Super 120B" },
+    { value: "navigator:gpt-oss-120b", name: "[Navigator] GPT OSS 120B" },
     { value: "navigator:llama-3.3-70b-instruct", name: "[Navigator] Llama 3.3 70B" },
-    { value: "navigator:gemma-3-27b-it", name: "[Navigator] Gemma 3 27B" },
+    { value: "navigator:gemma-4-31b-it", name: "[Navigator] Gemma 4 31B" },
+    { value: "navigator:nemotron-3-nano-30b-a3b", name: "[Navigator] Nemotron 3 Nano 30B" },
     { value: "navigator:mistral-small-3.1", name: "[Navigator] Mistral Small 3.1" },
-    { value: "navigator:claude-4-sonnet", name: "[Navigator] Claude Sonnet 4" },
-    { value: "navigator:gpt-4o", name: "[Navigator] GPT-4o" },
-    { value: "navigator:gemini-2.0-flash", name: "[Navigator] Gemini 2.0 Flash" },
+    { value: "navigator:gpt-oss-20b", name: "[Navigator] GPT OSS 20B" },
+    { value: "navigator:claude-sonnet-5.5", name: "[Navigator] Claude Sonnet 5.5" },
+    { value: "navigator:claude-haiku-5.5", name: "[Navigator] Claude Haiku 5.5" },
+    { value: "navigator:gemini-3.8-flash", name: "[Navigator] Gemini 3.8 Flash" },
 
     // --- API Models: Anthropic (Direct) ---
     { value: "anthropic:claude-sonnet-4-20250514", name: "[Anthropic] Claude Sonnet 4" },

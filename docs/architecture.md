@@ -128,12 +128,18 @@ Authenticated with `NAVIGATOR_TOOLKIT_API_KEY` (UF-issued). Navigator is UF's in
 
 | Model ID | Description |
 |----------|-------------|
+| `nemotron-3-super-120b-a12b` | NVIDIA Nemotron 3 Super 120B (hosted on UF infrastructure) |
+| `gpt-oss-120b` | OpenAI GPT OSS 120B (hosted on UF infrastructure) |
 | `llama-3.3-70b-instruct` | Meta Llama 3.3 70B (hosted on UF infrastructure) |
-| `gemma-3-27b-it` | Google Gemma 3 27B (hosted on UF infrastructure) |
+| `gemma-4-31b-it` | Google Gemma 4 31B (hosted on UF infrastructure) |
+| `nemotron-3-nano-30b-a3b` | NVIDIA Nemotron 3 Nano 30B (hosted on UF infrastructure) |
 | `mistral-small-3.1` | Mistral Small 3.1 (hosted on UF infrastructure) |
-| `claude-4-sonnet` | Anthropic Claude Sonnet 4 (proxied via Navigator) |
-| `gpt-4o` | OpenAI GPT-4o (proxied via Navigator) |
-| `gemini-2.0-flash` | Google Gemini 2.0 Flash (proxied via Navigator) |
+| `gpt-oss-20b` | OpenAI GPT OSS 20B (hosted on UF infrastructure) |
+| `claude-sonnet-5.5` | Anthropic Claude Sonnet 5.5 (proxied via Navigator) |
+| `claude-haiku-5.5` | Anthropic Claude Haiku 5.5 (proxied via Navigator) |
+| `gemini-3.8-flash` | Google Gemini 3.8 Flash (proxied via Navigator) |
+
+The list follows UF's [model inventory](https://docs.ai.it.ufl.edu/docs/navigator_models). UF retired `gemma-3-27b-it`, `claude-4-sonnet`, `gpt-4o` and `gemini-2.0-flash` between March and October 2026, so the app no longer offers them. The OpenAI GPT-5 and GPT-6 models are not offered because `core/api_clients.py` sends `max_tokens` and `temperature`, which those models are likely to reject.
 
 #### OpenAI (`api.openai.com`) — Hosted by OpenAI (US data centers)
 

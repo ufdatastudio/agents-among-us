@@ -457,8 +457,17 @@ function getModelAbbreviation(modelName) {
     const normalized = String(modelName);
     const modelMap = {
         "navigator:llama-3.3-70b-instruct": "Nav Llama3.3-70B",
-        "navigator:gemma-3-27b-it": "Nav Gemma3-27B",
+        "navigator:nemotron-3-super-120b-a12b": "Nav Nemotron3-S",
+        "navigator:nemotron-3-nano-30b-a3b": "Nav Nemotron3-N",
+        "navigator:gpt-oss-120b": "Nav GPT-OSS-120B",
+        "navigator:gpt-oss-20b": "Nav GPT-OSS-20B",
+        "navigator:gemma-4-31b-it": "Nav Gemma4-31B",
+        "navigator:claude-sonnet-5.5": "Nav Claude5.5-S",
+        "navigator:claude-haiku-5.5": "Nav Claude5.5-H",
+        "navigator:gemini-3.8-flash": "Nav Gemini3.8-F",
         "navigator:mistral-small-3.1": "Nav Mistral-S",
+        // Retired Navigator models, kept so saved games still show a short label.
+        "navigator:gemma-3-27b-it": "Nav Gemma3-27B",
         "navigator:claude-4-sonnet": "Nav Claude4-S",
         "navigator:gpt-4o": "Nav GPT-4o",
         "navigator:gemini-2.0-flash": "Nav Gemini2-F",
