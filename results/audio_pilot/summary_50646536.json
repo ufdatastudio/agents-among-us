@@ -1,0 +1,227 @@
+{
+  "seed": 7,
+  "texts": {
+    "Red": "Orange says they were in Weapons, but I saw them in Medical earlier, and that does not add up.",
+    "Orange": "I was in Medical with Pink and we both finished our tasks, so I think Green is lying about where they were.",
+    "Yellow": "Purple says they were in Cafeteria, but I saw them in Shields earlier, and that does not add up.",
+    "Lime": "Red says they were in Storage, but I saw them in Cafeteria earlier, and that does not add up.",
+    "Green": "I was in Storage with Purple and we both finished our tasks, so I think Red is lying about where they were.",
+    "Cyan": "I found the body in Storage right after Green walked out, and I saw Purple heading toward Cafeteria.",
+    "Blue": "I was in Electrical with Green and we both finished our tasks, so I think Pink is lying about where they were.",
+    "Purple": "I found the body in Electrical right after Cyan walked out, and I saw Orange heading toward Cafeteria.",
+    "Brown": "I was in Medical with Lime and we both finished our tasks, so I think Purple is lying about where they were.",
+    "Pink": "Nobody was with Purple in Navigation, which is suspicious, so I will vote for Purple unless someone speaks up."
+  },
+  "words_per_text_mean": 20,
+  "tts": [
+    {
+      "agent": "Red",
+      "voice": "af_nova",
+      "audio_s": 5.55,
+      "synth_s": 0.07
+    },
+    {
+      "agent": "Orange",
+      "voice": "af_nicole",
+      "audio_s": 9.4,
+      "synth_s": 0.08
+    },
+    {
+      "agent": "Yellow",
+      "voice": "af_jessica",
+      "audio_s": 5.12,
+      "synth_s": 0.1
+    },
+    {
+      "agent": "Lime",
+      "voice": "af_heart",
+      "audio_s": 6.15,
+      "synth_s": 0.07
+    },
+    {
+      "agent": "Green",
+      "voice": "af_bella",
+      "audio_s": 7.1,
+      "synth_s": 0.08
+    },
+    {
+      "agent": "Cyan",
+      "voice": "am_eric",
+      "audio_s": 6.0,
+      "synth_s": 0.06
+    },
+    {
+      "agent": "Blue",
+      "voice": "af_sky",
+      "audio_s": 6.95,
+      "synth_s": 0.06
+    },
+    {
+      "agent": "Purple",
+      "voice": "am_michael",
+      "audio_s": 7.45,
+      "synth_s": 0.05
+    },
+    {
+      "agent": "Brown",
+      "voice": "am_onyx",
+      "audio_s": 6.4,
+      "synth_s": 0.07
+    },
+    {
+      "agent": "Pink",
+      "voice": "af_sarah",
+      "audio_s": 7.55,
+      "synth_s": 0.06
+    }
+  ],
+  "clean": {
+    "wer_mean": 0.0045,
+    "wer_max": 0.0455,
+    "batch_of_10_seconds": 1.21
+  },
+  "overlap": [
+    {
+      "speakers": 1,
+      "trials": 10,
+      "overlap_fraction": 0.0,
+      "recall": 0.996,
+      "recall_sd": 0.014,
+      "content_recall": 0.992,
+      "precision": 0.996,
+      "speakers_recovered_share": 1.0,
+      "words_with_one_speaker": 0.969,
+      "asr_seconds_mean": 1.138,
+      "example": {
+        "speakers": [
+          "Lime"
+        ],
+        "references": {
+          "Lime": "Red says they were in Storage, but I saw them in Cafeteria earlier, and that does not add up."
+        },
+        "transcript": "Red says they were in storage, but I saw them in cafeteria earlier, and that does not add up."
+      }
+    },
+    {
+      "speakers": 2,
+      "trials": 10,
+      "overlap_fraction": 0.766,
+      "recall": 0.516,
+      "recall_sd": 0.044,
+      "content_recall": 0.518,
+      "precision": 0.996,
+      "speakers_recovered_share": 0.55,
+      "words_with_one_speaker": 0.133,
+      "asr_seconds_mean": 1.016,
+      "example": {
+        "speakers": [
+          "Green",
+          "Brown"
+        ],
+        "references": {
+          "Green": "I was in Storage with Purple and we both finished our tasks, so I think Red is lying about where they were.",
+          "Brown": "I was in Medical with Lime and we both finished our tasks, so I think Purple is lying about where they were."
+        },
+        "transcript": "I was in storage with Purple, and we both finished our tasks, so I think Purple is lying about where they were."
+      }
+    },
+    {
+      "speakers": 3,
+      "trials": 10,
+      "overlap_fraction": 0.792,
+      "recall": 0.444,
+      "recall_sd": 0.072,
+      "content_recall": 0.441,
+      "precision": 0.973,
+      "speakers_recovered_share": 0.5,
+      "words_with_one_speaker": 0.133,
+      "asr_seconds_mean": 1.499,
+      "example": {
+        "speakers": [
+          "Purple",
+          "Brown",
+          "Lime"
+        ],
+        "references": {
+          "Purple": "I found the body in Electrical right after Cyan walked out, and I saw Orange heading toward Cafeteria.",
+          "Brown": "I was in Medical with Lime and we both finished our tasks, so I think Purple is lying about where they were.",
+          "Lime": "Red says they were in Storage, but I saw them in Cafeteria earlier, and that does not add up."
+        },
+        "transcript": "Red says they were used to orange, but I saw them in cafeteria earlier, and that does not add up."
+      }
+    },
+    {
+      "speakers": 5,
+      "trials": 10,
+      "overlap_fraction": 0.829,
+      "recall": 0.241,
+      "recall_sd": 0.068,
+      "content_recall": 0.231,
+      "precision": 0.899,
+      "speakers_recovered_share": 0.262,
+      "words_with_one_speaker": 0.111,
+      "asr_seconds_mean": 1.518,
+      "example": {
+        "speakers": [
+          "Purple",
+          "Lime",
+          "Red",
+          "Green",
+          "Pink"
+        ],
+        "references": {
+          "Purple": "I found the body in Electrical right after Cyan walked out, and I saw Orange heading toward Cafeteria.",
+          "Lime": "Red says they were in Storage, but I saw them in Cafeteria earlier, and that does not add up.",
+          "Red": "Orange says they were in Weapons, but I saw them in Medical earlier, and that does not add up.",
+          "Green": "I was in Storage with Purple and we both finished our tasks, so I think Red is lying about where they were.",
+          "Pink": "Nobody was with Purple in Navigation, which is suspicious, so I will vote for Purple unless someone speaks up."
+        },
+        "transcript": "Nobody was with Purple in the investigation, which is suspicious, so I will vote for Purple, unless it speaks up."
+      }
+    },
+    {
+      "speakers": 10,
+      "trials": 10,
+      "overlap_fraction": 0.88,
+      "recall": 0.121,
+      "recall_sd": 0.093,
+      "content_recall": 0.093,
+      "precision": 0.62,
+      "speakers_recovered_share": 0.06,
+      "words_with_one_speaker": 0.117,
+      "asr_seconds_mean": 2.892,
+      "example": {
+        "speakers": [
+          "Green",
+          "Blue",
+          "Orange",
+          "Pink",
+          "Yellow",
+          "Cyan",
+          "Brown",
+          "Lime",
+          "Purple",
+          "Red"
+        ],
+        "references": {
+          "Green": "I was in Storage with Purple and we both finished our tasks, so I think Red is lying about where they were.",
+          "Blue": "I was in Electrical with Green and we both finished our tasks, so I think Pink is lying about where they were.",
+          "Orange": "I was in Medical with Pink and we both finished our tasks, so I think Green is lying about where they were.",
+          "Pink": "Nobody was with Purple in Navigation, which is suspicious, so I will vote for Purple unless someone speaks up.",
+          "Yellow": "Purple says they were in Cafeteria, but I saw them in Shields earlier, and that does not add up.",
+          "Cyan": "I found the body in Storage right after Green walked out, and I saw Purple heading toward Cafeteria.",
+          "Brown": "I was in Medical with Lime and we both finished our tasks, so I think Purple is lying about where they were.",
+          "Lime": "Red says they were in Storage, but I saw them in Cafeteria earlier, and that does not add up.",
+          "Purple": "I found the body in Electrical right after Cyan walked out, and I saw Orange heading toward Cafeteria.",
+          "Red": "Orange says they were in Weapons, but I saw them in Medical earlier, and that does not add up."
+        },
+        "transcript": "Purple says they don't have to do that, but you saw the news, which is suspicious, so I would vote for Purple, unless you want me to tell you about where they were."
+      }
+    }
+  ],
+  "tick": {
+    "window_s": 10.0,
+    "readers": 10,
+    "asr_seconds": 17.96
+  }
+}
