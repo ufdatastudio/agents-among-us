@@ -2,7 +2,7 @@
 
 import pytest
 
-from config.eligible_models import BLOCKED, ELIGIBLE, EXCLUDED, check_eligible, main
+from config.eligible_models import BLOCKED, ELIGIBLE, EXCLUDED, OVERRIDE_PHRASE, check_eligible, main
 
 
 def test_no_eligible_model_matches_a_blocked_family():
@@ -42,6 +42,49 @@ def test_models_from_blocked_families_are_rejected(model):
         check_eligible(model)
 
 
+def test_a_qwen_model_gets_a_warning_that_names_the_override():
+    with pytest.raises(ValueError, match="WARNING.*Qwen model.*type the override") as error:
+        check_eligible("Qwen/Qwen2.5-7B-Instruct")
+    assert OVERRIDE_PHRASE in str(error.value)
+    assert "Research Computing" in str(error.value)
+
+
+def test_the_typed_override_lets_a_qwen_model_through_with_a_warning():
+    with pytest.warns(UserWarning, match="typed Qwen override"):
+        assert check_eligible("Qwen/Qwen2.5-7B-Instruct", OVERRIDE_PHRASE) == "Qwen/Qwen2.5-7B-Instruct"
+
+
+@pytest.mark.parametrize("phrase", ["", "yes", "i accept running a qwen model from a country of concern", "override"])
+def test_a_wrong_or_partial_phrase_is_refused(phrase):
+    with pytest.raises(ValueError, match="override phrase does not match"):
+        check_eligible("Qwen/Qwen2.5-7B-Instruct", phrase)
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+        "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
+        "moonshotai/Kimi-K2-Instruct",
+        "zai-org/GLM-4.5",
+    ],
+)
+def test_the_override_does_not_open_other_blocked_families(model):
+    with pytest.raises(ValueError, match="country of concern") as error:
+        check_eligible(model, OVERRIDE_PHRASE)
+    assert "override" not in str(error.value)
+
+
+@pytest.mark.parametrize("model", ["llama-3.1-nemotron-nano-8B", "nemotron-3-nano-30b-a3b", "medgemma-27b-it"])
+def test_the_override_does_not_open_excluded_models(model):
+    with pytest.raises(ValueError, match="excluded"):
+        check_eligible(model, OVERRIDE_PHRASE)
+
+
+def test_the_override_changes_nothing_for_an_eligible_model():
+    assert check_eligible("gpt-oss-20b", OVERRIDE_PHRASE) == "openai/gpt-oss-20b"
+
+
 @pytest.mark.parametrize(
     "model, reason",
     [
@@ -68,3 +111,14 @@ def test_command_line_exit_codes(capsys):
     assert main(["Qwen/Qwen2.5-7B-Instruct"]) == 1
     assert "country of concern" in capsys.readouterr().err
     assert main([]) == 1
+
+
+def test_command_line_override(capsys):
+    assert main(["Qwen/Qwen2.5-7B-Instruct"]) == 1
+    assert "--override" in capsys.readouterr().err
+    with pytest.warns(UserWarning, match="typed Qwen override"):
+        assert main(["Qwen/Qwen2.5-7B-Instruct", "--override", OVERRIDE_PHRASE]) == 0
+    assert capsys.readouterr().out.strip() == "Qwen/Qwen2.5-7B-Instruct"
+    assert main(["Qwen/Qwen2.5-7B-Instruct", "--override", "yes"]) == 1
+    assert main(["deepseek-ai/DeepSeek-R1", "--override", OVERRIDE_PHRASE]) == 1
+    assert main(["Qwen/Qwen2.5-7B-Instruct", "--override"]) == 1

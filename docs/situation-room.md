@@ -9,6 +9,7 @@ Replace turn-taking with a situation room. All agents speak during the same time
 Text is one modality. Agents also hear each other as audio and learn who is talking through diarization. They argue their points by answering the justifications they heard.
 The experiments compare how models handle this across scenarios.
 They run on HiPerGator with local models and make no API calls.
+They run in English. The game prompts, the scenarios and the agents' speech are English, Kokoro uses American English voices, and Whisper is set to English.
 
 Each agent is an adapter that hears the room and replies to it. An adapter can run in the controller process, on its own GPU, on another node, or behind an API, and the room does not change.
 
@@ -171,7 +172,7 @@ Whisper large-v3 (speech recognition) and Kokoro (speech synthesis) are both in 
 
 Three components are not on Navigator and wait for approval.
 
-- Native ear. None of Navigator's language models takes audio, and the Gemma 4 31B config has `audio_config: null`. The one candidate found, `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, was improved using Qwen3 and is excluded. The native ear has no model until an eligible one is found.
+- Native ear. None of Navigator's language models takes audio, and the Gemma 4 31B config has `audio_config: null`. The one candidate found, `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, is not in Navigator's catalog, builds on a Nemotron 3 Nano backbone that is itself excluded, and its card says it was improved using Qwen models. It is excluded, and a question about it is with Research Computing. The native ear has no model until an eligible one is found.
 - Model-based diarization. `nvidia/Nemotron-3-Diarization` is a streaming Sortformer with the OpenMDW license and no gating. Until it is approved, `estimated` labels come from the oracle labels with errors injected at a chosen diarization error rate, which also makes that rate a controlled factor.
 - Speech separation. The mix ear needs it to do better than Whisper alone.
 
@@ -353,6 +354,7 @@ What this means for the design.
 The byzantine-agents README records that only models from organizations outside the foreign countries of concern may run on HiPerGator (Florida Statute 288.860, UF Research Computing training module 4).
 The experiments follow two rules. The model must also be served by Navigator, so results apply to the Navigator demo. Neither the model nor its post-training may come from a country of concern. That excludes the Qwen family and DeepSeek, models built on them (Athene V2, Arcee Nova and OpenPipe Qwen3 14B), and any model whose card says it was improved using them. It removes most of the HW and LW lists in `config/model_composition.py`.
 `config/eligible_models.py` enforces the rules. It lists the eligible models, matches Qwen, DeepSeek and other family names, and gives the reason for each exclusion. The HiPerGator job scripts run `python -m config.eligible_models <model>` before they start a server, and the job fails for any model that is not on the list.
+A Qwen checkpoint gets a warning and does not start unless someone types the override phrase, as `--override "<phrase>"` on the command or `QWEN_OVERRIDE="<phrase>"` on the `sbatch` line. The warning prints the phrase and advises confirming with Research Computing first. The override opens Qwen names only. DeepSeek and the other families, and the models excluded for a card that cites Qwen, stay refused.
 The table lists the eligible models with the Hugging Face checkpoint to use. Navigator may serve a different revision or quantization, so each run records the checkpoint revision.
 
 | Navigator model | Hugging Face checkpoint | Class | On /blue |
@@ -374,7 +376,7 @@ Excluded after the audit.
 - `llama-3.1-nemotron-nano-8B`. The card says "Improved using Qwen".
 - `nemotron-3-nano-30b-a3b`. The card says "Improved using Qwen", and its reinforcement learning used a reward model built on Qwen3.
 - `nemotron-3-super-120b-a12b`. The card names GPT-OSS-120B as one teacher and leaves the others unnamed, so Qwen or DeepSeek outputs cannot be ruled out. It returns to the list if its dataset card shows otherwise.
-- `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, the native-ear candidate. The card says it was improved using Qwen3-VL and Qwen3.
+- `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, the native-ear candidate. The card says it was improved using Qwen3-VL-30B-A3B-Instruct, Qwen3.5-122B-A10B, Qwen3.5-397B-A17B, Qwen2.5-VL-72B-Instruct and gpt-oss-120b. Its architecture section names the excluded Nemotron 3 Nano 30B-A3B as the language backbone. The training data table lists Qwen models as annotators for most of its public datasets, and also DeepSeek OCR, GLM-4.1V-9B-Thinking and Kimi-K2.5 for a few. Navigator does not list it. The license is the NVIDIA Open Model Agreement.
 - `medgemma-27b-it`, which is tuned for medicine and not used in the game.
 
 The audio stack passed. Whisper large-v3 (OpenAI) and Kokoro (built on StyleTTS 2) have no Chinese-origin base, and the audio environment has no packages from the Qwen or DeepSeek ecosystems. `nvidia/Nemotron-3-Diarization` is an NVIDIA model, but it trains on Mandarin meeting corpora (AISHELL-4 and AliMeeting), which its pending approval should consider.

@@ -13,9 +13,12 @@
 # Usage: sbatch scripts/hipergator/bench_vllm.sbatch [navigator model name or hf checkpoint id]
 # Submit from the repository root. Only models on the eligible list in config/eligible_models.py
 # start. The check exits with an error for Qwen, DeepSeek and other families from countries of concern.
+# A Qwen model starts only when QWEN_OVERRIDE holds the phrase the check prints in its warning,
+# as in: QWEN_OVERRIDE="<phrase>" sbatch scripts/hipergator/bench_vllm.sbatch Qwen/Qwen2.5-7B-Instruct
+# Confirm with Research Computing first. The override covers no other family.
 set -euo pipefail
 source "${SLURM_SUBMIT_DIR}/scripts/hipergator/env.sh"
-MODEL=$(uv run --no-project python -m config.eligible_models "${1:-granite-3.3-8b-instruct}")
+MODEL=$(uv run --no-project python -m config.eligible_models "${1:-granite-3.3-8b-instruct}" ${QWEN_OVERRIDE:+--override "${QWEN_OVERRIDE}"})
 # The weights come from the cache on /blue.
 export HF_HUB_OFFLINE=1
 PORT=$((20000 + SLURM_JOB_ID % 20000))
