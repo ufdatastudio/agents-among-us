@@ -171,8 +171,8 @@ Whisper large-v3 (speech recognition) and Kokoro (speech synthesis) are both in 
 
 Three components are not on Navigator and wait for approval.
 
-- Native ear. None of Navigator's language models takes audio, and the Gemma 4 31B config has `audio_config: null`. `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16` is a multimodal any-to-any model from the family of a Navigator model. Its audio support is unconfirmed, and it needs custom code.
-- Real diarization. `nvidia/Nemotron-3-Diarization` is a streaming Sortformer with the OpenMDW license and no gating. Until it is approved, `estimated` labels come from the oracle labels with errors injected at a chosen diarization error rate, which also makes that rate a controlled factor.
+- Native ear. None of Navigator's language models takes audio, and the Gemma 4 31B config has `audio_config: null`. The one candidate found, `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, was improved using Qwen3 and is excluded. The native ear has no model until an eligible one is found.
+- Model-based diarization. `nvidia/Nemotron-3-Diarization` is a streaming Sortformer with the OpenMDW license and no gating. Until it is approved, `estimated` labels come from the oracle labels with errors injected at a chosen diarization error rate, which also makes that rate a controlled factor.
 - Speech separation. The mix ear needs it to do better than Whisper alone.
 
 ### Diarization
@@ -301,22 +301,25 @@ The plan for this project.
 
 ### Measured concurrency on one L4
 
-`scripts/bench_vllm_concurrency.py` sends the requests of a tick all at once to a vLLM 0.33.0 server running Llama 3.1 8B in bf16 on an NVIDIA L4 (24 GB, KV cache of 34,656 tokens). The prompts are synthetic and about 1.3k tokens, with temperature 1.0 and `max_tokens` 160. Each concurrency row is the median of 3 rounds whose prompts share almost no prefix with an earlier round (5% to 8% of tokens came from the cache), and the sequential row is a single run. The server logged no preemptions. The result file is `results/bench/meta-llama_Llama-3.1-8B-Instruct_50641907.json`.
+`scripts/bench_vllm_concurrency.py` sends the requests of a tick all at once to a vLLM 0.33.0 server on an NVIDIA L4 (24 GB) with an 8B model in bf16. The prompts are synthetic and about 1.3k tokens, with temperature 1.0 and `max_tokens` 160. Each concurrency row is the median of 3 rounds whose prompts share almost no prefix with an earlier round (3% to 8% of tokens came from the cache), and the sequential row is a single run. Neither server logged a preemption.
 
-| Requests at once | Round time | Completion tokens per second |
-|------------------|-----------|------------------------------|
-| 1 | 0.6 s (a 4-token reply) | 7 |
-| 2 | 3.0 s | 18 |
-| 5 | 11.3 s (one reply ran to the 160-token limit) | 28 |
-| 10 | 6.6 s | 49 |
-| 20 | 14.0 s | 60 |
-| 10, one after another | 24.7 s | 14 |
+The first run used Llama 3.1 8B, which Navigator retired on 2026-08-10 and which is not on the eligible list. The second run uses Granite 3.3 8B, an eligible model, and is the reference. The result files are in `results/bench/`.
 
-- Batching works. 10 simultaneous requests finish in 6.6 s, against 24.7 s one after another, and throughput is still rising at 20 requests, so 10 agents do not saturate an L4.
-- The tick lasts as long as its slowest reply. At 5 requests a single reply that ran to the limit stretched the round to 11.3 s. This is the reason for `max_words` and `max_tokens`.
-- The growing-board test uses 10 agents over 6 ticks, with the prompt growing from 563 to 1,753 tokens. The share of prompt tokens served from the prefix cache was 18%, 67%, 74%, 80%, 82% and 85% for ticks 1 to 6, and rounds took between 3.7 s and 6.7 s.
-- A 6-tick meeting of 10 agents therefore takes about 32 s of wall time on an L4 with an 8B model, plus a voting tick. The default 18-tick meeting would take roughly 1.6 minutes. The movement phase is still sequential and has not been measured. It is likely to dominate game time, and P1 will measure it.
-- The result covers one model, one GPU type and synthetic prompts. Larger models, other GPUs and reasoning models such as gpt-oss need their own runs.
+| Requests at once | Granite 3.3 8B round time | Llama 3.1 8B round time |
+|------------------|---------------------------|-------------------------|
+| 1 | 0.7 s | 0.6 s |
+| 2 | 1.2 s | 3.0 s |
+| 5 | 3.8 s | 11.3 s (one reply ran to the 160-token limit) |
+| 10 | 6.9 s | 6.6 s |
+| 20 | 13.6 s | 14.0 s |
+| 10, one after another | 14.2 s | 24.7 s |
+
+- Batching helps. 10 simultaneous requests finish in 6.9 s on Granite against 14.2 s one after another, which is 2.1 times faster. Granite's replies are short, about 14 tokens on average, so there is less to overlap. Llama's replies averaged about 40 tokens and the gain was 3.7 times.
+- An L4 is at capacity near 10 agents. The round time doubles from 10 to 20 requests on both models, so the limit is mostly prompt processing of about 13k tokens per tick. A larger GPU would shorten the tick, and the prefix cache reduces the prompt cost, as the next point shows.
+- The tick lasts as long as its slowest reply. On Granite one reply ran to the 160-token limit at tick 4 and the round took 11.5 s against 2.9 s to 6.3 s for the other ticks. This is the reason for `max_words` and `max_tokens`.
+- The growing-board test uses 10 agents over 6 ticks. On Granite the prompt grows from 616 to 2,004 tokens, and the share of prompt tokens served from the prefix cache was 16%, 66%, 74%, 79%, 82% and 85% for ticks 1 to 6. Llama gave 18% to 85% on shorter prompts.
+- A 6-tick meeting of 10 agents takes about 34 s of wall time on Granite, plus a voting tick. The default 18-tick meeting would take roughly 1.7 minutes. The movement phase is still sequential and has not been measured. It is likely to dominate game time, and P1 will measure it.
+- The result covers two 8B models, one GPU type and synthetic prompts. Larger models, other GPUs and reasoning models such as gpt-oss need their own runs.
 
 ### Measured audio stack (P1b)
 
@@ -348,27 +351,36 @@ What this means for the design.
 ### Model eligibility
 
 The byzantine-agents README records that only models from organizations outside the foreign countries of concern may run on HiPerGator (Florida Statute 288.860, UF Research Computing training module 4).
-The Qwen family is out, along with models that appear to build on it (Athene V2, Arcee Nova and OpenPipe Qwen3 14B), which removes most of the HW and LW lists in `config/model_composition.py`.
-The model set is the open-weight models that Navigator also serves on HiPerGator, so results apply to the Navigator demo. The table lists them with the Hugging Face checkpoint to use. Navigator may serve a different revision or quantization, so each run records the checkpoint revision.
+The experiments follow two rules. The model must also be served by Navigator, so results apply to the Navigator demo. Neither the model nor its post-training may come from a country of concern. That excludes the Qwen family and DeepSeek, models built on them (Athene V2, Arcee Nova and OpenPipe Qwen3 14B), and any model whose card says it was improved using them. It removes most of the HW and LW lists in `config/model_composition.py`.
+`config/eligible_models.py` enforces the rules. It lists the eligible models, matches Qwen, DeepSeek and other family names, and gives the reason for each exclusion. The HiPerGator job scripts run `python -m config.eligible_models <model>` before they start a server, and the job fails for any model that is not on the list.
+The table lists the eligible models with the Hugging Face checkpoint to use. Navigator may serve a different revision or quantization, so each run records the checkpoint revision.
 
 | Navigator model | Hugging Face checkpoint | Class | On /blue |
 |-----------------|-------------------------|-------|----------|
 | `ministral-8b` | `mistralai/Ministral-8B-Instruct-2410` (research license) | 8B | no |
-| `llama-3.1-nemotron-nano-8B` | `nvidia/Llama-3.1-Nemotron-Nano-8B-v1` | 8B | no |
 | `granite-3.3-8b-instruct` | `ibm-granite/granite-3.3-8b-instruct` | 8B | yes |
 | `gpt-oss-20b` | `openai/gpt-oss-20b` | 21B MoE | yes |
 | `mistral-small-3.1` | `mistralai/Mistral-Small-3.1-24B-Instruct-2503` | 24B | no |
 | `magistral-small` | `mistralai/Magistral-Small-2506`, `-2507` or `-2509`, to match Navigator | 24B reasoning | no |
 | `gemma-4-31b-it` | `google/gemma-4-31B-it` | 31B | yes |
-| `nemotron-3-nano-30b-a3b` | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16` | 30B MoE | no |
 | `meta-muse-glimmer-30b` | `meta-models/Muse-Glimmer-30B`, which Navigator's lifecycle page may list as legacy | 30B | no |
 | `llama-3.3-70b-instruct` | `meta-llama/Llama-3.3-70B-Instruct` | 70B | yes |
 | `gpt-oss-120b` | `openai/gpt-oss-120b` | 117B MoE | yes |
-| `nemotron-3-super-120b-a12b` | `nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16` or the FP8 variant | 120B MoE | no |
 
-`medgemma-27b-it` is on Navigator too, but it is tuned for medicine and is left out of the matrix. The 8B models fit one L4 or part of an RTX PRO 6000. The 70B and 120B models need 2 or more GPUs, as the byzantine-agents notes describe.
-The reasoning models (gpt-oss, Magistral, Nemotron) spend part of `max_tokens` on thinking, so their limit needs its own check in P1.
-Speech and diarization models need the same country check.
+The audit on 2026-11-10 read the public model card of every Navigator open-weight model and of the audio models, looking for a Qwen, DeepSeek or other Chinese-origin base, teacher or reward model. The 9 models above are clean. Their cards mention Qwen or DeepSeek only in benchmark tables and Chinese only as a supported language. The Llama 3.3 70B card is gated, so its check rests on the base model in its metadata, Llama 3.1 70B, and Muse Glimmer 30B lists no base model.
+
+Excluded after the audit.
+
+- `llama-3.1-nemotron-nano-8B`. The card says "Improved using Qwen".
+- `nemotron-3-nano-30b-a3b`. The card says "Improved using Qwen", and its reinforcement learning used a reward model built on Qwen3.
+- `nemotron-3-super-120b-a12b`. The card names GPT-OSS-120B as one teacher and leaves the others unnamed, so Qwen or DeepSeek outputs cannot be ruled out. It returns to the list if its dataset card shows otherwise.
+- `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, the native-ear candidate. The card says it was improved using Qwen3-VL and Qwen3.
+- `medgemma-27b-it`, which is tuned for medicine and not used in the game.
+
+The audio stack passed. Whisper large-v3 (OpenAI) and Kokoro (built on StyleTTS 2) have no Chinese-origin base, and the audio environment has no packages from the Qwen or DeepSeek ecosystems. `nvidia/Nemotron-3-Diarization` is an NVIDIA model, but it trains on Mandarin meeting corpora (AISHELL-4 and AliMeeting), which its pending approval should consider.
+
+The 8B models fit one L4 or part of an RTX PRO 6000. The 70B and 120B models need 2 or more GPUs, as the byzantine-agents notes describe.
+The reasoning models (gpt-oss and Magistral) spend part of `max_tokens` on thinking, so their limit needs its own check in P1.
 
 ## Experiments
 
@@ -378,7 +390,7 @@ Speech and diarization models need the same country check.
 | P1 | What does a game cost and does it read well | 1 GPU, 1 small model, 5 games per protocol. Measure minutes per game and parse failures, check that `interleaved` is legible, tune defaults. Run one game with each agent on its own GPU to confirm the barrier works across processes | about 25 |
 | P1b | Does the audio stack work | Done once on 1 RTX PRO 6000 with Kokoro and Whisper large-v3, see Measured audio stack. Still to do. Map word recall against overlap share with wider onsets, cap Whisper's generation length, and test a speech separation model once it is approved | 0 |
 | P2 | How much does the protocol matter | 3 models (small, medium, large), homogeneous. Sequential, timed `clean`, `interleaved` and `noisy` at budgets 60, 180 and 300 s, and no discussion. 11 cells per model, 50 games per cell | 1,650 |
-| P3 | How does each model perform | Each of the 12 eligible models as crew against a fixed reference model as impostors, then swapped, under sequential, timed `clean` and timed `interleaved`. 50 games per cell | 3,600 |
+| P3 | How does each model perform | Each of the 9 eligible models as crew against a fixed reference model as impostors, then swapped, under sequential, timed `clean` and timed `interleaved`. 50 games per cell | 2,700 |
 | P4 | Which knobs matter | `tick_s` 5, 10, 20. Impostors 1, 2, 3. `dropout` 0, 0.1, 0.3. `barge_in` off and on. 11 cells per model, 50 games per cell, on 1 or 2 models | 550 per model |
 | P5 | Does hearing change the game | Text `interleaved` as the baseline. Audio with a separated ear at `oracle` and `estimated` diarization. Audio with a mix ear as the cocktail-party stress test. A native ear at `oracle` and `none` if a model is approved. 4 cells per model without the native ear, 50 games per cell, on 1 or 2 models | 200 per model, plus 100 for the native ear |
 
@@ -403,7 +415,7 @@ Sizing. At 50 games per cell the 95% interval on a win rate is about ±14 points
 
 - Default for `barge_in`, to be set from P4.
 - Wall-clock scenario, to measure what inference latency costs a model. Adapters would hear continuously and post when ready.
-- Approval for models that are not on Navigator. `nvidia/Nemotron-3-Diarization` for model-based diarization, a speech separation model for the mix ear, and an audio-capable model for the native ear.
+- Approval for models that are not on Navigator. `nvidia/Nemotron-3-Diarization` for model-based diarization, a speech separation model for the mix ear, and an eligible audio-capable model for the native ear, for which none is known yet.
 - Human seat in timed mode. The current human input path uses a 30 s timeout per message.
 - Default for `quiet_close_ticks`, to be set from the P1 pilot.
 - The movement phase is still sequential. Making it simultaneous is a separate change.

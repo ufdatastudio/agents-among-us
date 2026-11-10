@@ -10,11 +10,12 @@
 #SBATCH --output=logs/sr-bench-%j.out
 # Start a vLLM server on one GPU, run the concurrency benchmark against it, and stop the server.
 # The job owns its server, so nothing stays running after it ends.
-# Usage: sbatch scripts/hipergator/bench_vllm.sbatch [hf model id]
-# Submit from the repository root.
+# Usage: sbatch scripts/hipergator/bench_vllm.sbatch [navigator model name or hf checkpoint id]
+# Submit from the repository root. Only models on the eligible list in config/eligible_models.py
+# start. The check exits with an error for Qwen, DeepSeek and other families from countries of concern.
 set -euo pipefail
-MODEL=${1:-meta-llama/Llama-3.1-8B-Instruct}
 source "${SLURM_SUBMIT_DIR}/scripts/hipergator/env.sh"
+MODEL=$(uv run --no-project python -m config.eligible_models "${1:-granite-3.3-8b-instruct}")
 # The weights come from the cache on /blue.
 export HF_HUB_OFFLINE=1
 PORT=$((20000 + SLURM_JOB_ID % 20000))
