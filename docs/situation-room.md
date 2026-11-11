@@ -340,7 +340,23 @@ The first run used Llama 3.1 8B, which Navigator retired on 2026-08-10 and which
 - The tick lasts as long as its slowest reply. On Granite one reply ran to the 160-token limit at tick 4 and the round took 11.5 s against 2.9 s to 6.3 s for the other ticks. This is the reason for `max_words` and `max_tokens`.
 - The growing-board test uses 10 agents over 6 ticks. On Granite the prompt grows from 616 to 2,004 tokens, and the share of prompt tokens served from the prefix cache was 16%, 66%, 74%, 79%, 82% and 85% for ticks 1 to 6. Llama gave 18% to 85% on shorter prompts.
 - A 6-tick meeting of 10 agents takes about 34 s of wall time on Granite, plus a voting tick. The default 18-tick meeting would take roughly 1.7 minutes. The movement phase is still sequential and has not been measured. It is likely to dominate game time, and P1 will measure it.
-- The result covers two 8B models, one GPU type and synthetic prompts. Larger models, other GPUs and reasoning models such as gpt-oss need their own runs.
+- The L4 result covers two 8B models and synthetic prompts. The next section adds two larger models on another GPU.
+
+### Measured concurrency on an RTX PRO 6000
+
+Jobs 50715127 and 50715128 ran the same script on one RTX PRO 6000 (96 GB) with two more eligible models, gpt-oss-20b and Gemma 4 31B. The GPU differs from the L4 above, so the two tables are not a comparison of models alone.
+
+| Requests at once | gpt-oss-20b round time | Gemma 4 31B round time |
+|------------------|------------------------|------------------------|
+| 1 | 0.7 s | 2.8 s |
+| 2 | 0.9 s | 3.2 s |
+| 5 | 1.2 s | 4.1 s |
+| 10 | 1.5 s | 5.5 s |
+| 20 | 1.9 s | 8.9 s |
+| 10, one after another | 6.7 s | 30.5 s |
+
+- Gemma 4 31B finishes 10 simultaneous requests in 5.5 s against 30.5 s one after another, which is 5.5 times faster. Its replies averaged 56 tokens. The 6-tick growing-board meeting took 22 s in total, and 84% of prompt tokens came from the prefix cache by tick 6.
+- gpt-oss-20b produced exactly 160 completion tokens on every request in every round, so the cap ended each one. The model reasons before it answers, and the server's `openai_gptoss` reasoning parser keeps the reasoning apart from the reply, so the budget probably ran out before any reply text. These round times measure reasoning up to the cap and say little about game replies. A game with gpt-oss needs a larger token budget or a low reasoning effort, and the first run has to check that replies are not empty. The same applies to gpt-oss-120b.
 
 ### Measured audio stack (P1b)
 

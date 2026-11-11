@@ -1,0 +1,146 @@
+{
+  "model": "google/gemma-4-31B-it",
+  "max_tokens": 160,
+  "sweep": {
+    "1": {
+      "requests": 1,
+      "wall_s": 2.759,
+      "mean_latency_s": 2.759,
+      "max_latency_s": 2.759,
+      "prompt_tokens_mean": 1391,
+      "completion_tokens_mean": 56.0,
+      "completion_tokens_max": 56,
+      "completion_tokens_per_s": 20.3,
+      "cached_fraction": 0.046
+    },
+    "2": {
+      "requests": 2,
+      "wall_s": 3.189,
+      "mean_latency_s": 3.057,
+      "max_latency_s": 3.188,
+      "prompt_tokens_mean": 1399,
+      "completion_tokens_mean": 56.0,
+      "completion_tokens_max": 59,
+      "completion_tokens_per_s": 35.1,
+      "cached_fraction": 0.046
+    },
+    "5": {
+      "requests": 5,
+      "wall_s": 4.145,
+      "mean_latency_s": 4.005,
+      "max_latency_s": 4.143,
+      "prompt_tokens_mean": 1380,
+      "completion_tokens_mean": 59.0,
+      "completion_tokens_max": 62,
+      "completion_tokens_per_s": 71.2,
+      "cached_fraction": 0.023
+    },
+    "10": {
+      "requests": 10,
+      "wall_s": 5.514,
+      "mean_latency_s": 5.252,
+      "max_latency_s": 5.513,
+      "prompt_tokens_mean": 1400,
+      "completion_tokens_mean": 56.1,
+      "completion_tokens_max": 62,
+      "completion_tokens_per_s": 101.7,
+      "cached_fraction": 0.046
+    },
+    "20": {
+      "requests": 20,
+      "wall_s": 8.943,
+      "mean_latency_s": 8.269,
+      "max_latency_s": 8.931,
+      "prompt_tokens_mean": 1381,
+      "completion_tokens_mean": 57.8,
+      "completion_tokens_max": 70,
+      "completion_tokens_per_s": 129.3,
+      "cached_fraction": 0.009
+    }
+  },
+  "sequential": {
+    "requests": 10,
+    "wall_s": 30.469,
+    "mean_latency_s": 3.047,
+    "max_latency_s": 4.002,
+    "prompt_tokens_mean": 1390,
+    "completion_tokens_mean": 62.6,
+    "completion_tokens_max": 84,
+    "completion_tokens_per_s": 20.5,
+    "cached_fraction": 0.018
+  },
+  "growing": [
+    {
+      "requests": 10,
+      "wall_s": 3.254,
+      "mean_latency_s": 2.502,
+      "max_latency_s": 3.251,
+      "prompt_tokens_mean": 599,
+      "completion_tokens_mean": 33.5,
+      "completion_tokens_max": 50,
+      "completion_tokens_per_s": 102.9,
+      "cached_fraction": 0.107,
+      "tick": 1
+    },
+    {
+      "requests": 10,
+      "wall_s": 3.674,
+      "mean_latency_s": 3.406,
+      "max_latency_s": 3.668,
+      "prompt_tokens_mean": 868,
+      "completion_tokens_mean": 57.2,
+      "completion_tokens_max": 63,
+      "completion_tokens_per_s": 155.7,
+      "cached_fraction": 0.642,
+      "tick": 2
+    },
+    {
+      "requests": 10,
+      "wall_s": 3.777,
+      "mean_latency_s": 3.456,
+      "max_latency_s": 3.772,
+      "prompt_tokens_mean": 1138,
+      "completion_tokens_mean": 57.2,
+      "completion_tokens_max": 64,
+      "completion_tokens_per_s": 151.4,
+      "cached_fraction": 0.731,
+      "tick": 3
+    },
+    {
+      "requests": 10,
+      "wall_s": 3.914,
+      "mean_latency_s": 3.554,
+      "max_latency_s": 3.91,
+      "prompt_tokens_mean": 1402,
+      "completion_tokens_mean": 58.3,
+      "completion_tokens_max": 66,
+      "completion_tokens_per_s": 148.9,
+      "cached_fraction": 0.776,
+      "tick": 4
+    },
+    {
+      "requests": 10,
+      "wall_s": 3.738,
+      "mean_latency_s": 3.444,
+      "max_latency_s": 3.737,
+      "prompt_tokens_mean": 1671,
+      "completion_tokens_mean": 55.8,
+      "completion_tokens_max": 62,
+      "completion_tokens_per_s": 149.3,
+      "cached_fraction": 0.816,
+      "tick": 5
+    },
+    {
+      "requests": 10,
+      "wall_s": 3.679,
+      "mean_latency_s": 3.337,
+      "max_latency_s": 3.678,
+      "prompt_tokens_mean": 1938,
+      "completion_tokens_mean": 53.7,
+      "completion_tokens_max": 61,
+      "completion_tokens_per_s": 146.0,
+      "cached_fraction": 0.842,
+      "tick": 6
+    }
+  ]
+}
