@@ -2,12 +2,22 @@ import random
 import re
 import time
 import json
+from dataclasses import replace
+from pathlib import Path
+
+from loguru import logger as log
+
 from config.settings import MAX_MOVEMENT_PHASES, ROOMS, NUM_BYZ, NUM_HONEST, NUM_ROUNDS as DEFAULT_NUM_ROUNDS
 from agents.honest_agent import HonestAgent
 from agents.byzantine_agent import ByzantineAgent
+from config.eligible_models import check_eligible
+from core.adapters.game_agent import GameAgentAdapter
+from core.situation_room import Meeting, RoomConfig
 from core.state import GameState
 from core.logger import LogManager
-import os 
+from core.timed_discussion import collect_votes, run_timed_discussion
+from core.transport import InProcessTransport
+import os
 import joblib
 import pandas as pd
 
@@ -97,14 +107,32 @@ class Observer:
         
         return scores_by_agent  
 
+DISCUSSION_MODES = ("turns", "timed")
+
+
 class GameEngine:
-    def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST, num_rounds=DEFAULT_NUM_ROUNDS, num_ticks=None, num_discussion_messages=2,skip_discussion=False):
+    def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST, num_rounds=DEFAULT_NUM_ROUNDS, num_ticks=None, num_discussion_messages=2,skip_discussion=False,
+                 discussion_mode="turns", room_config=None, room_workers=None):
+        """Creates the engine.
+
+        Args:
+            discussion_mode: `turns` keeps the turn-taking discussion. `timed` runs the situation
+                room, where every agent speaks during the same timed window and votes at once.
+            room_config: RoomConfig for the timed discussion, or None for the defaults.
+            room_workers: Agents that may generate at the same time in the timed discussion, or None
+                for all of them. Use 1 when the model runs inside this process.
+        """
+        if discussion_mode not in DISCUSSION_MODES:
+            raise ValueError(f"discussion_mode must be one of {DISCUSSION_MODES}, got {discussion_mode!r}")
         self.game_id = game_id
         self.num_agents = num_agents
         self.num_rounds = num_rounds
         self.num_ticks = num_ticks if num_ticks is not None else MAX_MOVEMENT_PHASES
         self.num_discussion_messages = num_discussion_messages
         self.skip_discussion = skip_discussion
+        self.discussion_mode = discussion_mode
+        self.room_config = room_config or RoomConfig()
+        self.room_transport = InProcessTransport(room_workers)
         self.agents = []
         self.state = None
         self.logger = None
@@ -262,6 +290,12 @@ class GameEngine:
                 except Exception:
                     # fallback to default prompts for that agent
                     pass
+
+        # A local vLLM model runs on HiPerGator, where only eligible models may run.
+        for agent in self.agents:
+            model_name = str(agent.model_name)
+            if model_name.startswith("vllm:"):
+                check_eligible(model_name.partition(":")[2])
 
         self.logger = LogManager(self.game_id, self.agents, scen_name)
         self.state = GameState(self.agents, self.logger)
@@ -711,7 +745,10 @@ class GameEngine:
                 discussion_order.append(agent)
 
         round_statements = []
-        if not self.skip_discussion:
+        room = None
+        adapters = []
+        use_timed = not self.skip_discussion and self._use_timed_discussion(active_agents)
+        if not self.skip_discussion and not use_timed:
             statement_counts = {a.name: 0 for a in active_agents}
             discussion_turn_idx = 0
             for discussion_round in range(self.num_discussion_messages):
@@ -765,19 +802,30 @@ class GameEngine:
 
                     self.state.record_chat(agent.name, clean_msg)
                     self.state.save_json()
-        else:
+        elif self.skip_discussion:
             self.logger.write_log("discussion", None, "** DISCUSSION PHASE SKIPPED **")
             self.state.add_ui_event("Discussion Skipped", "info")
+        else:
+            adapters, room = self._run_timed_meeting(round_num, active_agents, caller_name, reason)
+            round_statements = room.statements(caller_name)
+            # The classifiers were trained on at most num_discussion_messages statements per agent.
+            for row in round_statements:
+                row["S_Num"] = min(row["S_Num"], self.num_discussion_messages)
 
         # After Discussion, Use Classifier to see probabilities and store results
         suspicion_scores = self.observer.analyze_round(round_statements)
         if suspicion_scores:
             self.state.update_suspicion_scores(suspicion_scores)
 
-        self.state.update_phase("VOTING") 
+        self.state.update_phase("VOTING")
         votes = {}
+        if room is not None:
+            # Every agent votes at once after seeing the room as it ended.
+            votes = collect_votes(adapters, room, self.room_transport)
+            for agent in active_agents:
+                self._record_vote(agent, votes[agent.name], round_num)
         vote_turn_idx = 0
-        for agent in active_agents:
+        for agent in ([] if room is not None else active_agents):
             vote_turn_idx += 1
             view = self.state.get_agent_view(agent.name, round_num, log_to_file=False)
             view["skip_discussion"] = self.skip_discussion
@@ -802,25 +850,7 @@ class GameEngine:
             # overwrite the hybrid branch and drop the pruner, breaking hybrid voting.
 
             votes[agent.name] = vote
-            self.state.record_vote(agent.name, vote, round_num)
-            self.state.save_json()
-            voter_stats = self.state.world_data["agents"][agent.name]["stats"]
-            voter_role = self.state.world_data["agents"][agent.name]["role"]
-
-            if vote == "SKIP":
-                voter_stats["skipped_votes"] += 1
-            elif vote in self.state.world_data["agents"]:
-                self.state.world_data["agents"][vote]["stats"]["votes_received"] += 1
-                target_role = self.state.world_data["agents"][vote]["role"]
-                is_correct = False
-                if voter_role == "honest" and target_role == "byzantine":
-                    is_correct = True
-                elif voter_role == "byzantine" and target_role == "honest":
-                    is_correct = True
-                if is_correct:
-                    voter_stats["correct_votes"] += 1
-                else:
-                    voter_stats["incorrect_votes"] += 1
+            self._record_vote(agent, vote, round_num)
 
         tally = {}
         for v in votes.values(): tally[v] = tally.get(v, 0) + 1
@@ -859,6 +889,88 @@ class GameEngine:
         status_snapshot = {n: d["status"] for n, d in self.state.world_data["agents"].items()}
         self.logger.write_log("results", None, f"Player Statuses: {status_snapshot}")
         
+    def _record_vote(self, agent, vote, round_num):
+        """Stores one vote and updates the voting statistics of the voter and the target."""
+        self.state.record_vote(agent.name, vote, round_num)
+        self.state.save_json()
+        voter_stats = self.state.world_data["agents"][agent.name]["stats"]
+        voter_role = self.state.world_data["agents"][agent.name]["role"]
+
+        if vote == "SKIP":
+            voter_stats["skipped_votes"] += 1
+        elif vote in self.state.world_data["agents"]:
+            self.state.world_data["agents"][vote]["stats"]["votes_received"] += 1
+            target_role = self.state.world_data["agents"][vote]["role"]
+            is_correct = False
+            if voter_role == "honest" and target_role == "byzantine":
+                is_correct = True
+            elif voter_role == "byzantine" and target_role == "honest":
+                is_correct = True
+            if is_correct:
+                voter_stats["correct_votes"] += 1
+            else:
+                voter_stats["incorrect_votes"] += 1
+
+    def _use_timed_discussion(self, active_agents):
+        """Tells whether this meeting runs in the situation room.
+
+        A human seat is not supported in the room yet, so a meeting with a human falls back to turns.
+        """
+        if self.discussion_mode != "timed":
+            return False
+        if any(getattr(a, "is_human", False) for a in active_agents):
+            log.warning("A human player is in the game, so this meeting uses turn-taking, not the timed room")
+            return False
+        return True
+
+    def _run_timed_meeting(self, round_num, active_agents, caller_name, reason):
+        """Runs the discussion of one meeting in the situation room.
+
+        Every utterance is written to the discussion log and the chat file in order of start time,
+        as turn-taking writes them. The room's own record goes to room/room_round<N>.jsonl in the game's log folder.
+
+        Returns:
+            The adapters, which the vote reuses, and the closed room.
+        """
+        names = [a.name for a in active_agents]
+        room_dir = Path(self.logger.get_discussion_log_path("honest")).parent / "room"
+        config = replace(self.room_config, seed=self.room_config.seed + round_num)
+
+        def view_for(name, rnd):
+            view = self.state.get_agent_view(name, rnd, log_to_file=False)
+            view["capture_thoughts"] = self.capture_thoughts
+            view["require_think_tags"] = self.require_think_tags
+            return view
+
+        adapters = [GameAgentAdapter(a, names, config, view_for, room_dir) for a in active_agents]
+        room = run_timed_discussion(adapters, Meeting(round_num, reason, caller_name), config, self.room_transport)
+        by_name = {a.name: a for a in active_agents}
+        for utterance in room.utterances():
+            if not utterance.words:
+                continue
+            agent = by_name[utterance.author]
+            self.logger.write_log("discussion", None, f"{agent.name}: {utterance.text}")
+            self.logger.log_discussion_chat(
+                discussion_num=round_num,
+                reason=reason,
+                agent_name=agent.name,
+                model_name=agent.model_name,
+                role=agent.role,
+                message=utterance.text,
+            )
+            self.state.record_chat(agent.name, utterance.text)
+        room.write_jsonl(room_dir / f"room_round{round_num}.jsonl")
+        self.state.save_json()
+        log.info(
+            "Room round {}: {} ticks, {} utterances, closed at {:.0f} s{}",
+            round_num,
+            room.ticks,
+            len(room.utterances()),
+            room.closed_at or 0.0,
+            " (early)" if room.closed_early else "",
+        )
+        return adapters, room
+
     def check_win_condition(self):
             active = [d for n, d in self.state.world_data["agents"].items() if d["status"] == "active"]
             byz = [a for a in active if a["role"] == "byzantine"]

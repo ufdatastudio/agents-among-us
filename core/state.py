@@ -2,6 +2,7 @@
 import json
 import os
 import random
+import threading
 from datetime import datetime
 from config.settings import ROOMS, NUM_ROUNDS
 
@@ -9,6 +10,8 @@ class GameState:
     def __init__(self, agents, log_manager):
         self.agents = agents
         self.logger = log_manager
+        # The situation room lets agents generate in parallel, and each writes its thought and the live state.
+        self._lock = threading.RLock()
         self.live_state_file = os.path.join("logs", "live_state.json")
         
         # Onserver tracking
@@ -360,6 +363,10 @@ class GameState:
         Thoughts are published as soon as they are captured (before the public
         discussion line or vote is recorded), so the timeline stays in order.
         """
+        with self._lock:
+            self._publish_latest_thought(record)
+
+    def _publish_latest_thought(self, record):
         if not isinstance(record, dict):
             return
         agent_name = record.get("agent")
@@ -397,6 +404,10 @@ class GameState:
     
     def save_json(self):
         """Exports the current state to a JSON file for the Live Map."""
+        with self._lock:
+            self._save_json()
+
+    def _save_json(self):
         try:
             from core.llm import ModelManager
 

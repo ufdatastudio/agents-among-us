@@ -30,6 +30,7 @@ from config.settings import NUM_ROUNDS as DEFAULT_NUM_ROUNDS, MAX_MOVEMENT_PHASE
 from config.model_composition import COMPOSITION
 from core.game_engine import GameEngine
 from core.llm import ModelManager
+from core.situation_room import RoomConfig
 import random
 
 def main():
@@ -41,6 +42,13 @@ def main():
     parser.add_argument("--num_ticks", type=int, default=MAX_MOVEMENT_PHASES, help="Movement ticks per round")
     parser.add_argument("--num_discussion_messages", type=int, default=2, help="Messages per agent per discussion")
     parser.add_argument("--skip_discussion", action="store_true", help="Skip discussion phase and vote purely on action logs")
+    parser.add_argument("--discussion_mode", choices=("turns", "timed"), default="turns", help="turns keeps turn-taking; timed runs the situation room")
+    parser.add_argument("--room_budget_s", type=float, default=180.0, help="Length of a timed discussion in room seconds")
+    parser.add_argument("--room_tick_s", type=float, default=10.0, help="Room seconds between decision points")
+    parser.add_argument("--room_max_words", type=int, default=40, help="Words kept from one statement in the room")
+    parser.add_argument("--room_overlap", choices=("clean", "interleaved", "noisy"), default="clean", help="How overlapping speech is shown to the listener")
+    parser.add_argument("--room_seed", type=int, default=0, help="Seed for onsets, shuffles and dropout in the room")
+    parser.add_argument("--room_workers", type=int, default=None, help="Agents that generate at once in the room (default: all, or 1 when the model runs in this process)")
     args = parser.parse_args()
 
     num_rounds = args.num_rounds
@@ -83,8 +91,22 @@ def main():
     if isinstance(selected_composition, dict) and 'num_discussion_messages' in selected_composition:
         num_discussion_messages = selected_composition['num_discussion_messages']
 
+    discussion_mode = args.discussion_mode
+    if isinstance(selected_composition, dict) and 'discussion_mode' in selected_composition:
+        discussion_mode = selected_composition['discussion_mode']
+
     manager = ModelManager.get_instance()
     manager.set_game_context(args.game_id, args.composition_name)
+
+    # A model loaded in this process cannot serve several agents at once.
+    room_workers = args.room_workers if args.room_workers is not None else (1 if manager.mode == "LOCAL" else None)
+    room_config = RoomConfig(
+        budget_s=args.room_budget_s,
+        tick_s=args.room_tick_s,
+        max_words=args.room_max_words,
+        overlap=args.room_overlap,
+        seed=args.room_seed,
+    )
 
     if manager.mode == "GLOBUS":
         manager.init_globus_executor()
@@ -97,7 +119,10 @@ def main():
         num_rounds=num_rounds,
         num_ticks=num_ticks,
         num_discussion_messages=num_discussion_messages,
-        skip_discussion=skip_discussion
+        skip_discussion=skip_discussion,
+        discussion_mode=discussion_mode,
+        room_config=room_config,
+        room_workers=room_workers,
     )
    
     engine.setup(composition=selected_composition)

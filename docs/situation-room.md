@@ -1,7 +1,7 @@
 # Situation Room
 
 Design for timed, simultaneous discussion in Agents Among Us, plus the experiments that use it.
-Status is design plus two HiPerGator pilots, one for vLLM concurrency and one for the audio stack. Phase 0 is done. The room, the three text renderers, the tick loop, the vote tick, an in-process transport and a scripted adapter exist and are tested with no GPU, as do `core/audio/` and the benchmark scripts. The engine and agent integration and the `File` transport are still to do. Work happens on the `situation-room` branch.
+Status is design, two HiPerGator pilots (vLLM concurrency and the audio stack), and a text-only integration. Phases 0 and 1a are done. The room, the three text renderers, the tick loop, the vote tick, an in-process transport and a scripted adapter exist and are tested with no GPU, as do `core/audio/` and the benchmark scripts. The engine runs a full game in `timed` mode with the existing honest and Byzantine agents, through an adapter, against any OpenAI-compatible server, and a smoke test ran 2 rounds of 10 agents through `main.py` against a fake server. No full game has run against a model served on HiPerGator yet, and the `File` transport is still to do. Work happens on the `situation-room` branch.
 
 ## Goal
 
@@ -32,7 +32,7 @@ A wall-clock timer can be added later as its own scenario if inference latency b
 
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
-| `discussion_mode` | `sequential` | `sequential` keeps today's behavior, `timed` uses the situation room |
+| `discussion_mode` | `turns` | `turns` keeps today's behavior, `timed` uses the situation room |
 | `budget_s` | 180 | Length of the discussion in room time. The default is generous so agents can argue before the vote |
 | `tick_s` | 10 | Time between decision points |
 | `words_per_s` | 2.5 | Speaking rate in the `text` modality, about 150 words per minute. The `audio` modality uses the length of the synthesized speech |
@@ -136,6 +136,23 @@ Each adapter receives only its own render. Other readers' renders, dropout masks
 `Percept.modality` is `text` or `audio`. For `audio`, `audio_ref` points to the reader's mix on the shared filesystem and `speakers` lists the diarization labels the reader is allowed to see. The next section describes how an adapter hears and speaks in each modality.
 
 The v1 barrier needs every adapter to reply once per tick. The same interface supports adapters that hear continuously and post when ready, which is the wall-clock scenario listed under open questions.
+
+### How the existing agents take part
+
+The honest and Byzantine agents read the discussion from log files, so `GameAgentAdapter` builds its own prompt and leaves the agent classes unchanged. At the start of a meeting it builds the agent's view of the game once on the controller thread, because building a view changes game state, and reads the agent's memory log and the results log. At each tick it asks the model for the next statement using the agent's own system prompt, so the role and objective stay the same.
+
+The room prompt keeps each role's behavior rules from the turn-based prompts, including the Byzantine rule never to confess. It replaces the rule of 45 to 80 words with the room's word limit, and adds the rules of a timed meeting, `<silent/>` and `<to>Name</to>`. The reply is generated with a phase label of `ROOM`, because the generator retries any `DISCUSSION` reply under 45 words and silence is a valid reply here. With thought capture on, the agent writes `<think>` first and the existing retry for missing tags applies.
+
+For the vote the adapter writes what the agent heard to a per-agent file under `room/` in the game's log folder, in the format the agent's `vote()` already reads, and substitutes that path for the shared discussion log. Each agent therefore votes on its own interleaved view, and the files record what each one heard.
+
+Some behaviors differ from turn-taking and need to be known when reading results.
+
+- The token budget of a reply is the agent's own (160, or 384 with thought capture). The room's `max_tokens` setting is not used yet, and `max_words` cuts the words after generation.
+- `ModelManager` returns `move` when an API call fails. The adapter treats that as silence, so it is never committed as a statement. A failed vote counts as a skip.
+- Agents generate in parallel, up to `room_workers` at once. `main.py` sets 1 when the model runs in the same process. A lock in `GameState` guards the live-state file and the thought history.
+- The Observer classifiers receive the room's statements with `S_Num` capped at `num_discussion_messages`, as turn-taking caps it.
+- A game with a human seat falls back to turn-taking for its meetings, and hybrid pruning is not applied in the room.
+- Every `vllm:` model is checked against the eligible list when the game is set up, and the engine has no Qwen override.
 
 ### Transports
 
@@ -256,17 +273,20 @@ The SGD, SVM and LR classifiers were trained on sequential transcripts, so their
 | File | Change |
 |------|--------|
 | `core/situation_room.py` | Done in Phase 0. `RoomConfig`, `Utterance`, `Lane`, `Room`, the message types (`Meeting`, `Tick`, `Percept`, `Reply`, `Vote`), `parse_reply`, and the `clean`, `interleaved` and `noisy` renderers |
-| `core/adapters/` | `base.py` (the `AgentAdapter` protocol) and `scripted.py` (a deterministic fake for tests and dry runs) are done. `in_process.py`, `vllm.py`, `api.py` and `remote.py` are still to write |
+| `core/adapters/` | `base.py` (the `AgentAdapter` protocol), `scripted.py` (a deterministic fake for tests and dry runs) and `game_agent.py` (wraps an existing honest or Byzantine agent) are done. The wrapped agent reaches a model through `ModelManager`, so the `vllm` and API providers need no adapter of their own. `remote.py` is still to write |
+| `agents/room_prompts.py` | Done in Phase 1a. The room instructions for each role, built on the turn-based behavior rules |
 | `core/adapters/ears.py`, `core/adapters/mouths.py` | New. `TextEar`, `SeparatedEar`, `MixEar`, `NativeEar`, `TextMouth`, `TtsMouth` |
 | `core/audio/` | Started in P1b. `mix.py` (per-reader mix, overlap, WAV), `metrics.py` (word error rate, recall), `tts.py` (Kokoro voices) and `asr.py` (Whisper) exist and are tested. `diarize.py` is still to write |
-| `core/transport.py` | `InProcessTransport` is done. The `File` transport is still to write, with `Network` left for later |
-| `core/timed_discussion.py` | The tick loop over adapters and the simultaneous vote tick are done. The sequential runner stays in `core/game_engine.py` as the control |
-| `core/game_engine.py` | Pick the runner from `discussion_mode`, build one adapter per agent from the composition, accept `seed` |
-| `core/llm.py` | Unique request ids and timeouts for the in-process adapter, plus `LLM_MODE=VLLM` |
-| `core/state.py` | Seeded start rooms |
-| `agents/honest_agent.py`, `agents/byzantine_agent.py` | Take `percept.text` in discussion and voting in place of the discussion log file, add the room instructions and `<silent/>` |
-| `agents/prompts.py` | Room instructions, with the `<think>` appendix unchanged |
-| `core/logger.py` | Write `room.jsonl` and per-utterance start times |
+| `core/transport.py` | `InProcessTransport` is done, with a `max_workers` limit for a model loaded in the same process. The `File` transport is still to write, with `Network` left for later |
+| `core/timed_discussion.py` | The tick loop over adapters and the simultaneous vote tick are done. The turn-based runner stays in `core/game_engine.py` as the control |
+| `core/game_engine.py` | Done in Phase 1a. `discussion_mode` (`turns` or `timed`), `room_config` and `room_workers` select and set the runner. The vote bookkeeping moved into `_record_vote`, which both modes use. A `vllm:` model that is not on the eligible list stops the game at setup |
+| `core/api_clients.py` | A `vllm` provider that talks to the server at `VLLM_BASE_URL` and needs no key. Model names look like `vllm:ibm-granite/granite-3.3-8b-instruct` |
+| `main.py` | `--discussion_mode`, `--room_budget_s`, `--room_tick_s`, `--room_max_words`, `--room_overlap`, `--room_seed` and `--room_workers`. A composition file may set `discussion_mode` |
+| `core/state.py` | A lock around the live-state save and the thought publishing, because agents generate in parallel. Seeded start rooms are still to do |
+| `agents/honest_agent.py`, `agents/byzantine_agent.py` | Unchanged. The adapter builds the room prompt itself and calls the agent's own system prompt, vote method and model client |
+| `agents/prompts.py` | Unchanged. The room reuses its behavior rules and the `<think>` appendix idea |
+| `core/logger.py` | Unchanged. The engine writes `room/room_round<N>.jsonl` and each agent's final percept to the game's log folder |
+| `scripts/hipergator/run_game.sbatch` | Done. Starts a vLLM server and times full games in each mode in `MODES` |
 | `submit_games.sh` | Longer time limit, vLLM startup, seed from the array index |
 | `tests/test_situation_room.py` | pytest with a fake generator and no GPU |
 

@@ -16,6 +16,15 @@ from loguru import logger
 class InProcessTransport:
     """Runs one call per agent at once and collects the results."""
 
+    def __init__(self, max_workers: int | None = None) -> None:
+        """Creates the transport.
+
+        Args:
+            max_workers: Calls to run at the same time, or None to run one per agent. Use 1 for a
+                backend that cannot serve calls in parallel, such as a model loaded in this process.
+        """
+        self._max_workers = max_workers
+
     def collect(self, jobs: Mapping[str, Callable[[], Any]], timeout_s: float | None = None) -> dict[str, Any]:
         """Runs every job in parallel and waits for the results.
 
@@ -32,7 +41,7 @@ class InProcessTransport:
         results: dict[str, Any] = {name: None for name in jobs}
         if not jobs:
             return results
-        pool = ThreadPoolExecutor(max_workers=len(jobs))
+        pool = ThreadPoolExecutor(max_workers=min(len(jobs), self._max_workers or len(jobs)))
         futures = {name: pool.submit(job) for name, job in jobs.items()}
         deadline = None if timeout_s is None else time.monotonic() + timeout_s
         for name, future in futures.items():

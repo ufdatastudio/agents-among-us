@@ -1,5 +1,6 @@
-"""API client wrappers for Navigator, OpenAI, and Anthropic providers."""
+"""API client wrappers for Navigator, OpenAI, Anthropic and local vLLM providers."""
 
+import os
 import time
 from dataclasses import dataclass
 
@@ -139,15 +140,23 @@ def get_client(provider, api_keys):
     """Factory to get an API client for a provider.
 
     Args:
-        provider: One of 'navigator', 'openai', 'anthropic'.
+        provider: One of 'navigator', 'openai', 'anthropic', 'vllm'.
         api_keys: Dict mapping provider names to API key strings.
 
     Returns:
-        An API client instance.
+        An API client instance. The 'vllm' provider talks to a vLLM server on the same node
+        at VLLM_BASE_URL (default http://127.0.0.1:8000/v1), which needs no key.
 
     Raises:
         ValueError: If the required API key is missing.
     """
+    if provider == "vllm":
+        return OpenAICompatibleClient(
+            base_url=os.environ.get("VLLM_BASE_URL", "http://127.0.0.1:8000/v1"),
+            api_key="EMPTY",
+            provider_name="vLLM",
+        )
+
     key_map = {
         "navigator": "NAVIGATOR_TOOLKIT_API_KEY",
         "openai": "OPENAI_API_KEY",
