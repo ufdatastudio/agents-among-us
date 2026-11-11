@@ -174,6 +174,20 @@ def read_discussion(path: Path) -> dict:
     return {"meetings": len(MEETING_LINE.findall(text)), "statements": len(STATEMENT_LINE.findall(text))}
 
 
+def read_redone(path: Path) -> int:
+    """Counts the meetings of a game that were rewound because an agent had no valid vote.
+
+    Args:
+        path: The `voided_meetings.jsonl` of one game.
+
+    Returns:
+        The number of rewound meetings, 0 if the file is missing.
+    """
+    if not path.exists():
+        return 0
+    return sum(1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
+
+
 def load_done(path: Path) -> set[tuple[str, int]]:
     """Reads the games that finished from an earlier run.
 
@@ -231,6 +245,9 @@ def run_game(protocol: Protocol, seed: int, args: argparse.Namespace, scenario: 
         "reasoning_effort": os.environ.get("VLLM_REASONING_EFFORT") or "default",
         "max_tokens": int(os.environ.get("AAU_MAX_TOKENS", "160")),
         **parse_output(text), **read_discussion(game_dir / "discussion.log"),
+        # Meetings held again for lack of a vote, and whether the game stopped because the last attempt lacked one.
+        "redone_meetings": read_redone(game_dir / "voided_meetings.jsonl"),
+        "stopped_for_votes": "MeetingFailed" in text,
         "stats": read_stats(game_dir / "stats.csv"), "tokens": read_tokens(game_dir / "stats.csv"),
     }
     logger.info("{} {} seed {}: {} in {:.0f} s", game_id, protocol.name, seed, record["result"], wall)

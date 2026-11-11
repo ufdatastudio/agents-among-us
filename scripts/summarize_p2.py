@@ -67,6 +67,8 @@ def summarize(records: Iterable[dict]) -> list[dict]:
         low, high = wilson(wins, len(finished))
         correct = sum(g.get("stats", {}).get("honest_correct_votes", 0) for g in finished)
         incorrect = sum(g.get("stats", {}).get("honest_incorrect_votes", 0) for g in finished)
+        skipped = sum(g.get("stats", {}).get("honest_skipped_votes", 0) for g in finished)
+        redone = [g["redone_meetings"] for g in games if "redone_meetings" in g]
         tokens = {k: sum(g.get("tokens", {}).get(k, 0) for g in finished) for k in ("api_output_tokens", "api_reasoning_tokens", "api_calls", "api_truncated_calls", "api_empty_replies")}
         rows.append(
             {
@@ -80,6 +82,8 @@ def summarize(records: Iterable[dict]) -> list[dict]:
                 "ci_low": low,
                 "ci_high": high,
                 "honest_vote_accuracy": correct / (correct + incorrect) if correct + incorrect else None,
+                "honest_skipped_share": _ratio(skipped, correct + incorrect + skipped),
+                "redone_per_game": statistics.mean(redone) if redone else None,
                 "mean_rounds": statistics.mean(g["rounds_played"] for g in finished) if finished else None,
                 "mean_meetings": statistics.mean(g["meetings"] for g in finished) if finished else None,
                 "mean_statements": statistics.mean(g["statements"] for g in finished) if finished else None,
@@ -111,8 +115,8 @@ def format_table(rows: Sequence[dict]) -> str:
         The table.
     """
     lines = [
-        "| Model | Effort | Token limit | Protocol | Games | Failed | Honest win rate | 95% interval | Honest vote accuracy | Rounds | Meetings | Statements | Minutes | Tokens per call | Reasoning share | Cut at limit | Empty |",
-        "|-------|--------|-------------|----------|-------|--------|-----------------|--------------|----------------------|--------|----------|------------|---------|-----------------|-----------------|--------------|-------|",
+        "| Model | Effort | Token limit | Protocol | Games | Failed | Honest win rate | 95% interval | Honest vote accuracy | Rounds | Meetings | Statements | Minutes | Tokens per call | Reasoning share | Cut at limit | Empty | Honest votes skipped | Meetings redone per game |",
+        "|-------|--------|-------------|----------|-------|--------|-----------------|--------------|----------------------|--------|----------|------------|---------|-----------------|-----------------|--------------|-------|---------------------|--------------------------|",
     ]
     for r in rows:
         lines.append(
@@ -120,7 +124,8 @@ def format_table(rows: Sequence[dict]) -> str:
             f"| {_fmt(r['honest_win_rate'], '.2f')} | {r['ci_low']:.2f} to {r['ci_high']:.2f} "
             f"| {_fmt(r['honest_vote_accuracy'], '.2f')} | {_fmt(r['mean_rounds'], '.1f')} | {_fmt(r['mean_meetings'], '.1f')} "
             f"| {_fmt(r['mean_statements'], '.0f')} | {_fmt(r['mean_minutes'], '.1f')} | {_fmt(r['tokens_per_call'], '.0f')} "
-            f"| {_fmt(r['reasoning_share'], '.0%')} | {_fmt(r['truncated_share'], '.1%')} | {_fmt(r['empty_share'], '.1%')} |"
+            f"| {_fmt(r['reasoning_share'], '.0%')} | {_fmt(r['truncated_share'], '.1%')} | {_fmt(r['empty_share'], '.1%')} "
+            f"| {_fmt(r['honest_skipped_share'], '.0%')} | {_fmt(r['redone_per_game'], '.2f')} |"
         )
     return "\n".join(lines)
 

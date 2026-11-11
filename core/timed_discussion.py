@@ -9,8 +9,7 @@ from loguru import logger
 from core.adapters.base import AgentAdapter
 from core.situation_room import Meeting, Percept, Reply, Room, RoomConfig, Tick, Vote
 from core.transport import InProcessTransport
-
-SKIP = "SKIP"
+from core.voting import SKIP
 
 
 def onset_delay(config: RoomConfig, agent: str, tick: int) -> float:
@@ -100,17 +99,20 @@ def collect_votes(
     room: Room,
     transport: InProcessTransport | None = None,
     timeout_s: float | None = None,
+    allow_skip: bool = True,
 ) -> dict[str, str]:
     """Collects every agent's vote in one simultaneous tick.
 
     Every agent sees the final state of the room. A missing, invalid or self-directed
-    vote counts as a skip.
+    vote is recorded as SKIP, which marks a voter the caller has to deal with when
+    skipping is not allowed.
 
     Args:
         adapters: One adapter per agent.
         room: The closed room.
         transport: How to reach the adapters. Defaults to the in-process transport.
         timeout_s: Time to wait for the votes, or None to wait for ever.
+        allow_skip: Whether SKIP is among the candidates the agents may choose.
 
     Returns:
         The target of each agent's vote.
@@ -121,7 +123,7 @@ def collect_votes(
     jobs = {}
     for adapter in adapters:
         percept = room.percept(adapter.name, end, room.ticks + 1)
-        candidates = [n for n in names if n != adapter.name] + [SKIP]
+        candidates = [n for n in names if n != adapter.name] + ([SKIP] if allow_skip else [])
         jobs[adapter.name] = partial(adapter.vote, percept, candidates)
     results = transport.collect(jobs, timeout_s)
     votes = {}

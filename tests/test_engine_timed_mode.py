@@ -18,11 +18,12 @@ COMPOSITION = {
 
 
 class StubLLM:
-    """Answers votes with Agent_0 and says one fixed thing in a discussion."""
+    """Votes for Agent_0, or for Agent_1 when it is Agent_0, and says one fixed thing in a discussion."""
 
     def generate(self, model_name, system_prompt, user_prompt, temperature=0.1, max_tokens=160, preserve_think_tags=False):
         if "You are in a voting phase" in user_prompt:
-            return "Agent_0"
+            candidates = next(line for line in user_prompt.splitlines() if line.startswith("Candidates:"))
+            return "Agent_0" if "Agent_0" in candidates else "Agent_1"
         if "timed meeting" in user_prompt and "nobody has spoken yet" not in user_prompt:
             return "<silent/>"
         return "I was in Cafeteria and Agent_0 was acting strange near the body, so I suspect Agent_0."
@@ -81,11 +82,12 @@ def test_a_timed_meeting_logs_the_room_and_collects_the_votes(tmp_path, monkeypa
     rows = [json.loads(line) for line in (base / "room" / "room_round1.jsonl").read_text(encoding="utf-8").splitlines()]
     assert rows[0]["type"] == "room" and rows[0]["closed_early"] is True
     assert sum(row["type"] == "utterance" for row in rows) == 4
-    # The three honest agents vote for Agent_0. Agent_0 cannot vote for itself, so it skips.
+    # The three honest agents vote for Agent_0, and Agent_0 votes for Agent_1.
     assert engine.state.world_data["agents"]["Agent_0"]["status"] == "ejected"
     assert engine.state.world_data["agents"]["Agent_0"]["stats"]["votes_received"] == 3
     assert engine.state.world_data["agents"]["Agent_1"]["stats"]["correct_votes"] == 1
-    assert engine.state.world_data["agents"]["Agent_0"]["stats"]["skipped_votes"] == 1
+    assert engine.state.world_data["agents"]["Agent_0"]["stats"]["skipped_votes"] == 0
+    assert engine.state.world_data["agents"]["Agent_1"]["stats"]["votes_received"] == 1
     assert (base / "room" / "Agent_1_round1_heard.log").exists()
 
 

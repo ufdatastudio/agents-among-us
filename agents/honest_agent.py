@@ -14,6 +14,7 @@ from agents.prompts import (
     HONEST_VOTE_INSTRUCTIONS_SKIP_DISCUSSION_WITH_THOUGHTS,
     honest_system_prompt,
     honest_system_prompt_skip_discussion,
+    require_vote,
 )
 from agents.thought_capture import (
     capture_enabled,
@@ -219,6 +220,7 @@ You are in a discussion phase.
         )
 
     def vote(self, world_view, candidates, round_num, pruner=None):
+        allow_skip = "SKIP" in candidates
         discussion_log = self._read_file(world_view["discussion_log_path"])
         round_num = int(round_num)
         recent_discussion = self._get_current_round_log(discussion_log, round_num - self.context_window) # can adjust as needed
@@ -279,11 +281,13 @@ Note: Be aware of total player count to ensure Byzantines do not equal or outnum
 
 {vote_body}
 """
+        if not allow_skip:
+            prompt = require_vote(prompt)
         response = generate_with_optional_thoughts(
             self,
             self._system_prompt(),
             prompt,
-            temperature=0.1,
+            temperature=world_view.get("vote_temperature", 0.1),
             phase="VOTING",
             round_num=round_num,
             tick=world_view.get("tick", 0),
@@ -294,8 +298,9 @@ Note: Be aware of total player count to ensure Byzantines do not equal or outnum
         for cand in candidates:
             if cand in clean_resp:
                 return cand
-                
-        return "SKIP"
+
+        # An agent that may not skip gets None, so that the engine can ask again.
+        return "SKIP" if allow_skip else None
 
     def _system_prompt(self):
         overrides = getattr(self, "prompt_overrides", {}) or {}

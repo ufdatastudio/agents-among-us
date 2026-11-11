@@ -1,7 +1,25 @@
 # agents/prompts.py
 """Centralized LLM prompt templates for honest and Byzantine agents."""
 
+import re
+
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
+
+_SKIP_OPTION = re.compile(r"\s*or 'SKIP'( if you choose not to vote)?")
+
+
+def require_vote(prompt: str) -> str:
+    """Removes the option to skip from a voting prompt.
+
+    Args:
+        prompt: A voting prompt that offers SKIP.
+
+    Returns:
+        The prompt with the note about skipping replaced by a rule that the agent must vote,
+        and the reply instruction asking only for a name.
+    """
+    prompt = prompt.replace("Skipping your vote is an option. ", "You must vote for one of the candidates. ")
+    return _SKIP_OPTION.sub("", prompt)
 
 # -----------------------------------------------------------------------------
 # Honest agent

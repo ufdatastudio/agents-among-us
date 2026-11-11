@@ -15,6 +15,7 @@ from scripts.run_p2 import (
     parse_output,
     plan,
     read_discussion,
+    read_redone,
     read_stats,
     read_tokens,
 )
@@ -191,3 +192,28 @@ def test_games_with_one_seed_start_alike_under_any_protocol(tmp_path, monkeypatc
         engine.setup(comp)
         starts.append({n: d["location"] for n, d in engine.state.world_data["agents"].items()})
     assert starts[0] == starts[1]
+
+
+def test_read_redone_counts_the_rewound_meetings(tmp_path):
+    path = tmp_path / "voided_meetings.jsonl"
+    path.write_text('{"round": 1, "attempt": 1}\n{"round": 2, "attempt": 1}\n', encoding="utf-8")
+    assert read_redone(path) == 2
+    assert read_redone(tmp_path / "missing.jsonl") == 0
+
+
+def test_summarize_reports_skipped_votes_and_redone_meetings():
+    def game(redone, skipped):
+        return {
+            "model": "m", "protocol": "none", "result": "done", "winner": "honest", "rounds_played": 3, "meetings": 2,
+            "statements": 0, "wall_s": 60, "redone_meetings": redone,
+            "stats": {"honest_correct_votes": 1, "honest_incorrect_votes": 1, "honest_skipped_votes": skipped},
+        }
+
+    (row,) = summarize([game(0, 2), game(2, 0)])
+    assert row["honest_skipped_share"] == pytest.approx(2 / 6)
+    assert row["redone_per_game"] == 1.0
+    table = format_table([row])
+    assert "| 33% | 1.00 |" in table
+    # Records written before the rule have no count, which the table leaves empty.
+    old = {k: v for k, v in game(0, 0).items() if k != "redone_meetings"}
+    assert summarize([old])[0]["redone_per_game"] is None

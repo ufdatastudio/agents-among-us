@@ -16,6 +16,7 @@ from loguru import logger
 from agents.room_prompts import build_room_prompt
 from agents.thought_capture import capture_enabled, generate_with_optional_thoughts
 from core.situation_room import Meeting, Percept, Reply, RoomConfig, Tick, Vote, format_time, parse_reply
+from core.voting import SKIP, ask_until_valid
 
 # Phase label for the thought log. It differs from DISCUSSION on purpose, because the
 # generator retries any DISCUSSION reply of fewer than 45 words, and silence is allowed here.
@@ -55,6 +56,7 @@ class GameAgentAdapter:
         config: RoomConfig,
         view_factory: Callable[[str, int], dict],
         percept_dir: Path,
+        vote_retries: int = 2,
     ) -> None:
         """Creates the adapter.
 
@@ -65,6 +67,7 @@ class GameAgentAdapter:
             view_factory: Builds the agent's view of the game for a round. It is called once per
                 meeting from the controller's thread, because building a view changes game state.
             percept_dir: Folder for the files in which the agent's final percept is written.
+            vote_retries: Asks to add when the agent's vote reply does not name a candidate.
         """
         self.name = agent.name
         self.agent = agent
@@ -72,6 +75,7 @@ class GameAgentAdapter:
         self._config = config
         self._view_factory = view_factory
         self._percept_dir = percept_dir
+        self._vote_retries = vote_retries
         self._meeting: Meeting | None = None
         self._view: dict = {}
         self._action_log = ""
@@ -143,10 +147,10 @@ class GameAgentAdapter:
 
         Args:
             percept: Everything the agent heard.
-            candidates: Names the agent may vote for, including SKIP.
+            candidates: Names the agent may vote for, with SKIP only when skipping is allowed.
 
         Returns:
-            The vote.
+            The vote. Its target is SKIP when no ask gave a candidate.
         """
         assert self._meeting is not None, "vote before begin_meeting"
         if getattr(self.agent, "is_hybrid", False):
@@ -156,8 +160,12 @@ class GameAgentAdapter:
         path = self._percept_dir / f"{self.name}_round{round_num}_heard.log"
         path.write_text(f"=== Round {round_num} ===\n{percept.text}\n", encoding="utf-8")
         view = {**self._view, "discussion_log_path": str(path), "tick": percept.tick, "phase": "VOTING"}
-        target = self.agent.vote(view, candidates, round_num)
-        return Vote(self.name, target)
+
+        def ask(temperature: float) -> str | None:
+            return self.agent.vote({**view, "vote_temperature": temperature}, candidates, round_num)
+
+        target = ask_until_valid(ask, candidates, self._vote_retries, self.name)
+        return Vote(self.name, SKIP if target is None else target)
 
     def end_meeting(self) -> None:
         """Drops the last percept. The meeting stays known, because the vote comes after it."""

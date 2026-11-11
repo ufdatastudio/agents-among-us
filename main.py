@@ -52,6 +52,9 @@ def main():
     parser.add_argument("--room_dropout", type=float, default=0.0, help="Fraction of words a listener misses in noisy mode")
     parser.add_argument("--room_tag_policy", choices=("every_chunk", "first_chunk"), default="every_chunk", help="Speaker tags in noisy mode")
     parser.add_argument("--room_workers", type=int, default=None, help="Agents that generate at once in the room (default: all, or 1 when the model runs in this process)")
+    parser.add_argument("--allow_skip", action="store_true", help="Let a model agent skip its vote. By default every agent has to vote")
+    parser.add_argument("--vote_retries", type=int, default=2, help="Times to ask again when a vote reply names no candidate")
+    parser.add_argument("--meeting_attempts", type=int, default=3, help="Times a meeting may be held when a vote is still missing, before the game stops")
     args = parser.parse_args()
 
     num_rounds = args.num_rounds
@@ -129,6 +132,9 @@ def main():
         room_config=room_config,
         room_workers=room_workers,
         seed=args.seed,
+        allow_skip=args.allow_skip,
+        vote_retries=args.vote_retries,
+        max_meeting_attempts=args.meeting_attempts,
     )
    
     engine.setup(composition=selected_composition)

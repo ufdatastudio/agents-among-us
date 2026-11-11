@@ -17,6 +17,7 @@ from core.state import GameState
 from core.logger import LogManager
 from core.timed_discussion import collect_votes, run_timed_discussion
 from core.transport import InProcessTransport
+from core.voting import SKIP, ask_until_valid
 import os
 import joblib
 import pandas as pd
@@ -110,9 +111,14 @@ class Observer:
 DISCUSSION_MODES = ("turns", "timed")
 
 
+class MeetingFailed(RuntimeError):
+    """A meeting never ended with a vote from every agent, even after it was redone."""
+
+
 class GameEngine:
     def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST, num_rounds=DEFAULT_NUM_ROUNDS, num_ticks=None, num_discussion_messages=2,skip_discussion=False,
-                 discussion_mode="turns", room_config=None, room_workers=None, seed=None):
+                 discussion_mode="turns", room_config=None, room_workers=None, seed=None,
+                 allow_skip=False, vote_retries=2, max_meeting_attempts=3):
         """Creates the engine.
 
         Args:
@@ -122,9 +128,16 @@ class GameEngine:
             room_workers: Agents that may generate at the same time in the timed discussion, or None
                 for all of them. Use 1 when the model runs inside this process.
             seed: Seed of the scenario. It sets the start rooms, so games with one seed begin alike.
+            allow_skip: Whether a model agent may skip its vote. By default every agent has to vote.
+            vote_retries: Asks to add when a model agent's reply to the vote does not name a candidate.
+            max_meeting_attempts: Times a meeting may be held. When an agent still has no valid vote after
+                its retries, the meeting is rewound and held again, and the game stops with MeetingFailed
+                when the last attempt also lacks a vote.
         """
         if discussion_mode not in DISCUSSION_MODES:
             raise ValueError(f"discussion_mode must be one of {DISCUSSION_MODES}, got {discussion_mode!r}")
+        if max_meeting_attempts < 1 or vote_retries < 0:
+            raise ValueError("max_meeting_attempts must be at least 1 and vote_retries must not be negative")
         self.game_id = game_id
         self.num_agents = num_agents
         self.num_rounds = num_rounds
@@ -133,6 +146,9 @@ class GameEngine:
         self.skip_discussion = skip_discussion
         self.discussion_mode = discussion_mode
         self.seed = seed
+        self.allow_skip = allow_skip
+        self.vote_retries = vote_retries
+        self.max_meeting_attempts = max_meeting_attempts
         self.room_config = room_config or RoomConfig()
         self.room_transport = InProcessTransport(room_workers)
         self.agents = []
@@ -728,13 +744,41 @@ class GameEngine:
                 self.state.world_data["agents"][agent.name]["last_action"] = None
 
     def run_discussion_phase(self, round_num):
+        """Holds the meeting of a round, with a vote from every agent, and ejects the agent with most votes.
+
+        A meeting in which a model agent has no valid vote is rewound and held again, up to
+        `max_meeting_attempts` times. The rewound discussion goes to voided_meetings.jsonl.
+
+        Raises:
+            MeetingFailed: If the last attempt still lacks a vote.
+        """
+        active_agents = [a for a in self.agents if self.state.world_data["agents"][a.name]["status"] == "active"]
+        votes = {}
+        for attempt in range(1, self.max_meeting_attempts + 1):
+            checkpoint = self._checkpoint_meeting()
+            votes = self._hold_meeting(round_num, active_agents, attempt)
+            missing = self._missing_voters(active_agents, votes)
+            if not missing:
+                break
+            if attempt == self.max_meeting_attempts:
+                self._rewind_meeting(checkpoint, round_num, attempt, missing, votes)
+                raise MeetingFailed(f"round {round_num}: {missing} had no valid vote in {attempt} attempts")
+            self._rewind_meeting(checkpoint, round_num, attempt, missing, votes)
+        for agent in active_agents:
+            self._record_vote(agent, votes[agent.name], round_num)
+        self._tally_and_eject(round_num, votes)
+
+    def _hold_meeting(self, round_num, active_agents, attempt):
+        """Runs the discussion of a meeting and collects every agent's vote, without recording the votes.
+
+        Returns:
+            The vote of each agent, which is SKIP where the agent gave no valid vote or skipped.
+        """
         self.logger.write_log("discussion", None, f"\n=== Round {round_num} ===")
         reason = self.state.world_data["global"]["meeting_reason_log"]
         if reason:
             self.logger.write_log("discussion", None, reason)
-        
-        active_agents = [a for a in self.agents if self.state.world_data["agents"][a.name]["status"] == "active"]
-        
+
         caller_name = self.state.world_data["global"]["meeting_caller"]
         discussion_order = []
         
@@ -808,7 +852,7 @@ class GameEngine:
             self.logger.write_log("discussion", None, "** DISCUSSION PHASE SKIPPED **")
             self.state.add_ui_event("Discussion Skipped", "info")
         else:
-            adapters, room = self._run_timed_meeting(round_num, active_agents, caller_name, reason)
+            adapters, room = self._run_timed_meeting(round_num, active_agents, caller_name, reason, attempt)
             round_statements = room.statements(caller_name)
             # The classifiers were trained on at most num_discussion_messages statements per agent.
             for row in round_statements:
@@ -823,9 +867,7 @@ class GameEngine:
         votes = {}
         if room is not None:
             # Every agent votes at once after seeing the room as it ended.
-            votes = collect_votes(adapters, room, self.room_transport)
-            for agent in active_agents:
-                self._record_vote(agent, votes[agent.name], round_num)
+            votes = collect_votes(adapters, room, self.room_transport, allow_skip=self.allow_skip)
         vote_turn_idx = 0
         for agent in ([] if room is not None else active_agents):
             vote_turn_idx += 1
@@ -835,8 +877,11 @@ class GameEngine:
             view["phase"] = "VOTING"
             view["capture_thoughts"] = self.capture_thoughts
             view["require_think_tags"] = self.require_think_tags
-            candidates = [a.name for a in active_agents if a.name != agent.name] + ["SKIP"]
-            if getattr(agent, "is_human", False):
+            is_human = getattr(agent, "is_human", False)
+            candidates = [a.name for a in active_agents if a.name != agent.name]
+            if self.allow_skip or is_human:
+                candidates.append(SKIP)
+            if is_human:
                 vote = self._await_human_vote(
                     agent,
                     round_num=round_num,
@@ -844,16 +889,64 @@ class GameEngine:
                     candidates=candidates,
                     timeout_s=30,
                 )
-            elif getattr(agent, "is_hybrid", False):
-                vote = agent.vote(view, candidates, round_num, pruner=self.pruner)
             else:
-                vote = agent.vote(view, candidates, round_num)
-            # Do not call vote() again here: a duplicate line (merge artifact) used to
-            # overwrite the hybrid branch and drop the pruner, breaking hybrid voting.
-
+                vote = self._ask_vote(agent, view, candidates, round_num)
             votes[agent.name] = vote
-            self._record_vote(agent, vote, round_num)
+        return votes
 
+    def _ask_vote(self, agent, view, candidates, round_num):
+        """Asks a model agent for its vote, again when the reply names no candidate.
+
+        Returns:
+            The candidate voted for, or SKIP when no ask gave one.
+        """
+        def ask(temperature):
+            asked = {**view, "vote_temperature": temperature}
+            if getattr(agent, "is_hybrid", False):
+                return agent.vote(asked, candidates, round_num, pruner=self.pruner)
+            return agent.vote(asked, candidates, round_num)
+
+        target = ask_until_valid(ask, candidates, self.vote_retries, agent.name)
+        return SKIP if target is None else target
+
+    def _missing_voters(self, active_agents, votes):
+        """Lists the model agents that have no valid vote when skipping is not allowed."""
+        if self.allow_skip:
+            return []
+        return [a.name for a in active_agents if not getattr(a, "is_human", False) and votes.get(a.name, SKIP) == SKIP]
+
+    def _checkpoint_meeting(self):
+        """Notes how far the logs a meeting writes to have grown, so the meeting can be rewound."""
+        return {
+            "discussion": os.path.getsize(self.logger.paths["discussion"]),
+            "discussion_chat": os.path.getsize(self.logger.paths["discussion_chat"]),
+            "ui_events": len(self.state.world_data["global"]["ui_event_log"]),
+        }
+
+    def _rewind_meeting(self, checkpoint, round_num, attempt, missing, votes):
+        """Takes back a meeting that lacks a vote.
+
+        The discussion and chat it wrote are cut from the logs the agents read, and kept in
+        voided_meetings.jsonl with the votes it did collect. The room's record is renamed.
+        """
+        voided = {"round": round_num, "attempt": attempt, "missing_voters": missing, "votes": votes}
+        for key in ("discussion", "discussion_chat"):
+            with open(self.logger.paths[key], "r+b") as handle:
+                handle.seek(checkpoint[key])
+                voided[key] = handle.read().decode("utf-8", errors="replace")
+                handle.truncate(checkpoint[key])
+        base = Path(self.logger.base_dir)
+        with (base / "voided_meetings.jsonl").open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(voided) + "\n")
+        room_file = base / "room" / f"room_round{round_num}.jsonl"
+        if room_file.exists():
+            room_file.rename(room_file.with_name(f"room_round{round_num}_voided{attempt}.jsonl"))
+        del self.state.world_data["global"]["ui_event_log"][checkpoint["ui_events"]:]
+        self.state.add_ui_event(f"Meeting {round_num} is held again, because {missing} had no valid vote", "info")
+        log.warning("Meeting of round {} rewound after attempt {}: {} had no valid vote", round_num, attempt, missing)
+
+    def _tally_and_eject(self, round_num, votes):
+        """Counts the votes of a meeting and ejects the agent with the most, unless the vote is tied."""
         tally = {}
         for v in votes.values(): tally[v] = tally.get(v, 0) + 1
         
@@ -925,7 +1018,7 @@ class GameEngine:
             return False
         return True
 
-    def _run_timed_meeting(self, round_num, active_agents, caller_name, reason):
+    def _run_timed_meeting(self, round_num, active_agents, caller_name, reason, attempt=1):
         """Runs the discussion of one meeting in the situation room.
 
         Every utterance is written to the discussion log and the chat file in order of start time,
@@ -936,7 +1029,8 @@ class GameEngine:
         """
         names = [a.name for a in active_agents]
         room_dir = Path(self.logger.get_discussion_log_path("honest")).parent / "room"
-        config = replace(self.room_config, seed=self.room_config.seed + round_num)
+        # A meeting that is held again gets other onsets, because the same ones would repeat its timing.
+        config = replace(self.room_config, seed=self.room_config.seed + round_num + 1000 * (attempt - 1))
 
         def view_for(name, rnd):
             view = self.state.get_agent_view(name, rnd, log_to_file=False)
@@ -944,7 +1038,7 @@ class GameEngine:
             view["require_think_tags"] = self.require_think_tags
             return view
 
-        adapters = [GameAgentAdapter(a, names, config, view_for, room_dir) for a in active_agents]
+        adapters = [GameAgentAdapter(a, names, config, view_for, room_dir, self.vote_retries) for a in active_agents]
         room = run_timed_discussion(adapters, Meeting(round_num, reason, caller_name), config, self.room_transport)
         by_name = {a.name: a for a in active_agents}
         for utterance in room.utterances():
