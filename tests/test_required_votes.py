@@ -8,7 +8,7 @@ import pytest
 from agents.prompts import HONEST_DEFAULT_VOTE_INSTRUCTIONS_WITH_THOUGHTS, BYZANTINE_DEFAULT_VOTE_INSTRUCTIONS, require_vote
 from core.game_engine import GameEngine, MeetingFailed
 from core.situation_room import RoomConfig
-from core.voting import VOTE_TEMPERATURES, ask_until_valid
+from core.voting import VOTE_TEMPERATURES, ask_until_valid, vote_feedback
 
 COMPOSITION = {
     "name": "VoteTest",
@@ -25,12 +25,14 @@ class VoteStub:
     """Votes for Agent_0 (Agent_1 when it is Agent_0) and gives one voter a bad reply for its first asks.
 
     Attributes:
+        self_voter: Agent that votes for itself until it is told the reply is not valid, or None.
         bad_voter: Agent whose first `bad_asks` vote replies name nobody, or None.
         bad_asks: How many of its asks fail, or None for all of them.
         votes: Every vote ask as (voter, temperature, prompt).
     """
 
-    def __init__(self, bad_voter=None, bad_asks=None):
+    def __init__(self, bad_voter=None, bad_asks=None, self_voter=None):
+        self.self_voter = self_voter
         self.bad_voter = bad_voter
         self.bad_asks = bad_asks
         self.votes = []
@@ -49,6 +51,8 @@ class VoteStub:
             self.votes.append((voter, temperature, user_prompt))
             if voter == self.bad_voter and (self.bad_asks is None or asked_before < self.bad_asks):
                 return "I abstain."
+            if voter == self.self_voter and "not a valid vote" not in user_prompt:
+                return voter
             return "Agent_0" if voter != "Agent_0" else "Agent_1"
         if "timed meeting" in user_prompt and "nobody has spoken yet" not in user_prompt:
             return "<silent/>"
@@ -83,7 +87,7 @@ def test_require_vote_removes_every_offer_to_skip():
 def test_ask_until_valid_stops_at_the_first_candidate():
     temperatures = []
 
-    def ask(temperature):
+    def ask(temperature, feedback):
         temperatures.append(temperature)
         return "Blue" if len(temperatures) == 2 else "no idea"
 
@@ -93,9 +97,9 @@ def test_ask_until_valid_stops_at_the_first_candidate():
 
 def test_ask_until_valid_gives_none_when_every_ask_fails():
     asked = []
-    assert ask_until_valid(lambda temperature: asked.append(temperature), ["Blue"], retries=2) is None
+    assert ask_until_valid(lambda temperature, feedback: asked.append(temperature), ["Blue"], retries=2) is None
     assert len(asked) == 3
-    assert ask_until_valid(lambda temperature: "SKIP", ["Blue"], retries=2) is None
+    assert ask_until_valid(lambda temperature, feedback: "SKIP", ["Blue"], retries=2) is None
 
 
 def test_no_vote_prompt_offers_a_skip_by_default(tmp_path, monkeypatch):
@@ -182,3 +186,26 @@ def test_allow_skip_keeps_the_skip_option_and_counts_it(tmp_path, monkeypatch):
 def test_the_limits_are_checked(settings):
     with pytest.raises(ValueError, match="max_meeting_attempts"):
         GameEngine("v2", **settings)
+
+
+def test_a_retry_tells_the_agent_what_was_wrong_and_who_it_may_vote_for():
+    notes = []
+
+    def ask(temperature, feedback):
+        notes.append(feedback)
+        return "Blue" if feedback else "Agent_5"
+
+    assert ask_until_valid(ask, ["Blue", "Red"], retries=1, reply_of=lambda: "Agent_5") == "Blue"
+    assert notes[0] is None
+    assert '"Agent_5"' in notes[1] and "Blue, Red" in notes[1] and "yourself" in notes[1] and "out of the game" in notes[1]
+    assert "empty" in vote_feedback("", ["Blue"])
+
+
+def test_an_agent_that_votes_for_itself_is_corrected_on_the_second_ask(tmp_path, monkeypatch):
+    stub = VoteStub(self_voter="Agent_2")
+    engine = make_engine(tmp_path, monkeypatch, stub)
+    engine.run_discussion_phase(1)
+    assert not (game_dir(tmp_path, engine) / "voided_meetings.jsonl").exists()
+    corrected = [prompt for voter, _, prompt in stub.votes if voter == "Agent_2" and "not a valid vote" in prompt]
+    assert len(corrected) == 1 and 'Your last reply was "Agent_2"' in corrected[0]
+    assert engine.state.world_data["agents"]["Agent_0"]["stats"]["votes_received"] == 3

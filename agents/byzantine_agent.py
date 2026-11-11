@@ -296,6 +296,8 @@ Note: Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts
 """
         if not allow_skip:
             prompt = require_vote(prompt)
+        if world_view.get("vote_feedback"):
+            prompt += f"\n{world_view['vote_feedback']}\n"
         response = generate_with_optional_thoughts(
             self,
             self._system_prompt(),

@@ -161,10 +161,14 @@ class GameAgentAdapter:
         path.write_text(f"=== Round {round_num} ===\n{percept.text}\n", encoding="utf-8")
         view = {**self._view, "discussion_log_path": str(path), "tick": percept.tick, "phase": "VOTING"}
 
-        def ask(temperature: float) -> str | None:
-            return self.agent.vote({**view, "vote_temperature": temperature}, candidates, round_num)
+        def ask(temperature: float, feedback: str | None = None) -> str | None:
+            return self.agent.vote({**view, "vote_temperature": temperature, "vote_feedback": feedback}, candidates, round_num)
 
-        target = ask_until_valid(ask, candidates, self._vote_retries, self.name)
+        def last_reply() -> str:
+            reads = getattr(self.agent, "vote_reads", [])
+            return reads[-1]["reply"] if reads else ""
+
+        target = ask_until_valid(ask, candidates, self._vote_retries, self.name, last_reply)
         return Vote(self.name, SKIP if target is None else target)
 
     def end_meeting(self) -> None:

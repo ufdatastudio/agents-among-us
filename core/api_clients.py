@@ -116,6 +116,13 @@ class OpenAICompatibleClient:
                 usage = response.usage
                 output_tokens = usage.completion_tokens if usage else 0
                 reasoning_tokens, estimated = reasoning_tokens_of(response, text, output_tokens)
+                if not text.strip():
+                    choice = response.choices[0]
+                    logger.warning(
+                        "[{}] empty reply: finish_reason={}, completion_tokens={}, prompt_tokens={}, refusal={!r}",
+                        self.provider_name, choice.finish_reason, output_tokens,
+                        usage.prompt_tokens if usage else 0, getattr(choice.message, "refusal", None),
+                    )
                 return APIResponse(
                     text=text.strip(),
                     input_tokens=usage.prompt_tokens if usage else 0,

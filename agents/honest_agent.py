@@ -284,6 +284,8 @@ Note: Be aware of total player count to ensure Byzantines do not equal or outnum
 """
         if not allow_skip:
             prompt = require_vote(prompt)
+        if world_view.get("vote_feedback"):
+            prompt += f"\n{world_view['vote_feedback']}\n"
         response = generate_with_optional_thoughts(
             self,
             self._system_prompt(),

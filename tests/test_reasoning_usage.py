@@ -116,3 +116,15 @@ def test_a_failed_call_is_counted_and_reads_as_move():
     assert manager._generate_api("vllm:m", "system", "user", 0.1) == "move"
     assert manager._generate_api("vllm:m", "system", "user", 0.1) == "move"
     assert manager.get_token_usage()["vllm:m"]["api_errors"] == 2
+
+
+def test_an_empty_reply_is_logged_with_its_finish_reason():
+    from loguru import logger
+
+    messages = []
+    handler = logger.add(lambda message: messages.append(str(message)), level="WARNING")
+    try:
+        make_client(completion("", completion_tokens=0, finish="stop")).generate("m", "s", "u", 0.1, 160)
+    finally:
+        logger.remove(handler)
+    assert any("empty reply" in m and "finish_reason=stop" in m and "completion_tokens=0" in m for m in messages)

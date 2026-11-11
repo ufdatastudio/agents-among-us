@@ -900,13 +900,17 @@ class GameEngine:
         Returns:
             The candidate voted for, or SKIP when no ask gave one.
         """
-        def ask(temperature):
-            asked = {**view, "vote_temperature": temperature}
+        def ask(temperature, feedback=None):
+            asked = {**view, "vote_temperature": temperature, "vote_feedback": feedback}
             if getattr(agent, "is_hybrid", False):
                 return agent.vote(asked, candidates, round_num, pruner=self.pruner)
             return agent.vote(asked, candidates, round_num)
 
-        target = ask_until_valid(ask, candidates, self.vote_retries, agent.name)
+        def last_reply():
+            reads = getattr(agent, "vote_reads", [])
+            return reads[-1]["reply"] if reads else ""
+
+        target = ask_until_valid(ask, candidates, self.vote_retries, agent.name, last_reply)
         return SKIP if target is None else target
 
     def _missing_voters(self, active_agents, votes):
