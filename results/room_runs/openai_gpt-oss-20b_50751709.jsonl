@@ -1,0 +1,2 @@
+{"game": "50751709_timed_1", "mode": "timed", "model": "openai/gpt-oss-20b", "rounds": 3, "seconds": 141}
+{"game": "50751709_turns_1", "mode": "turns", "model": "openai/gpt-oss-20b", "rounds": 3, "seconds": 77}
