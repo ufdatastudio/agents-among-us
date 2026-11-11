@@ -1,0 +1,2 @@
+{"game": "50742388_timed_1", "mode": "timed", "model": "ibm-granite/granite-3.3-8b-instruct", "rounds": 3, "seconds": 197}
+{"game": "50742388_turns_1", "mode": "turns", "model": "ibm-granite/granite-3.3-8b-instruct", "rounds": 3, "seconds": 123}

@@ -358,6 +358,24 @@ Jobs 50715127 and 50715128 ran the same script on one RTX PRO 6000 (96 GB) with 
 - Gemma 4 31B finishes 10 simultaneous requests in 5.5 s against 30.5 s one after another, which is 5.5 times faster. Its replies averaged 56 tokens. The 6-tick growing-board meeting took 22 s in total, and 84% of prompt tokens came from the prefix cache by tick 6.
 - gpt-oss-20b produced exactly 160 completion tokens on every request in every round, so the cap ended each one. The model reasons before it answers, and the server's `openai_gptoss` reasoning parser keeps the reasoning apart from the reply, so the budget probably ran out before any reply text. These round times measure reasoning up to the cap and say little about game replies. A game with gpt-oss needs a larger token budget or a low reasoning effort, and the first run has to check that replies are not empty. The same applies to gpt-oss-120b.
 
+### Measured game time (P1a)
+
+Jobs 50742388 and 50744516 played full games of 10 agents (8 honest, 2 Byzantine) on Granite 3.3 8B served on one RTX PRO 6000. Each game had 3 rounds, thought capture off, a discussion budget of 180 s and 10 s ticks. The first job played 1 game per mode. It showed that every statement began with an address tag and that two thirds ran past the 40-word limit, which the fix in commit 119381f addressed. The second job played 2 games per mode on the fixed code and is the reference. The timing records are in `results/room_runs/`.
+
+| Game | Mode | Wall time | Meetings | Statements |
+|------|------|-----------|----------|------------|
+| 50744516_timed_1 | timed | 135 s | 2 | 108 |
+| 50744516_timed_2 | timed | 162 s | 3 | 150 |
+| 50744516_turns_1 | turns | 161 s | 1 | 14 |
+| 50744516_turns_2 | turns | 94 s | 1 | 12 |
+
+- A 180 s meeting took 16 s to 25 s of wall time (5 meetings) and produced 32 to 70 statements. The room asks only the agents that have finished talking at each tick, so the batches stay small. The number of statements falls from meeting to meeting as agents are ejected or killed.
+- The movement phase is the larger share of a game. Subtracting the meetings leaves roughly 25 s to 30 s per round, and the movement phase runs one agent at a time. A 10-round game with a meeting in most rounds would take about 7 minutes at this rate, which is a rough extrapolation from 3 rounds.
+- Room statements averaged 26 to 28 words, and 6% to 14% were cut at the 40-word limit, down from 66% and 77% in the first job. No statement began with a comma, and no game had an API error or an empty reply.
+- Turn-taking statements averaged 76 and 97 words against the room's 26 to 28. The logs do not time a turn-taking meeting, so the two modes cannot be compared per meeting. A comparison needs the same number of agents and the same round on both sides.
+- 99% of room statements still include an address tag, although the prompt says most statements need none. Granite treats the tag as part of the format, so addressing is a default of this model. Either the tag leaves the prompt or the experiments record it as always on.
+- The room never closed early. In every meeting some agent was still speaking in the last ticks, so `quiet_close_ticks` has not been exercised on a served model.
+
 ### Measured audio stack (P1b)
 
 `scripts/audio_pilot.py` synthesizes scripted 20-word statements with 10 Kokoro voices, mixes them the way the room would for a silent listener, and transcribes the result with Whisper large-v3 in fp16 on an NVIDIA RTX PRO 6000. The result file is `results/audio_pilot/summary_50646536.json`. The WAV files stay on HiPerGator in `results/audio_pilot/wav_50646536/`.
