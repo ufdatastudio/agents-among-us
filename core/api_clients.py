@@ -1,6 +1,7 @@
 """API client wrappers for Navigator, OpenAI, Anthropic and local vLLM providers."""
 
 import os
+import re
 import time
 from dataclasses import dataclass
 
@@ -30,6 +31,16 @@ class APIResponse:
     empty: bool = False
 
 
+# A model such as Gemma 4 writes its reasoning inside the reply, as a think block that may never close when the
+# reply is cut at the token limit.
+_INLINE_THINK = re.compile(r"<think>.*?(?:</think>|\Z)", re.DOTALL | re.IGNORECASE)
+
+
+def public_text(text: str) -> str:
+    """Gives a reply without its think blocks, including one that was cut before it closed."""
+    return _INLINE_THINK.sub("", text).strip()
+
+
 def reasoning_tokens_of(response, text: str, output_tokens: int) -> tuple[int, bool]:
     """Counts the completion tokens a reasoning model spent on reasoning in one reply.
 
@@ -39,7 +50,7 @@ def reasoning_tokens_of(response, text: str, output_tokens: int) -> tuple[int, b
 
     Args:
         response: A chat completion from an OpenAI-compatible server.
-        text: The reply text, without reasoning.
+        text: The reply text. A think block in it counts as reasoning when the server gives none separately.
         output_tokens: Completion tokens of the whole reply.
 
     Returns:
@@ -57,7 +68,10 @@ def reasoning_tokens_of(response, text: str, output_tokens: int) -> tuple[int, b
         if reasoning:
             break
     if not reasoning:
-        return 0, False
+        inline = "".join(m.group(0) for m in _INLINE_THINK.finditer(text))
+        if not inline:
+            return 0, False
+        return round(output_tokens * len(inline) / len(text)), True
     return round(output_tokens * len(reasoning) / (len(reasoning) + len(text))), True
 
 
@@ -116,7 +130,7 @@ class OpenAICompatibleClient:
                 usage = response.usage
                 output_tokens = usage.completion_tokens if usage else 0
                 reasoning_tokens, estimated = reasoning_tokens_of(response, text, output_tokens)
-                if not text.strip():
+                if not public_text(text):
                     choice = response.choices[0]
                     logger.warning(
                         "[{}] empty reply: finish_reason={}, completion_tokens={}, prompt_tokens={}, refusal={!r}",
@@ -130,7 +144,7 @@ class OpenAICompatibleClient:
                     reasoning_tokens=reasoning_tokens,
                     reasoning_estimated=estimated,
                     truncated=response.choices[0].finish_reason == "length",
-                    empty=not text.strip(),
+                    empty=not public_text(text),
                 )
             except (APIConnectionError, APITimeoutError, RateLimitError) as e:
                 last_error = e

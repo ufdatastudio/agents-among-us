@@ -8,17 +8,20 @@ from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 _SKIP_OPTION = re.compile(r"\s*or 'SKIP'( if you choose not to vote)?")
 
 
-def require_vote(prompt: str) -> str:
+def require_vote(prompt: str, voter: str | None = None) -> str:
     """Removes the option to skip from a voting prompt.
 
     Args:
         prompt: A voting prompt that offers SKIP.
+        voter: Name of the agent that votes. The prompt then says that the agent cannot vote for itself,
+            which some models need, because they otherwise answer with their own name.
 
     Returns:
         The prompt with the note about skipping replaced by a rule that the agent must vote,
         and the reply instruction asking only for a name.
     """
-    prompt = prompt.replace("Skipping your vote is an option. ", "You must vote for one of the candidates. ")
+    rule = "You must vote for one of the candidates. " + (f"You are {voter}, so you cannot vote for yourself. " if voter else "")
+    prompt = prompt.replace("Skipping your vote is an option. ", rule)
     return _SKIP_OPTION.sub("", prompt)
 
 # -----------------------------------------------------------------------------
