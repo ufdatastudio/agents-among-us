@@ -139,11 +139,19 @@ class ModelManager:
         return provider, model_id
 
     @staticmethod
-    def _postprocess_response(text, preserve_think_tags=False):
+    def _postprocess_response(text, preserve_think_tags=False, collapse_quotes=True):
         """Shared post-processing for both local and API responses.
 
         When preserve_think_tags is True (thought-capture path), leave
         <think>...</think> intact so callers can parse private reasoning.
+
+        Args:
+            text: The model's reply.
+            preserve_think_tags: Keep the think block for callers that parse it.
+            collapse_quotes: Keep only the last double-quoted fragment of a reply that has quotes. That
+                suits a model that wraps its answer in quotes, and it destroys a reply that quotes someone
+                ("Agent_2 said "I was in Storage" but...") or a vote that mentions a quoted word. With False
+                a reply is changed only when one pair of quotes wraps all of it.
         """
         if "<think>" in text and not preserve_think_tags:
             text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
@@ -153,6 +161,9 @@ class ModelManager:
         # Quote collapsing breaks structured think+answer outputs; skip when
         # preserving think tags.
         if not preserve_think_tags:
+            if not collapse_quotes:
+                wrapped = re.fullmatch(r'\s*"(.*)"\s*', text, flags=re.DOTALL)
+                return (wrapped.group(1) if wrapped else text).strip()
             if text.count('"') % 2 != 0:
                 text += '"'
             quotes = re.findall(r'"([^"]*)"', text)
@@ -180,8 +191,9 @@ class ModelManager:
 
             self._record_usage(model_name, response)
 
+            # A vLLM server serves models that quote other agents, so their replies keep their quotes.
             return self._postprocess_response(
-                response.text, preserve_think_tags=preserve_think_tags
+                response.text, preserve_think_tags=preserve_think_tags, collapse_quotes=provider != "vllm"
             )
 
         except Exception as e:
