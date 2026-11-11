@@ -217,3 +217,21 @@ def test_summarize_reports_skipped_votes_and_redone_meetings():
     # Records written before the rule have no count, which the table leaves empty.
     old = {k: v for k, v in game(0, 0).items() if k != "redone_meetings"}
     assert summarize([old])[0]["redone_per_game"] is None
+
+
+def test_the_word_limit_reaches_the_game_command_only_when_it_is_set():
+    protocol = protocol_by_name("clean-60")
+    assert "--room_max_words" not in game_command(protocol, 1, "g", "s", 3, 4)
+    command = game_command(protocol, 1, "g", "s", 3, 4, room_max_words=90)
+    assert command[command.index("--room_max_words") + 1] == "90"
+
+
+def test_summaries_keep_runs_with_other_settings_apart():
+    def game(**settings):
+        return {
+            "model": "m", "protocol": "none", "result": "done", "winner": "honest", "rounds_played": 3, "meetings": 2,
+            "statements": 0, "wall_s": 60, **settings,
+        }
+
+    rows = summarize([game(), game(capture=True), game(room_max_words=90), game(room_max_words=40)])
+    assert sorted((r["effort"], r["games"]) for r in rows) == [("default", 2), ("default +think", 1), ("default words 90", 1)]

@@ -9,7 +9,7 @@ from agents.prompts import BYZANTINE_DISCUSSION_INSTRUCTIONS_PREFIX, HONEST_DISC
 
 ROOM_MECHANICS = """
 6. This is a timed meeting and everyone speaks during the same window, so people talk over each other. Below is everything spoken so far. Speech that overlaps in time is interleaved in time order.
-7. Reply with your next statement in one or two short sentences and at most {max_words} words. Words past that limit are cut off, so put the point first.
+7. Reply with your next statement in {length} and at most {max_words} words. Words past that limit are cut off, so put the point first.
 8. Reply with <silent/> when you have nothing new to add. You may stay silent at any decision point and speak at the next one.
 9. Do not repeat what you or anyone else already said. React to the newest statements, answer accusations and questions aimed at you, and give your reason for any suspicion.
 10. Most statements are for the whole room and need no tag. Only when you answer or question one person, start with <to>Name</to> and then speak to them.
@@ -27,6 +27,21 @@ BYZANTINE_THINK_HINT = "how to lie or redirect without sounding guilty"
 
 NOBODY_SPOKE = "(nobody has spoken yet)"
 
+# Statements up to this many words are asked for as one or two short sentences, and longer ones as a short paragraph.
+SHORT_STATEMENT_WORDS = 40
+
+
+def statement_length(max_words: int) -> str:
+    """Words the prompt uses to ask for a statement that fits the word limit.
+
+    Args:
+        max_words: Words kept from one statement.
+
+    Returns:
+        The length the agent is asked for.
+    """
+    return "one or two short sentences" if max_words <= SHORT_STATEMENT_WORDS else "a few sentences"
+
 
 def room_instructions(role: str, max_words: int, capture_thoughts: bool) -> str:
     """Builds the instruction block for one role.
@@ -41,7 +56,7 @@ def room_instructions(role: str, max_words: int, capture_thoughts: bool) -> str:
     """
     byzantine = role == "byzantine"
     text = BYZANTINE_DISCUSSION_INSTRUCTIONS_PREFIX if byzantine else HONEST_DISCUSSION_INSTRUCTIONS_PREFIX
-    text += ROOM_MECHANICS.format(max_words=max_words)
+    text += ROOM_MECHANICS.format(max_words=max_words, length=statement_length(max_words))
     if capture_thoughts:
         hint = BYZANTINE_THINK_HINT if byzantine else HONEST_THINK_HINT
         text += ROOM_THINK_APPENDIX.format(hint=hint, max_words=max_words)

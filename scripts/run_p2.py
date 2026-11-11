@@ -69,7 +69,9 @@ def plan(protocols: Sequence[Protocol], seeds: Iterable[int], done: set[tuple[st
     return [(p, seed) for seed in seeds for p in protocols if (p.name, seed) not in done]
 
 
-def game_command(protocol: Protocol, seed: int, game_id: str, scenario: str, rounds: int, room_workers: int) -> list[str]:
+def game_command(
+    protocol: Protocol, seed: int, game_id: str, scenario: str, rounds: int, room_workers: int, room_max_words: int | None = None
+) -> list[str]:
     """Builds the `main.py` command of one game.
 
     Args:
@@ -79,6 +81,7 @@ def game_command(protocol: Protocol, seed: int, game_id: str, scenario: str, rou
         scenario: Composition name.
         rounds: Maximum number of rounds.
         room_workers: Agents that may generate at once in a timed meeting.
+        room_max_words: Words kept from one statement in a timed meeting, or None for the default of `main.py`.
 
     Returns:
         The command line.
@@ -87,6 +90,7 @@ def game_command(protocol: Protocol, seed: int, game_id: str, scenario: str, rou
         sys.executable, "-m", "main",
         "--composition_name", scenario, "--game_id", game_id, "--num_rounds", str(rounds),
         "--seed", str(seed), "--room_seed", str(seed), "--room_workers", str(room_workers),
+        *(["--room_max_words", str(room_max_words)] if room_max_words is not None else []),
         *protocol.args,
     ]
 
@@ -207,6 +211,20 @@ def load_done(path: Path) -> set[tuple[str, int]]:
     return done
 
 
+def reply_token_limit(capture: bool) -> int:
+    """Gives the reply limit in tokens that games run with, from the environment the agents read.
+
+    Args:
+        capture: Whether agents write private reasoning first, which has its own limit.
+
+    Returns:
+        The limit in tokens.
+    """
+    if capture:
+        return int(os.environ.get("AAU_MAX_TOKENS_WITH_THOUGHTS", "384"))
+    return int(os.environ.get("AAU_MAX_TOKENS", "160"))
+
+
 def run_game(protocol: Protocol, seed: int, args: argparse.Namespace, scenario: str) -> dict:
     """Plays one game in its own process and collects its record.
 
@@ -229,7 +247,7 @@ def run_game(protocol: Protocol, seed: int, args: argparse.Namespace, scenario: 
     with (out_dir / f"{game_id}.out").open("w", encoding="utf-8") as handle:
         try:
             code = subprocess.run(
-                game_command(protocol, seed, game_id, scenario, args.rounds, args.room_workers),
+                game_command(protocol, seed, game_id, scenario, args.rounds, args.room_workers, args.room_max_words),
                 env=env, stdout=handle, stderr=subprocess.STDOUT, timeout=args.game_timeout_s,
             ).returncode
         except subprocess.TimeoutExpired:
@@ -243,7 +261,9 @@ def run_game(protocol: Protocol, seed: int, args: argparse.Namespace, scenario: 
         # The reasoning effort and the reply limit the games ran with, so results of one model at
         # different settings are not mixed.
         "reasoning_effort": os.environ.get("VLLM_REASONING_EFFORT") or "default",
-        "max_tokens": int(os.environ.get("AAU_MAX_TOKENS", "160")),
+        "max_tokens": reply_token_limit(args.capture),
+        "room_max_words": args.room_max_words,
+        "capture": args.capture,
         **parse_output(text), **read_discussion(game_dir / "discussion.log"),
         # Meetings held again for lack of a vote, and whether the game stopped because the last attempt lacked one.
         "redone_meetings": read_redone(game_dir / "voided_meetings.jsonl"),
@@ -272,6 +292,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--workers", type=int, default=6, help="Games played at once")
     parser.add_argument("--room-workers", type=int, default=10, help="Agents generating at once in a timed meeting")
     parser.add_argument("--protocols", default=",".join(p.name for p in P2_PROTOCOLS))
+    parser.add_argument("--room-max-words", type=int, default=40, help="Words kept from one statement in a timed meeting")
     parser.add_argument("--capture", action="store_true", help="Agents write private reasoning first")
     parser.add_argument("--game-timeout-s", type=int, default=3600)
     parser.add_argument("--out", type=Path, default=None, help="JSON lines file, default results/p2/<model>_<tag>.jsonl")
@@ -290,6 +311,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     model = check_eligible(args.model)
     args.model = model
+    # A word is about 1.3 tokens, and a reasoning model also spends tokens before it answers.
+    if args.room_max_words * 1.3 > reply_token_limit(args.capture):
+        logger.warning("{} words may not fit in {} tokens, so raise AAU_MAX_TOKENS", args.room_max_words, reply_token_limit(args.capture))
     protocols = [protocol_by_name(name) for name in args.protocols.split(",")]
     out = args.out or Path("results/p2") / f"{model.replace('/', '_')}_{args.tag}.jsonl"
     out.parent.mkdir(parents=True, exist_ok=True)

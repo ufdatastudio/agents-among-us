@@ -12,6 +12,7 @@
 # on the same scenario seeds, with several games at once. The job owns its server, so nothing
 # stays running after it ends.
 # Usage: [GAMES_PER_CELL=5] [ROUNDS=10] [WORKERS=6] [PROTOCOLS=sequential,clean-180] [TAG=...] \
+#        [ROOM_MAX_WORDS=40] [CAPTURE=1] \
 #        sbatch scripts/hipergator/run_p2.sbatch [model]
 # Submit from the repository root. Only models on the eligible list in config/eligible_models.py start,
 # and the runner checks the model again. TAG names the output file results/p2/<model>_<TAG>.jsonl, and a
@@ -51,6 +52,7 @@ TAG=${TAG:-${SLURM_JOB_ID}}
 uv run --extra api python -m scripts.run_p2 \
   --model "${MODEL}" --tag "${TAG}" \
   --games-per-cell "${GAMES_PER_CELL:-5}" --rounds "${ROUNDS:-10}" --workers "${WORKERS:-6}" \
+  ${ROOM_MAX_WORDS:+--room-max-words "${ROOM_MAX_WORDS}"} ${CAPTURE:+--capture} \
   ${PROTOCOLS:+--protocols "${PROTOCOLS}"}
 
 SAFE_NAME=${MODEL//\//_}

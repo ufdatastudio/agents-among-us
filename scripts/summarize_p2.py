@@ -59,7 +59,7 @@ def summarize(records: Iterable[dict]) -> list[dict]:
     """
     groups: dict[tuple[str, str, str], list[dict]] = {}
     for record in records:
-        groups.setdefault((record["model"], record.get("reasoning_effort") or "default", record["protocol"]), []).append(record)
+        groups.setdefault((record["model"], _settings(record), record["protocol"]), []).append(record)
     rows = []
     for (model, effort, protocol), games in groups.items():
         finished = [g for g in games if g.get("result")]
@@ -95,6 +95,24 @@ def summarize(records: Iterable[dict]) -> list[dict]:
             }
         )
     return sorted(rows, key=lambda r: (r["model"], r["effort"], PROTOCOL_ORDER.get(r["protocol"], len(PROTOCOL_ORDER))))
+
+
+def _settings(record: dict) -> str:
+    """Names the settings of a game that change its results, so that runs with different ones stay apart.
+
+    Args:
+        record: A game record.
+
+    Returns:
+        The reasoning effort, followed by `+think` when agents wrote private reasoning and by `words N`
+        when the statement limit is not the default of 40.
+    """
+    label = record.get("reasoning_effort") or "default"
+    if record.get("capture"):
+        label += " +think"
+    if record.get("room_max_words", 40) != 40:
+        label += f" words {record['room_max_words']}"
+    return label
 
 
 def _ratio(numerator: float, denominator: float) -> float | None:

@@ -53,3 +53,11 @@ def test_private_reasoning_rules_appear_only_when_thoughts_are_captured():
     assert "<silent/>" in honest.split("</think>")[-1]
     assert "lie or redirect" in room_instructions("byzantine", 40, capture_thoughts=True)
     assert "who you believe" in honest
+
+
+def test_a_longer_word_limit_asks_for_a_longer_statement():
+    short = room_instructions("honest", 40, False)
+    longer = room_instructions("honest", 90, False)
+    assert "one or two short sentences and at most 40 words" in short
+    assert "a few sentences and at most 90 words" in longer
+    assert "one or two short sentences" not in longer
