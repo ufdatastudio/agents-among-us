@@ -47,7 +47,7 @@ A wall-clock timer can be added later as its own scenario if inference latency b
 | `tag_policy` | `every_chunk` | `every_chunk` or `first_chunk` speaker tags in `noisy` mode |
 | `modality` | `text` | `text` or `audio`, what agents hear and say. Set per agent or for the whole room |
 | `diarization` | `oracle` | `oracle`, `estimated` or `none`, how speaker identity reaches an agent in the `audio` modality |
-| `barge_in` | `off` | With `on`, an agent that is mid-utterance can reply at a tick, which cuts off its current utterance at that moment |
+| `barge_in` | `off` | With `on`, an agent that is mid-utterance can reply at a tick, which cuts off its current utterance at that moment. No experiment uses it, and no interruption is planned |
 | `seed` | none | Controls start rooms, seating, onset jitter, dropout and sampling |
 
 These sit in the composition JSON next to `skip_discussion` and `num_discussion_messages`.
@@ -229,7 +229,7 @@ Agents argue by answering what others said. They need the justification and the 
 - The prompts ask an agent to address speakers by name, answer the justification it heard, and give its own.
 - A reply may begin with `<to>Agent_5</to>`. The room stores the names as `addressed_to` and keeps them in the spoken text, so the reply is shown and synthesized as "Agent_5, ...". The names stay because models also wrap a name in the tag in the middle of a sentence, and deleting the tag would delete the name.
 - Every utterance records the cursor its speaker had at the start, so analyses can link a rebuttal to what the speaker had heard.
-- With `barge_in` on, an agent mid-utterance can cut itself off and answer an accusation at the next tick, so a rebuttal can follow an accusation within 1 tick.
+- An agent answers an accusation at the first tick at which it has finished speaking. Agents are not interrupted, and a statement ends when its words are spoken or the meeting ends.
 
 Measures of arguing.
 
@@ -299,6 +299,7 @@ The SGD, SVM and LR classifiers were trained on sequential transcripts, so their
 | `agents/honest_agent.py`, `agents/byzantine_agent.py` | The adapter builds the room prompt itself and calls the agent's own system prompt, vote method and model client. `vote()` drops the offer to skip when `SKIP` is not a candidate, returns `None` for a reply that names nobody, and reads the sampling temperature from `vote_temperature` |
 | `agents/prompts.py` | The room reuses its behavior rules and the `<think>` appendix idea. `require_vote()` removes the offer to skip from a voting prompt |
 | `agents/vote_reading.py` | Reads which candidate a vote reply chooses, with rules first and the voter's model for the replies the rules cannot settle |
+| `scripts/make_figures.py` | Draws the figures of this doc from `docs/figures/data.json`. `data` collects the numbers from the P2 results, the game folders and the doc's tables, and `plot` draws the PNG files with `uv run --with matplotlib python -m scripts.make_figures plot` |
 | `scripts/analyze_p2_text.py` | Reads the transcripts of P2 games and measures speech acts, claims about places checked against the agents' own observation logs, accusations, the influence of accusations on honest votes, and what agents pick up from the room |
 | `core/voting.py` | `ask_until_valid()` asks again while a reply names no candidate, at rising temperatures |
 | `core/logger.py` | Unchanged. The engine writes `room/room_round<N>.jsonl` and each agent's final percept to the game's log folder |
@@ -378,6 +379,10 @@ Jobs 50715127 and 50715128 ran the same script on one RTX PRO 6000 (96 GB) with 
 - gpt-oss-20b produced exactly 160 completion tokens on every request in every round, so the cap ended each one. The model reasons before it answers, and the server's `openai_gptoss` reasoning parser keeps the reasoning apart from the reply, so the budget probably ran out before any reply text. These round times measure reasoning up to the cap and say little about game replies. A game with gpt-oss needs a larger token budget or a low reasoning effort, and the first run has to check that replies are not empty. The same applies to gpt-oss-120b.
 - A retest of gpt-oss-20b at a limit of 1024 tokens (job 50749200) separates the two causes. At the default reasoning effort, 40% to 60% of replies were still empty at 5 to 20 simultaneous requests, because the reasoning used almost the whole budget, with mean completion lengths of 770 to 1024 tokens. At `reasoning_effort` low, no reply was empty. Replies averaged 65 to 194 tokens with a maximum of 394, 10 simultaneous requests took 2.4 s, and the 6-tick meeting took 13 s in total. A larger budget alone is not enough, so gpt-oss runs need low reasoning effort and a limit of several hundred tokens. `AAU_MAX_TOKENS` and `VLLM_REASONING_EFFORT` set them, and `run_game.sbatch` and `run_p2.sbatch` pass them to the games.
 
+![Round time against requests at once for four models on two GPUs](figures/bench_concurrency.png)
+
+Figure 1. Round time against the number of requests sent at once. The hollow diamond marks 10 requests sent one after another. The two GPUs differ, so the panels do not compare the models.
+
 ### Measured game time (P1a)
 
 Jobs 50742388 and 50744516 played full games of 10 agents (8 honest, 2 Byzantine) on Granite 3.3 8B served on one RTX PRO 6000. Each game had 3 rounds, thought capture off, a discussion budget of 180 s and 10 s ticks. The first job played 1 game per mode. It showed that every statement began with an address tag and that two thirds ran past the 40-word limit, which the fix in commit 119381f addressed. The second job played 2 games per mode on the fixed code and is the reference. The timing records are in `results/room_runs/`.
@@ -414,6 +419,9 @@ What the benchmark shows. Jobs 50751707 (gpt-oss-20b) and 50751708 (gpt-oss-120b
 | gpt-oss-120b | high | 3,979 to 4,096 | 4,096 | 4,096 | 100% | 95% to 100% | 95% to 100% | 343 s |
 
 The answer to how many tokens reasoning needs depends on the effort. Low effort fits in 512 tokens and a limit of 768 leaves a wide margin. Medium effort averages 900 to 2,200 tokens, reaches 4,096 in about 1 reply in 20 on the 20b model, so a limit of 6,000 or more is prudent. High effort on both models did not finish within 4,096 tokens in most replies, so its length is above that. A meeting of 6 ticks takes 11 s to 20 s at low effort, 100 s to 130 s at medium and 200 s to 340 s at high. The 120b model at high effort also used the whole 4,096 tokens in 95% to 100% of replies. High effort is not usable in the room with these models.
+![Tokens per reply, reasoning share and meeting time of gpt-oss-20b and gpt-oss-120b at three reasoning efforts](figures/bench_reasoning.png)
+
+Figure 2. gpt-oss at each reasoning effort with a limit of 4,096 tokens. The bars of the first two panels span the range over 1 to 20 simultaneous requests.
 
 For comparison the benchmark replies of Granite 3.3 8B averaged 13 tokens and those of Gemma 4 31B 56 tokens. Benchmark prompts are synthetic, and a game prompt that asks for one room name may need fewer reasoning tokens than one that asks for an argument. The game test (job 50751709) played 3 rounds in each mode with gpt-oss-20b at low effort and a limit of 768 tokens. The timed game made 175 calls that averaged 110 completion tokens, 64% of them reasoning, with a longest reply of 391 tokens, no reply cut at the limit and none empty. The turn-taking game made 78 calls that averaged 100 tokens, 44% of them reasoning, with a longest reply of 327 tokens. Room statements averaged 28 words against 93 words in turn-taking. The timed game took 141 s and the turn-taking game 77 s, each with 2 meetings, and the Byzantines won both. The totals mix movement, discussion and voting calls, so the reasoning share of each phase is not yet known.
 
@@ -452,6 +460,9 @@ What this means for the design.
 - The default audio ear is the separated ear, which recognizes each speaker's stream on its own. The mix ear is the stress condition, and its difficulty follows how many agents speak at once.
 - At tick 1 every agent speaks at once, so a mix ear would recover about 12% of the words. `onset_jitter_s` is the lever for overlap, and the next P1b step maps word recall against overlap share with wider onsets.
 - A mix ear that does better than Whisper alone needs a speech separation model.
+![Word recall, precision and speakers recovered against the number of speakers at once](figures/audio_overlap.png)
+
+Figure 3. Whisper large-v3 on a mix of Kokoro voices. Each point averages 10 trials.
 
 ### Model eligibility
 
@@ -497,7 +508,7 @@ The reasoning models (gpt-oss and Magistral) spend part of `max_tokens` on think
 | P1b | Does the audio stack work | Done once on 1 RTX PRO 6000 with Kokoro and Whisper large-v3, see Measured audio stack. Still to do. Map word recall against overlap share with wider onsets, cap Whisper's generation length, and test a speech separation model once it is approved | 0 |
 | P2 | How much does the protocol matter | 3 models (small, medium, large), homogeneous. Sequential, timed `clean`, `interleaved` and `noisy` at budgets 60, 180 and 300 s, and no discussion. 11 cells per model, 50 games per cell | 1,650 |
 | P3 | How does each model perform | Each of the 9 eligible models as crew against a fixed reference model as impostors, then swapped, under sequential, timed `clean` and timed `interleaved`. 50 games per cell | 2,700 |
-| P4 | Which knobs matter | `tick_s` 5, 10, 20. Impostors 1, 2, 3. `dropout` 0, 0.1, 0.3. `barge_in` off and on. 11 cells per model, 50 games per cell, on 1 or 2 models | 550 per model |
+| P4 | Which knobs matter | `tick_s` 5, 10, 20. Impostors 1, 2, 3. `dropout` 0, 0.1, 0.3. 9 cells per model, 50 games per cell, on 1 or 2 models | 450 per model |
 | P5 | Does hearing change the game | Text `interleaved` as the baseline. Audio with a separated ear at `oracle` and `estimated` diarization. Audio with a mix ear as the cocktail-party stress test. A native ear at `oracle` and `none` if a model is approved. 4 cells per model without the native ear, 50 games per cell, on 1 or 2 models | 200 per model, plus 100 for the native ear |
 
 Run the models that fit on one GPU first.
@@ -568,6 +579,17 @@ Granite wins most often with no discussion (60%, interval 39% to 78%) and least 
 gpt-oss-120b used 104 completion tokens a call on average, of which 62% to 85% were reasoning, and at most 0.1% of its replies were cut at 768 tokens.
 
 The cells of gpt-oss-120b and Gemma have 5 games each, so only the direction of a gap is informative. The intervals treat games as independent, although games with one seed share their start rooms.
+![Honest win rate by discussion setting for three models](figures/p2_win_rate.png)
+
+Figure 4. Honest win rate by setting, with 95% Wilson intervals. The Granite bars rest on 20, 20 and 180 games and the other two models on 5, 5 and 45.
+
+![Granite honest win rate in each of the 11 protocols](figures/p2_granite_protocols.png)
+
+Figure 5. Granite 3.3 8B in each protocol, 20 games each. The intervals of no discussion and of the clean rooms do not overlap.
+
+![Share of honest votes that reached a Byzantine and share of honest ballots that were skips](figures/p2_votes.png)
+
+Figure 6. Accuracy of the honest votes that were cast, and the share of honest ballots that were skips, by setting. The Gemma bar for no discussion rests on 3 votes.
 
 ### What agents say and believe
 
@@ -591,6 +613,13 @@ What each role says. Each cell is the share of statements with that kind of spee
 | Gemma 4 31B | turns | honest | 106 | 66 | 87% | 29% | 10% | 76% | 6% | - | 10% |
 
 Statements in the room average 24 to 29 words against 65 to 94 in turns, and the 40-word limit cuts 3% to 11% of them. A higher limit would therefore change few statements, and the instruction to answer in one or two short sentences is the stronger limit. Honest gpt-oss agents call a vote in 69% of their statements, against 18% for its Byzantines. Byzantine agents ask questions more often than honest agents in all three models (17% to 21% against 3% to 14%). Byzantine Gemma and gpt-oss agents report what they saw less than half as often as honest ones (8% against 22%, and 23% against 41%), and Granite's Byzantines report as often as its honest agents (34% and 35%). Granite and Gemma open most room statements with the name of the agent addressed, which is the address tag.
+![Speech acts of honest and Byzantine agents in the clean room for three models](figures/text_speech_acts.png)
+
+Figure 7. Speech acts in the clean room. Solid bars are honest agents and hatched bars are Byzantine agents.
+
+![Words per statement in the room and in turns, and the share of room statements cut at the word limit](figures/text_length.png)
+
+Figure 8. Words per statement in the room and in turns, and the share of room statements cut at the 40-word limit.
 
 What agents believe and how well they hear.
 
@@ -601,15 +630,30 @@ What agents believe and how well they hear.
 | Gemma 4 31B | 20% | 40% (n=53) | 22% (31%) | 10% (15%) | 42% (29%) | 8% (n=24) | 0% (n=76) | 60% (n=169) | 94% (79%) |
 
 Chance is the share of Byzantines among the other active agents at the time of the statement. An honest agent that is told nothing would aim 29% to 31% of its accusations at a Byzantine.
+![Share of honest accusations aimed at a Byzantine against a random pick](figures/text_accusation_accuracy.png)
+
+Figure 9. Honest accusations that were aimed at a Byzantine. The black mark on each bar is the share a random pick among the other active agents would give.
+
+![Claims about places that never held, by role](figures/text_false_claims.png)
+
+Figure 10. Claims about places that never held at any earlier tick. Solid bars are honest agents and hatched bars are Byzantine agents.
+
+![Honest votes by who accused the candidate, and votes for the most accused agent](figures/text_influence.png)
+
+Figure 11. Honest votes for an honest candidate by who accused that candidate in the meeting (left), and the share of honest votes that went to the most accused agent (right).
 
 - Hearing. In the clean room each reader receives every statement up to the tick, so the record is complete except for the statements made in the same tick, which average 2.8 to 3.9 per statement. An agent has heard 38 to 47 earlier statements when it speaks. The accused agent speaks again in the same meeting after 79% (Granite), 93% (gpt-oss) and 91% (Gemma) of accusations, and its next statement names the accuser in 61%, 50% and 49%. In turns the answers name the accuser in 42% to 43%.
 - Believability. Granite's honest and Byzantine agents make false claims about places at nearly the same rate, and 62% of the honest agents' claims to have been with another agent were false, so a false claim does not separate its liars from its honest agents. Gemma's Byzantine agents make false claims twice as often as its honest agents. Honest Granite agents aim 28% of their accusations at a Byzantine, which is the rate of a random pick, and honest gpt-oss agents aim 38% (46% with interleaved speech) in the room and 14% in turns, where the first speakers anchor the rest. Its win rate follows, 42% in the timed rooms and 0 of 5 in turns.
 - Influence. Honest voters follow an accusation about as readily from a Byzantine as from an honest agent in Granite (10% and 13% of voter and candidate pairs end in a vote, against 3% when nobody accused the candidate), and much less readily from a Byzantine in gpt-oss (2% and 11%). Votes concentrate on the most accused agent, which got 62% (Granite), 83% (gpt-oss) and 94% (Gemma) of honest votes in the room and 86%, 88% and 79% in turns, whether or not that agent was a Byzantine.
 - Knowing and choosing anyway. The public text cannot show what an agent knew. The Granite games with private reasoning (`CAPTURE=1`) add the reasoning of each agent before each reply and each vote, which allows the comparison of "this agent is lying" in the reasoning with the vote that follows.
 
+![How often the accused agent speaks again and names the accuser, in the room and in turns](figures/text_listening.png)
+
+Figure 12. What agents pick up. The left panel is the share of accusations after which the accused agent speaks again in the meeting, and the right panel is the share of those answers that name the accuser.
+
 ## Later work
 
-These tasks start after the current ones (the P2 reruns with required votes, the vote reading, interruption in the room and the transcript analysis).
+These tasks start after the current ones (the P2 reruns with required votes, the vote reading and the transcript analysis).
 
 ### A visual world in Godot
 
@@ -635,9 +679,6 @@ Open design questions.
 
 ## Open questions
 
-- Interruption. `barge_in` exists in the room and is off by default, and `main.py` has no flag for it. An agent that is speaking is not asked at a tick, and with `barge_in` it is asked and may replace its statement, but it is not told that others have started to talk over it. Letting a speaker hear the room and choose to continue or stop at each tick is designed and not built, and a shorter `tick_s` makes the choice finer.
-
-- Default for `barge_in`, to be set from P4.
 - Wall-clock scenario, to measure what inference latency costs a model. Adapters would hear continuously and post when ready.
 - Approval for models that are not on Navigator. `nvidia/Nemotron-3-Diarization` for model-based diarization, a speech separation model for the mix ear, and an eligible audio-capable model for the native ear, for which none is known yet.
 - Human seat in timed mode. The current human input path uses a 30 s timeout per message.

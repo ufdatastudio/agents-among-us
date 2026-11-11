@@ -1,0 +1,1239 @@
+{
+ "audio": [
+  {
+   "overlap": 0.0,
+   "precision": 99.6,
+   "recall": 99.6,
+   "recovered": 100.0,
+   "speakers": 1
+  },
+  {
+   "overlap": 77.0,
+   "precision": 99.6,
+   "recall": 52.0,
+   "recovered": 55.0,
+   "speakers": 2
+  },
+  {
+   "overlap": 79.0,
+   "precision": 97.0,
+   "recall": 44.0,
+   "recovered": 50.0,
+   "speakers": 3
+  },
+  {
+   "overlap": 83.0,
+   "precision": 90.0,
+   "recall": 24.0,
+   "recovered": 26.0,
+   "speakers": 5
+  },
+  {
+   "overlap": 88.0,
+   "precision": 62.0,
+   "recall": 12.0,
+   "recovered": 6.0,
+   "speakers": 10
+  }
+ ],
+ "concurrency_l4": {
+  "Granite 3.3 8B": {
+   "at once": {
+    "1": 0.7,
+    "2": 1.2,
+    "5": 3.8,
+    "10": 6.9,
+    "20": 13.6
+   },
+   "one after another": 14.2
+  },
+  "Llama 3.1 8B": {
+   "at once": {
+    "1": 0.6,
+    "2": 3.0,
+    "5": 11.3,
+    "10": 6.6,
+    "20": 14.0
+   },
+   "one after another": 24.7
+  }
+ },
+ "concurrency_rtx": {
+  "Gemma 4 31B": {
+   "at once": {
+    "1": 2.8,
+    "2": 3.2,
+    "5": 4.1,
+    "10": 5.5,
+    "20": 8.9
+   },
+   "one after another": 30.5
+  },
+  "gpt-oss-20b": {
+   "at once": {
+    "1": 0.7,
+    "2": 0.9,
+    "5": 1.2,
+    "10": 1.5,
+    "20": 1.9
+   },
+   "one after another": 6.7
+  }
+ },
+ "p2": {
+  "Gemma 4 31B": {
+   "protocols": {
+    "clean-180": {
+     "ci_high": 0.43449149475208104,
+     "ci_low": 0.0,
+     "correct": 5,
+     "games": 5,
+     "incorrect": 38,
+     "skipped": 12,
+     "wins": 0
+    },
+    "clean-300": {
+     "ci_high": 0.43449149475208104,
+     "ci_low": 0.0,
+     "correct": 3,
+     "games": 5,
+     "incorrect": 36,
+     "skipped": 19,
+     "wins": 0
+    },
+    "clean-60": {
+     "ci_high": 0.6244717358814613,
+     "ci_low": 0.03622316096978745,
+     "correct": 11,
+     "games": 5,
+     "incorrect": 30,
+     "skipped": 11,
+     "wins": 1
+    },
+    "interleaved-180": {
+     "ci_high": 0.43449149475208104,
+     "ci_low": 0.0,
+     "correct": 12,
+     "games": 5,
+     "incorrect": 37,
+     "skipped": 14,
+     "wins": 0
+    },
+    "interleaved-300": {
+     "ci_high": 0.6244717358814613,
+     "ci_low": 0.03622316096978745,
+     "correct": 12,
+     "games": 5,
+     "incorrect": 34,
+     "skipped": 9,
+     "wins": 1
+    },
+    "interleaved-60": {
+     "ci_high": 0.43449149475208104,
+     "ci_low": 0.0,
+     "correct": 10,
+     "games": 5,
+     "incorrect": 16,
+     "skipped": 38,
+     "wins": 0
+    },
+    "noisy-180": {
+     "ci_high": 0.6244717358814613,
+     "ci_low": 0.03622316096978745,
+     "correct": 19,
+     "games": 5,
+     "incorrect": 33,
+     "skipped": 9,
+     "wins": 1
+    },
+    "noisy-300": {
+     "ci_high": 0.6244717358814613,
+     "ci_low": 0.03622316096978745,
+     "correct": 9,
+     "games": 5,
+     "incorrect": 36,
+     "skipped": 4,
+     "wins": 1
+    },
+    "noisy-60": {
+     "ci_high": 0.769280067791163,
+     "ci_low": 0.1176182311592533,
+     "correct": 20,
+     "games": 5,
+     "incorrect": 28,
+     "skipped": 19,
+     "wins": 2
+    },
+    "none": {
+     "ci_high": 0.43449149475208104,
+     "ci_low": 0.0,
+     "correct": 3,
+     "games": 5,
+     "incorrect": 0,
+     "skipped": 77,
+     "wins": 0
+    },
+    "sequential": {
+     "ci_high": 0.6244717358814613,
+     "ci_low": 0.03622316096978745,
+     "correct": 15,
+     "games": 5,
+     "incorrect": 27,
+     "skipped": 11,
+     "wins": 1
+    }
+   },
+   "settings": {
+    "no discussion": {
+     "ci_high": 0.43449149475208104,
+     "ci_low": 0.0,
+     "correct": 3,
+     "games": 5,
+     "incorrect": 0,
+     "skipped": 77,
+     "wins": 0
+    },
+    "timed room": {
+     "ci_high": 0.2617758224129731,
+     "ci_low": 0.0625706363434968,
+     "correct": 101,
+     "games": 45,
+     "incorrect": 288,
+     "skipped": 135,
+     "wins": 6
+    },
+    "turns": {
+     "ci_high": 0.6244717358814613,
+     "ci_low": 0.03622316096978745,
+     "correct": 15,
+     "games": 5,
+     "incorrect": 27,
+     "skipped": 11,
+     "wins": 1
+    }
+   }
+  },
+  "Granite 3.3 8B": {
+   "protocols": {
+    "clean-180": {
+     "ci_high": 0.41602172202575993,
+     "ci_low": 0.0806563532712,
+     "correct": 76,
+     "games": 20,
+     "incorrect": 128,
+     "skipped": 12,
+     "wins": 4
+    },
+    "clean-300": {
+     "ci_high": 0.36042329588695743,
+     "ci_low": 0.05236779195949584,
+     "correct": 65,
+     "games": 20,
+     "incorrect": 139,
+     "skipped": 19,
+     "wins": 3
+    },
+    "clean-60": {
+     "ci_high": 0.41602172202575993,
+     "ci_low": 0.0806563532712,
+     "correct": 87,
+     "games": 20,
+     "incorrect": 133,
+     "skipped": 9,
+     "wins": 4
+    },
+    "interleaved-180": {
+     "ci_high": 0.5671494897805354,
+     "ci_low": 0.18118954786794464,
+     "correct": 104,
+     "games": 20,
+     "incorrect": 143,
+     "skipped": 13,
+     "wins": 7
+    },
+    "interleaved-300": {
+     "ci_high": 0.36042329588695743,
+     "ci_low": 0.05236779195949584,
+     "correct": 53,
+     "games": 20,
+     "incorrect": 138,
+     "skipped": 36,
+     "wins": 3
+    },
+    "interleaved-60": {
+     "ci_high": 0.41602172202575993,
+     "ci_low": 0.0806563532712,
+     "correct": 68,
+     "games": 20,
+     "incorrect": 144,
+     "skipped": 12,
+     "wins": 4
+    },
+    "noisy-180": {
+     "ci_high": 0.5671494897805354,
+     "ci_low": 0.18118954786794464,
+     "correct": 92,
+     "games": 20,
+     "incorrect": 145,
+     "skipped": 11,
+     "wins": 7
+    },
+    "noisy-300": {
+     "ci_high": 0.5189767762289793,
+     "ci_low": 0.14547527396899385,
+     "correct": 73,
+     "games": 20,
+     "incorrect": 170,
+     "skipped": 13,
+     "wins": 6
+    },
+    "noisy-60": {
+     "ci_high": 0.6579179916924003,
+     "ci_low": 0.25819502085709295,
+     "correct": 119,
+     "games": 20,
+     "incorrect": 132,
+     "skipped": 19,
+     "wins": 9
+    },
+    "none": {
+     "ci_high": 0.7811960325858074,
+     "ci_low": 0.3865779423152061,
+     "correct": 150,
+     "games": 20,
+     "incorrect": 124,
+     "skipped": 0,
+     "wins": 12
+    },
+    "sequential": {
+     "ci_high": 0.613422057684794,
+     "ci_low": 0.21880396741419272,
+     "correct": 91,
+     "games": 20,
+     "incorrect": 101,
+     "skipped": 39,
+     "wins": 8
+    }
+   },
+   "settings": {
+    "no discussion": {
+     "ci_high": 0.7811960325858074,
+     "ci_low": 0.3865779423152061,
+     "correct": 150,
+     "games": 20,
+     "incorrect": 124,
+     "skipped": 0,
+     "wins": 12
+    },
+    "timed room": {
+     "ci_high": 0.32979346496795686,
+     "ci_low": 0.2024125210547933,
+     "correct": 737,
+     "games": 180,
+     "incorrect": 1272,
+     "skipped": 144,
+     "wins": 47
+    },
+    "turns": {
+     "ci_high": 0.613422057684794,
+     "ci_low": 0.21880396741419272,
+     "correct": 91,
+     "games": 20,
+     "incorrect": 101,
+     "skipped": 39,
+     "wins": 8
+    }
+   }
+  },
+  "gpt-oss-120b": {
+   "protocols": {
+    "clean-180": {
+     "ci_high": 0.8823817688407467,
+     "ci_low": 0.23071993220883708,
+     "correct": 33,
+     "games": 5,
+     "incorrect": 26,
+     "skipped": 2,
+     "wins": 3
+    },
+    "clean-300": {
+     "ci_high": 0.6244717358814613,
+     "ci_low": 0.03622316096978745,
+     "correct": 20,
+     "games": 5,
+     "incorrect": 50,
+     "skipped": 1,
+     "wins": 1
+    },
+    "clean-60": {
+     "ci_high": 0.769280067791163,
+     "ci_low": 0.1176182311592533,
+     "correct": 31,
+     "games": 5,
+     "incorrect": 39,
+     "skipped": 2,
+     "wins": 2
+    },
+    "interleaved-180": {
+     "ci_high": 0.6244717358814613,
+     "ci_low": 0.03622316096978745,
+     "correct": 41,
+     "games": 5,
+     "incorrect": 30,
+     "skipped": 1,
+     "wins": 1
+    },
+    "interleaved-300": {
+     "ci_high": 0.8823817688407467,
+     "ci_low": 0.23071993220883708,
+     "correct": 34,
+     "games": 5,
+     "incorrect": 35,
+     "skipped": 1,
+     "wins": 3
+    },
+    "interleaved-60": {
+     "ci_high": 0.9637768390302125,
+     "ci_low": 0.3755282641185388,
+     "correct": 33,
+     "games": 5,
+     "incorrect": 41,
+     "skipped": 1,
+     "wins": 4
+    },
+    "noisy-180": {
+     "ci_high": 0.6244717358814613,
+     "ci_low": 0.03622316096978745,
+     "correct": 36,
+     "games": 5,
+     "incorrect": 42,
+     "skipped": 1,
+     "wins": 1
+    },
+    "noisy-300": {
+     "ci_high": 0.769280067791163,
+     "ci_low": 0.1176182311592533,
+     "correct": 32,
+     "games": 5,
+     "incorrect": 38,
+     "skipped": 0,
+     "wins": 2
+    },
+    "noisy-60": {
+     "ci_high": 0.769280067791163,
+     "ci_low": 0.1176182311592533,
+     "correct": 24,
+     "games": 5,
+     "incorrect": 35,
+     "skipped": 3,
+     "wins": 2
+    },
+    "none": {
+     "ci_high": 0.43449149475208104,
+     "ci_low": 0.0,
+     "correct": 15,
+     "games": 5,
+     "incorrect": 36,
+     "skipped": 13,
+     "wins": 0
+    },
+    "sequential": {
+     "ci_high": 0.43449149475208104,
+     "ci_low": 0.0,
+     "correct": 9,
+     "games": 5,
+     "incorrect": 48,
+     "skipped": 6,
+     "wins": 0
+    }
+   },
+   "settings": {
+    "no discussion": {
+     "ci_high": 0.43449149475208104,
+     "ci_low": 0.0,
+     "correct": 15,
+     "games": 5,
+     "incorrect": 36,
+     "skipped": 13,
+     "wins": 0
+    },
+    "timed room": {
+     "ci_high": 0.566994672040555,
+     "ci_low": 0.2896848798168781,
+     "correct": 284,
+     "games": 45,
+     "incorrect": 336,
+     "skipped": 12,
+     "wins": 19
+    },
+    "turns": {
+     "ci_high": 0.43449149475208104,
+     "ci_low": 0.0,
+     "correct": 9,
+     "games": 5,
+     "incorrect": 48,
+     "skipped": 6,
+     "wins": 0
+    }
+   }
+  }
+ },
+ "reasoning": [
+  {
+   "effort": "low",
+   "mean": [
+    79.0,
+    138.0
+   ],
+   "meeting_s": 11.0,
+   "model": "gpt-oss-20b",
+   "share": [
+    24.0,
+    49.0
+   ]
+  },
+  {
+   "effort": "medium",
+   "mean": [
+    898.0,
+    1409.0
+   ],
+   "meeting_s": 102.0,
+   "model": "gpt-oss-20b",
+   "share": [
+    91.0,
+    95.0
+   ]
+  },
+  {
+   "effort": "high",
+   "mean": [
+    3584.0,
+    4096.0
+   ],
+   "meeting_s": 199.0,
+   "model": "gpt-oss-20b",
+   "share": [
+    100.0,
+    100.0
+   ]
+  },
+  {
+   "effort": "low",
+   "mean": [
+    132.0,
+    203.0
+   ],
+   "meeting_s": 20.0,
+   "model": "gpt-oss-120b",
+   "share": [
+    54.0,
+    66.0
+   ]
+  },
+  {
+   "effort": "medium",
+   "mean": [
+    1217.0,
+    2171.0
+   ],
+   "meeting_s": 127.0,
+   "model": "gpt-oss-120b",
+   "share": [
+    94.0,
+    97.0
+   ]
+  },
+  {
+   "effort": "high",
+   "mean": [
+    3979.0,
+    4096.0
+   ],
+   "meeting_s": 343.0,
+   "model": "gpt-oss-120b",
+   "share": [
+    100.0,
+    100.0
+   ]
+  }
+ ],
+ "text": {
+  "Gemma 4 31B": {
+   "clean": {
+    "accusations": {
+     "byzantine": {
+      "accuse": 412.0,
+      "at_byz": 40.0,
+      "chance_byz": 62.18452380952382,
+      "trust": 8.0,
+      "trust_byz": 1.0
+     },
+     "honest": {
+      "accuse": 1318.0,
+      "at_byz": 293.0,
+      "chance_byz": 406.2857142857141,
+      "trust": 29.0,
+      "trust_byz": 11.0
+     }
+    },
+    "claims": {
+     "byzantine": {
+      "claims": 53.0,
+      "echoed": 25.0,
+      "echoed_false": 14.0,
+      "false": 21.0,
+      "fresh": 28.0,
+      "fresh_false": 7.0,
+      "seen_claims": 7.0,
+      "seen_false": 0.0,
+      "self_claims": 32.0,
+      "self_false": 14.0,
+      "with_claims": 14.0,
+      "with_false": 7.0
+     },
+     "honest": {
+      "claims": 584.0,
+      "echoed": 317.0,
+      "echoed_false": 57.0,
+      "false": 118.0,
+      "fresh": 267.0,
+      "fresh_false": 61.0,
+      "seen_claims": 246.0,
+      "seen_false": 38.0,
+      "self_claims": 286.0,
+      "self_false": 69.0,
+      "with_claims": 52.0,
+      "with_false": 11.0
+     }
+    },
+    "influence": {
+     "byzantine|both|pairs": 54.0,
+     "byzantine|both|votes": 12.0,
+     "byzantine|byzantine only|pairs": 12.0,
+     "byzantine|byzantine only|votes": 0.0,
+     "byzantine|honest only|pairs": 66.0,
+     "byzantine|honest only|votes": 7.0,
+     "byzantine|nobody|pairs": 108.0,
+     "byzantine|nobody|votes": 0.0,
+     "honest_votes": 123.0,
+     "honest|both|pairs": 169.0,
+     "honest|both|votes": 102.0,
+     "honest|byzantine only|pairs": 24.0,
+     "honest|byzantine only|votes": 2.0,
+     "honest|honest only|pairs": 76.0,
+     "honest|honest only|votes": 0.0,
+     "honest|nobody|pairs": 332.0,
+     "honest|nobody|votes": 0.0,
+     "plurality_meetings_votes": 123.0,
+     "plurality_votes": 116.0
+    },
+    "listening": {
+     "accused": 1730.0,
+     "answerable": 1574.0,
+     "answered": 777.0,
+     "concurrent_total": 9102.0,
+     "heard_total": 112262.0,
+     "timed_statements": 2413.0
+    },
+    "speech": {
+     "byzantine": {
+      "cut": 18.0,
+      "label_accuse": 296.0,
+      "label_agree": 26.0,
+      "label_challenge": 33.0,
+      "label_defend": 13.0,
+      "label_other": 247.0,
+      "label_question": 120.0,
+      "label_redirect": 4.0,
+      "label_report": 56.0,
+      "label_vote_call": 181.0,
+      "label_vouch": 12.0,
+      "n": 680.0,
+      "repeat": 6.0,
+      "tagged": 562.0,
+      "timed": 680.0,
+      "words_total": 16579.0
+     },
+     "honest": {
+      "cut": 56.0,
+      "label_accuse": 1006.0,
+      "label_agree": 42.0,
+      "label_challenge": 43.0,
+      "label_defend": 36.0,
+      "label_other": 413.0,
+      "label_question": 206.0,
+      "label_redirect": 20.0,
+      "label_report": 380.0,
+      "label_vote_call": 778.0,
+      "label_vouch": 29.0,
+      "n": 1733.0,
+      "repeat": 102.0,
+      "tagged": 1149.0,
+      "timed": 1733.0,
+      "words_total": 41640.0
+     }
+    }
+   },
+   "sequential": {
+    "accusations": {
+     "byzantine": {
+      "accuse": 40.0,
+      "at_byz": 6.0,
+      "chance_byz": 6.532142857142857,
+      "trust": 4.0,
+      "trust_byz": 0.0
+     },
+     "honest": {
+      "accuse": 128.0,
+      "at_byz": 54.0,
+      "chance_byz": 37.54761904761905,
+      "trust": 33.0,
+      "trust_byz": 4.0
+     }
+    },
+    "claims": {
+     "byzantine": {
+      "claims": 23.0,
+      "echoed": 7.0,
+      "echoed_false": 0.0,
+      "false": 3.0,
+      "fresh": 16.0,
+      "fresh_false": 3.0,
+      "seen_claims": 7.0,
+      "seen_false": 0.0,
+      "self_claims": 12.0,
+      "self_false": 2.0,
+      "with_claims": 4.0,
+      "with_false": 1.0
+     },
+     "honest": {
+      "claims": 281.0,
+      "echoed": 182.0,
+      "echoed_false": 41.0,
+      "false": 61.0,
+      "fresh": 99.0,
+      "fresh_false": 20.0,
+      "seen_claims": 56.0,
+      "seen_false": 10.0,
+      "self_claims": 172.0,
+      "self_false": 43.0,
+      "with_claims": 53.0,
+      "with_false": 8.0
+     }
+    },
+    "influence": {
+     "byzantine|both|pairs": 14.0,
+     "byzantine|both|votes": 3.0,
+     "byzantine|byzantine only|pairs": 6.0,
+     "byzantine|byzantine only|votes": 0.0,
+     "byzantine|honest only|pairs": 35.0,
+     "byzantine|honest only|votes": 12.0,
+     "byzantine|nobody|pairs": 24.0,
+     "byzantine|nobody|votes": 0.0,
+     "honest_votes": 42.0,
+     "honest|both|pairs": 48.0,
+     "honest|both|votes": 27.0,
+     "honest|byzantine only|pairs": 12.0,
+     "honest|byzantine only|votes": 0.0,
+     "honest|honest only|pairs": 16.0,
+     "honest|honest only|votes": 0.0,
+     "honest|nobody|pairs": 128.0,
+     "honest|nobody|votes": 0.0,
+     "plurality_meetings_votes": 42.0,
+     "plurality_votes": 33.0
+    },
+    "listening": {
+     "accused": 168.0,
+     "answerable": 108.0,
+     "answered": 45.0
+    },
+    "speech": {
+     "byzantine": {
+      "cut": 0.0,
+      "label_accuse": 30.0,
+      "label_agree": 2.0,
+      "label_defend": 11.0,
+      "label_question": 10.0,
+      "label_redirect": 4.0,
+      "label_report": 19.0,
+      "label_vote_call": 14.0,
+      "label_vouch": 7.0,
+      "n": 38.0,
+      "repeat": 0.0,
+      "tagged": 0.0,
+      "timed": 0.0,
+      "words_total": 2486.0
+     },
+     "honest": {
+      "cut": 0.0,
+      "label_accuse": 92.0,
+      "label_agree": 6.0,
+      "label_challenge": 4.0,
+      "label_defend": 11.0,
+      "label_question": 6.0,
+      "label_redirect": 1.0,
+      "label_report": 81.0,
+      "label_vote_call": 31.0,
+      "label_vouch": 33.0,
+      "n": 106.0,
+      "repeat": 3.0,
+      "tagged": 11.0,
+      "timed": 0.0,
+      "words_total": 6994.0
+     }
+    }
+   }
+  },
+  "Granite 3.3 8B": {
+   "clean": {
+    "accusations": {
+     "byzantine": {
+      "accuse": 1182.0,
+      "at_byz": 89.0,
+      "chance_byz": 162.60357142857134,
+      "trust": 349.0,
+      "trust_byz": 66.0
+     },
+     "honest": {
+      "accuse": 4261.0,
+      "at_byz": 1186.0,
+      "chance_byz": 1286.819047619048,
+      "trust": 1584.0,
+      "trust_byz": 380.0
+     }
+    },
+    "claims": {
+     "byzantine": {
+      "claims": 919.0,
+      "echoed": 607.0,
+      "echoed_false": 228.0,
+      "false": 334.0,
+      "fresh": 312.0,
+      "fresh_false": 106.0,
+      "seen_claims": 365.0,
+      "seen_false": 90.0,
+      "self_claims": 381.0,
+      "self_false": 139.0,
+      "with_claims": 173.0,
+      "with_false": 105.0
+     },
+     "honest": {
+      "claims": 2297.0,
+      "echoed": 1513.0,
+      "echoed_false": 485.0,
+      "false": 737.0,
+      "fresh": 784.0,
+      "fresh_false": 252.0,
+      "seen_claims": 937.0,
+      "seen_false": 242.0,
+      "self_claims": 846.0,
+      "self_false": 178.0,
+      "with_claims": 514.0,
+      "with_false": 317.0
+     }
+    },
+    "influence": {
+     "byzantine|both|pairs": 208.0,
+     "byzantine|both|votes": 125.0,
+     "byzantine|byzantine only|pairs": 44.0,
+     "byzantine|byzantine only|votes": 7.0,
+     "byzantine|honest only|pairs": 353.0,
+     "byzantine|honest only|votes": 76.0,
+     "byzantine|nobody|pairs": 484.0,
+     "byzantine|nobody|votes": 20.0,
+     "honest_votes": 628.0,
+     "honest|both|pairs": 681.0,
+     "honest|both|votes": 276.0,
+     "honest|byzantine only|pairs": 132.0,
+     "honest|byzantine only|votes": 13.0,
+     "honest|honest only|pairs": 493.0,
+     "honest|honest only|votes": 66.0,
+     "honest|nobody|pairs": 1430.0,
+     "honest|nobody|votes": 45.0,
+     "plurality_meetings_votes": 559.0,
+     "plurality_votes": 345.0
+    },
+    "listening": {
+     "accused": 5443.0,
+     "answerable": 4281.0,
+     "answered": 2611.0,
+     "concurrent_total": 22050.0,
+     "heard_total": 290248.0,
+     "timed_statements": 7740.0
+    },
+    "speech": {
+     "byzantine": {
+      "cut": 226.0,
+      "label_accuse": 1036.0,
+      "label_agree": 83.0,
+      "label_challenge": 562.0,
+      "label_defend": 428.0,
+      "label_other": 121.0,
+      "label_question": 437.0,
+      "label_redirect": 509.0,
+      "label_report": 700.0,
+      "label_vote_call": 217.0,
+      "label_vouch": 445.0,
+      "n": 2040.0,
+      "repeat": 28.0,
+      "tagged": 1917.0,
+      "timed": 2040.0,
+      "words_total": 56565.0
+     },
+     "honest": {
+      "cut": 488.0,
+      "label_accuse": 3554.0,
+      "label_agree": 149.0,
+      "label_challenge": 1529.0,
+      "label_defend": 595.0,
+      "label_other": 286.0,
+      "label_question": 806.0,
+      "label_redirect": 1249.0,
+      "label_report": 1989.0,
+      "label_vote_call": 1410.0,
+      "label_vouch": 1731.0,
+      "n": 5700.0,
+      "repeat": 199.0,
+      "tagged": 5507.0,
+      "timed": 5700.0,
+      "words_total": 151235.0
+     }
+    }
+   },
+   "sequential": {
+    "accusations": {
+     "byzantine": {
+      "accuse": 114.0,
+      "at_byz": 22.0,
+      "chance_byz": 13.133333333333333,
+      "trust": 25.0,
+      "trust_byz": 6.0
+     },
+     "honest": {
+      "accuse": 461.0,
+      "at_byz": 172.0,
+      "chance_byz": 129.65238095238098,
+      "trust": 180.0,
+      "trust_byz": 75.0
+     }
+    },
+    "claims": {
+     "byzantine": {
+      "claims": 242.0,
+      "echoed": 140.0,
+      "echoed_false": 55.0,
+      "false": 93.0,
+      "fresh": 102.0,
+      "fresh_false": 38.0,
+      "seen_claims": 39.0,
+      "seen_false": 7.0,
+      "self_claims": 130.0,
+      "self_false": 50.0,
+      "with_claims": 73.0,
+      "with_false": 36.0
+     },
+     "honest": {
+      "claims": 884.0,
+      "echoed": 605.0,
+      "echoed_false": 267.0,
+      "false": 367.0,
+      "fresh": 279.0,
+      "fresh_false": 100.0,
+      "seen_claims": 141.0,
+      "seen_false": 23.0,
+      "self_claims": 432.0,
+      "self_false": 132.0,
+      "with_claims": 311.0,
+      "with_false": 212.0
+     }
+    },
+    "influence": {
+     "byzantine|both|pairs": 66.0,
+     "byzantine|both|votes": 62.0,
+     "byzantine|honest only|pairs": 70.0,
+     "byzantine|honest only|votes": 27.0,
+     "byzantine|nobody|pairs": 181.0,
+     "byzantine|nobody|votes": 2.0,
+     "honest_votes": 192.0,
+     "honest|both|pairs": 118.0,
+     "honest|both|votes": 85.0,
+     "honest|byzantine only|pairs": 10.0,
+     "honest|byzantine only|votes": 1.0,
+     "honest|honest only|pairs": 86.0,
+     "honest|honest only|votes": 2.0,
+     "honest|nobody|pairs": 651.0,
+     "honest|nobody|votes": 13.0,
+     "plurality_meetings_votes": 190.0,
+     "plurality_votes": 163.0
+    },
+    "listening": {
+     "accused": 575.0,
+     "answerable": 318.0,
+     "answered": 132.0
+    },
+    "speech": {
+     "byzantine": {
+      "cut": 0.0,
+      "label_accuse": 108.0,
+      "label_agree": 27.0,
+      "label_challenge": 49.0,
+      "label_defend": 66.0,
+      "label_other": 3.0,
+      "label_question": 10.0,
+      "label_redirect": 32.0,
+      "label_report": 95.0,
+      "label_vote_call": 30.0,
+      "label_vouch": 39.0,
+      "n": 149.0,
+      "repeat": 0.0,
+      "tagged": 2.0,
+      "timed": 0.0,
+      "words_total": 13982.0
+     },
+     "honest": {
+      "cut": 0.0,
+      "label_accuse": 391.0,
+      "label_agree": 53.0,
+      "label_challenge": 137.0,
+      "label_defend": 158.0,
+      "label_other": 2.0,
+      "label_question": 36.0,
+      "label_redirect": 88.0,
+      "label_report": 352.0,
+      "label_vote_call": 160.0,
+      "label_vouch": 186.0,
+      "n": 459.0,
+      "repeat": 2.0,
+      "tagged": 1.0,
+      "timed": 0.0,
+      "words_total": 42001.0
+     }
+    }
+   }
+  },
+  "gpt-oss-120b": {
+   "clean": {
+    "accusations": {
+     "byzantine": {
+      "accuse": 466.0,
+      "at_byz": 60.0,
+      "chance_byz": 58.2190476190476,
+      "trust": 1.0,
+      "trust_byz": 0.0
+     },
+     "honest": {
+      "accuse": 1753.0,
+      "at_byz": 671.0,
+      "chance_byz": 509.4785714285714,
+      "trust": 25.0,
+      "trust_byz": 7.0
+     }
+    },
+    "claims": {
+     "byzantine": {
+      "claims": 237.0,
+      "echoed": 163.0,
+      "echoed_false": 22.0,
+      "false": 37.0,
+      "fresh": 74.0,
+      "fresh_false": 15.0,
+      "seen_claims": 130.0,
+      "seen_false": 8.0,
+      "self_claims": 77.0,
+      "self_false": 21.0,
+      "with_claims": 30.0,
+      "with_false": 8.0
+     },
+     "honest": {
+      "claims": 1100.0,
+      "echoed": 733.0,
+      "echoed_false": 153.0,
+      "false": 239.0,
+      "fresh": 367.0,
+      "fresh_false": 86.0,
+      "seen_claims": 430.0,
+      "seen_false": 47.0,
+      "self_claims": 354.0,
+      "self_false": 96.0,
+      "with_claims": 316.0,
+      "with_false": 96.0
+     }
+    },
+    "influence": {
+     "byzantine|both|pairs": 89.0,
+     "byzantine|both|votes": 28.0,
+     "byzantine|byzantine only|pairs": 19.0,
+     "byzantine|byzantine only|votes": 3.0,
+     "byzantine|honest only|pairs": 147.0,
+     "byzantine|honest only|votes": 52.0,
+     "byzantine|nobody|pairs": 85.0,
+     "byzantine|nobody|votes": 1.0,
+     "honest_votes": 199.0,
+     "honest|both|pairs": 236.0,
+     "honest|both|votes": 97.0,
+     "honest|byzantine only|pairs": 101.0,
+     "honest|byzantine only|votes": 2.0,
+     "honest|honest only|pairs": 142.0,
+     "honest|honest only|votes": 16.0,
+     "honest|nobody|pairs": 411.0,
+     "honest|nobody|votes": 0.0,
+     "plurality_meetings_votes": 186.0,
+     "plurality_votes": 154.0
+    },
+    "listening": {
+     "accused": 2219.0,
+     "answerable": 2057.0,
+     "answered": 1027.0,
+     "concurrent_total": 10376.0,
+     "heard_total": 114341.0,
+     "timed_statements": 2680.0
+    },
+    "speech": {
+     "byzantine": {
+      "cut": 30.0,
+      "label_accuse": 372.0,
+      "label_agree": 103.0,
+      "label_challenge": 19.0,
+      "label_defend": 19.0,
+      "label_other": 148.0,
+      "label_question": 123.0,
+      "label_redirect": 16.0,
+      "label_report": 170.0,
+      "label_vote_call": 130.0,
+      "label_vouch": 13.0,
+      "n": 726.0,
+      "repeat": 44.0,
+      "tagged": 335.0,
+      "timed": 726.0,
+      "words_total": 18466.0
+     },
+     "honest": {
+      "cut": 99.0,
+      "label_accuse": 1591.0,
+      "label_agree": 218.0,
+      "label_challenge": 58.0,
+      "label_defend": 153.0,
+      "label_other": 76.0,
+      "label_question": 65.0,
+      "label_redirect": 4.0,
+      "label_report": 792.0,
+      "label_vote_call": 1344.0,
+      "label_vouch": 39.0,
+      "n": 1954.0,
+      "repeat": 328.0,
+      "tagged": 603.0,
+      "timed": 1954.0,
+      "words_total": 57240.0
+     }
+    }
+   },
+   "sequential": {
+    "accusations": {
+     "byzantine": {
+      "accuse": 56.0,
+      "at_byz": 2.0,
+      "chance_byz": 9.476190476190476
+     },
+     "honest": {
+      "accuse": 138.0,
+      "at_byz": 20.0,
+      "chance_byz": 43.733333333333334,
+      "trust": 3.0,
+      "trust_byz": 1.0
+     }
+    },
+    "claims": {
+     "byzantine": {
+      "claims": 77.0,
+      "echoed": 40.0,
+      "echoed_false": 8.0,
+      "false": 19.0,
+      "fresh": 37.0,
+      "fresh_false": 11.0,
+      "seen_claims": 23.0,
+      "seen_false": 3.0,
+      "self_claims": 33.0,
+      "self_false": 12.0,
+      "with_claims": 21.0,
+      "with_false": 4.0
+     },
+     "honest": {
+      "claims": 211.0,
+      "echoed": 130.0,
+      "echoed_false": 33.0,
+      "false": 57.0,
+      "fresh": 81.0,
+      "fresh_false": 24.0,
+      "seen_claims": 69.0,
+      "seen_false": 22.0,
+      "self_claims": 103.0,
+      "self_false": 23.0,
+      "with_claims": 39.0,
+      "with_false": 12.0
+     }
+    },
+    "influence": {
+     "byzantine|both|pairs": 6.0,
+     "byzantine|both|votes": 4.0,
+     "byzantine|byzantine only|pairs": 1.0,
+     "byzantine|byzantine only|votes": 0.0,
+     "byzantine|honest only|pairs": 26.0,
+     "byzantine|honest only|votes": 5.0,
+     "byzantine|nobody|pairs": 78.0,
+     "byzantine|nobody|votes": 0.0,
+     "honest_votes": 57.0,
+     "honest|both|pairs": 72.0,
+     "honest|both|votes": 44.0,
+     "honest|byzantine only|pairs": 12.0,
+     "honest|byzantine only|votes": 2.0,
+     "honest|honest only|pairs": 14.0,
+     "honest|honest only|votes": 2.0,
+     "honest|nobody|pairs": 154.0,
+     "honest|nobody|votes": 0.0,
+     "plurality_meetings_votes": 50.0,
+     "plurality_votes": 44.0
+    },
+    "listening": {
+     "accused": 194.0,
+     "answerable": 137.0,
+     "answered": 59.0
+    },
+    "speech": {
+     "byzantine": {
+      "cut": 0.0,
+      "label_accuse": 48.0,
+      "label_challenge": 1.0,
+      "label_defend": 16.0,
+      "label_question": 1.0,
+      "label_redirect": 16.0,
+      "label_report": 47.0,
+      "label_vote_call": 40.0,
+      "label_vouch": 2.0,
+      "n": 50.0,
+      "repeat": 2.0,
+      "tagged": 0.0,
+      "timed": 0.0,
+      "words_total": 3571.0
+     },
+     "honest": {
+      "cut": 0.0,
+      "label_accuse": 123.0,
+      "label_agree": 4.0,
+      "label_challenge": 8.0,
+      "label_defend": 53.0,
+      "label_redirect": 3.0,
+      "label_report": 121.0,
+      "label_vote_call": 119.0,
+      "label_vouch": 10.0,
+      "n": 126.0,
+      "repeat": 2.0,
+      "tagged": 0.0,
+      "timed": 0.0,
+      "words_total": 10243.0
+     }
+    }
+   }
+  }
+ }
+}
