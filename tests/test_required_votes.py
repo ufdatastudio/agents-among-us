@@ -34,8 +34,13 @@ class VoteStub:
         self.bad_voter = bad_voter
         self.bad_asks = bad_asks
         self.votes = []
+        self.readings = []
 
     def generate(self, model_name, system_prompt, user_prompt, temperature=0.1, max_tokens=160, preserve_think_tags=False):
+        if "Say which candidate the reply below votes for" in user_prompt:
+            # The model that reads a vote reply finds no candidate in "I abstain."
+            self.readings.append(user_prompt)
+            return "NONE"
         if "You are in a voting phase" in user_prompt:
             line = next(row for row in user_prompt.splitlines() if row.startswith("Candidates:"))
             named = set(re.findall(r"Agent_\d", line))
@@ -108,6 +113,8 @@ def test_a_vote_that_names_nobody_is_asked_again_with_a_higher_temperature(tmp_p
     engine.run_discussion_phase(1)
     asks = [temperature for voter, temperature, _ in stub.votes if voter == "Agent_1"]
     assert asks == list(VOTE_TEMPERATURES[:2])
+    # The reply "I abstain." names nobody, so the model was asked to read it once.
+    assert len(stub.readings) == 1
     assert not (game_dir(tmp_path, engine) / "voided_meetings.jsonl").exists()
     assert engine.state.world_data["agents"]["Agent_0"]["stats"]["votes_received"] == 3
 

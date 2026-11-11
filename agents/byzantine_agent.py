@@ -21,6 +21,7 @@ from agents.thought_capture import (
     generate_with_optional_thoughts,
     with_think_format_if_capturing,
 )
+from agents.vote_reading import ask_model_to_read_vote, read_vote
 from config.settings import ROOMS, MAX_MOVEMENT_PHASES
 
 class ByzantineAgent(BaseAgent):
@@ -307,9 +308,12 @@ Note: Skipping your vote is an option. Your vote is ANONYMOUS. Only total counts
         )
         clean_resp = response.strip()
         
-        for cand in candidates:
-            if cand in clean_resp:
-                return cand
+        reading = read_vote(clean_resp, candidates, lambda reply, names: ask_model_to_read_vote(self, reply, names, recent_discussion))
+        self.vote_reads.append(
+            {"method": reading.method, "reply": clean_resp[:400], "temperature": world_view.get("vote_temperature", 0.1)}
+        )
+        if reading.target:
+            return reading.target
 
         # An agent that may not skip gets None, so that the engine can ask again.
         return "SKIP" if allow_skip else None

@@ -930,6 +930,10 @@ class GameEngine:
         voided_meetings.jsonl with the votes it did collect. The room's record is renamed.
         """
         voided = {"round": round_num, "attempt": attempt, "missing_voters": missing, "votes": votes}
+        voided["vote_reads"] = {a.name: list(a.vote_reads) for a in self.agents if getattr(a, "vote_reads", None)}
+        for a in self.agents:
+            if hasattr(a, "vote_reads"):
+                a.vote_reads.clear()
         for key in ("discussion", "discussion_chat"):
             with open(self.logger.paths[key], "r+b") as handle:
                 handle.seek(checkpoint[key])
@@ -986,6 +990,7 @@ class GameEngine:
         
     def _record_vote(self, agent, vote, round_num):
         """Stores one vote and updates the voting statistics of the voter and the target."""
+        self._log_vote_readings(agent, vote, round_num)
         self.state.record_vote(agent.name, vote, round_num)
         self.state.save_json()
         voter_stats = self.state.world_data["agents"][agent.name]["stats"]
@@ -1005,6 +1010,19 @@ class GameEngine:
                 voter_stats["correct_votes"] += 1
             else:
                 voter_stats["incorrect_votes"] += 1
+
+    def _log_vote_readings(self, agent, vote, round_num):
+        """Appends the readings of an agent's vote replies to votes.jsonl, one line per vote.
+
+        Each reading says how the reply was read (`exact`, `marker`, `single`, `llm`, `ambiguous` or
+        `none`), so a run shows how often replies needed the model. A human seat has no readings.
+        """
+        reads = list(getattr(agent, "vote_reads", []))
+        if hasattr(agent, "vote_reads"):
+            agent.vote_reads.clear()
+        record = {"round": round_num, "voter": agent.name, "role": agent.role, "vote": vote, "reads": reads}
+        with (Path(self.logger.base_dir) / "votes.jsonl").open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record) + "\n")
 
     def _use_timed_discussion(self, active_agents):
         """Tells whether this meeting runs in the situation room.

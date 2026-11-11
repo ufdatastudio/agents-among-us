@@ -9,6 +9,8 @@ class BaseAgent:
         self.model_name = model_name
         self.llm = ModelManager.get_instance()
         self.action_num = 0
+        # How each vote reply was read, for the game's vote log. The engine writes and clears it.
+        self.vote_reads = []
 
     def think_and_act(self, world_view, round_num):
         """
