@@ -607,6 +607,32 @@ Chance is the share of Byzantines among the other active agents at the time of t
 - Influence. Honest voters follow an accusation about as readily from a Byzantine as from an honest agent in Granite (10% and 13% of voter and candidate pairs end in a vote, against 3% when nobody accused the candidate), and much less readily from a Byzantine in gpt-oss (2% and 11%). Votes concentrate on the most accused agent, which got 62% (Granite), 83% (gpt-oss) and 94% (Gemma) of honest votes in the room and 86%, 88% and 79% in turns, whether or not that agent was a Byzantine.
 - Knowing and choosing anyway. The public text cannot show what an agent knew. The Granite games with private reasoning (`CAPTURE=1`) add the reasoning of each agent before each reply and each vote, which allows the comparison of "this agent is lying" in the reasoning with the vote that follows.
 
+## Later work
+
+These tasks start after the current ones (the P2 reruns with required votes, the vote reading, interruption in the room and the transcript analysis).
+
+### A visual world in Godot
+
+The goal is a world that people can watch and play in, and that agents can live in. Rooms have sprites and sounds, humans can join as players, and the same world runs as a visible simulation or as a headless one for experiments. The situation room stays the place where meetings happen.
+
+What the world has to do.
+
+- Rooms with sprites and sounds, and a ship that a player runs around in. Movement is continuous and not a jump between room names.
+- Audio with distance and room physics. Sound gets quieter with distance, walls and doors block or muffle it, and a meeting room sounds different from a corridor. The audio work of P1b (per-reader mixes, overlap, Kokoro voices and Whisper recognition) is the starting point.
+- Agents that perceive. Each agent receives a video stream of what it sees and an audio stream of what it hears, and it updates its own memory of what is happening in the rooms. Today an agent reads a text observation log that the engine writes, so this replaces the log with a perception step and a memory update step, and the memory becomes part of what is measured.
+- Humans and agents in one world. A human uses the browser, an agent uses the streams, and both act through the same game rules.
+- The situation room for meetings, with the timed discussion, the transports and the vote of this document. The human seat in a timed meeting is not supported yet and becomes part of this work.
+
+Why Godot. It is scriptable, it exports to the browser, and the same project can run without a display for experiments. A browser build that uses threads needs the page to be cross-origin isolated, which means serving it with the `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` headers. Players in different places also need a server that stores the game state. Both points are to be checked against the Godot version when the work starts, together with what the PubApps proxy allows.
+
+Open design questions.
+
+- How often an agent samples video, and what a frame costs, since a vision model reads every frame it is shown.
+- What the memory update looks like, for example a short text summary written after each interval, and how it is kept comparable across models.
+- Which models may read video and audio. The Nemotron Omni model is waiting for an answer from Research Computing, and the model rule of this project applies to every model in the loop.
+- Whether the game server is authoritative, and how a seed fixes a run so that experiments repeat.
+- The art and sound assets. They have to be original or licensed for this use.
+
 ## Open questions
 
 - Interruption. `barge_in` exists in the room and is off by default, and `main.py` has no flag for it. An agent that is speaking is not asked at a tick, and with `barge_in` it is asked and may replace its statement, but it is not told that others have started to talk over it. Letting a speaker hear the room and choose to continue or stop at each tick is designed and not built, and a shorter `tick_s` makes the choice finer.
