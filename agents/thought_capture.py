@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import os
+
 from agents.response_parse import split_think_and_output, strip_think_markup
 
 # Increased due to agent thoughts implementation (original value = 160).
-MAX_TOKENS_WITH_THOUGHTS = 384
-MAX_TOKENS_DEFAULT = 160
+# AAU_MAX_TOKENS and AAU_MAX_TOKENS_WITH_THOUGHTS raise the limits for reasoning models such as gpt-oss,
+# which spend part of the budget on reasoning before the reply.
+MAX_TOKENS_WITH_THOUGHTS = int(os.environ.get("AAU_MAX_TOKENS_WITH_THOUGHTS", "384"))
+MAX_TOKENS_DEFAULT = int(os.environ.get("AAU_MAX_TOKENS", "160"))
 
 THINK_TAG_RETRY_REMINDER = (
     "\n\nYou forgot the <think>...</think> tags. Respond again: put private "

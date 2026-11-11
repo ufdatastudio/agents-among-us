@@ -19,11 +19,22 @@ class APIResponse:
 class OpenAICompatibleClient:
     """Client for OpenAI-compatible APIs (Navigator, OpenAI)."""
 
-    def __init__(self, base_url, api_key, provider_name):
+    def __init__(self, base_url, api_key, provider_name, extra_body=None, timeout_s=60):
+        """Creates the client.
+
+        Args:
+            base_url: Root of the OpenAI-compatible API.
+            api_key: Key for the API.
+            provider_name: Name used in log messages.
+            extra_body: Extra JSON fields for every request, such as `reasoning_effort` for gpt-oss.
+            timeout_s: Seconds to wait for one reply.
+        """
         from openai import OpenAI
 
         self.client = OpenAI(base_url=base_url, api_key=api_key)
         self.provider_name = provider_name
+        self.extra_body = extra_body
+        self.timeout_s = timeout_s
 
     def generate(self, model_id, system_prompt, user_prompt, temperature, max_tokens=160):
         """Generate a response using the OpenAI-compatible API.
@@ -53,7 +64,8 @@ class OpenAICompatibleClient:
                     # Increased due to agent thoughts implementation when caller requests it
                     # (original value = 160). Default remains 160 when capture_thoughts is off.
                     max_tokens=max_tokens,
-                    timeout=60,
+                    timeout=self.timeout_s,
+                    **({"extra_body": self.extra_body} if self.extra_body else {}),
                 )
                 text = response.choices[0].message.content or ""
                 usage = response.usage
@@ -145,16 +157,21 @@ def get_client(provider, api_keys):
 
     Returns:
         An API client instance. The 'vllm' provider talks to a vLLM server on the same node
-        at VLLM_BASE_URL (default http://127.0.0.1:8000/v1), which needs no key.
+        at VLLM_BASE_URL (default http://127.0.0.1:8000/v1), which needs no key. Set
+        VLLM_REASONING_EFFORT (low, medium or high) to pass `reasoning_effort` to a gpt-oss
+        server, and VLLM_TIMEOUT_S to change the 300 s wait for a reply.
 
     Raises:
         ValueError: If the required API key is missing.
     """
     if provider == "vllm":
+        effort = os.environ.get("VLLM_REASONING_EFFORT")
         return OpenAICompatibleClient(
             base_url=os.environ.get("VLLM_BASE_URL", "http://127.0.0.1:8000/v1"),
             api_key="EMPTY",
             provider_name="vLLM",
+            extra_body={"reasoning_effort": effort} if effort else None,
+            timeout_s=float(os.environ.get("VLLM_TIMEOUT_S", "300")),
         )
 
     key_map = {

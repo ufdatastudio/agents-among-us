@@ -123,6 +123,10 @@ def user_prompt(agent: int, tick: int, num_agents: int, salt: int) -> str:
     return f"{head}\n=== Now ===\nRoom time is {(tick - 1) * TICK_SECONDS} s. Reply now."
 
 
+# Extra JSON fields sent with every request, set from --reasoning-effort.
+EXTRA_BODY: dict | None = None
+
+
 def call(client: OpenAI, model: str, system: str, user: str, max_tokens: int, seed: int) -> dict:
     """Sends one chat request and records its timing and token counts.
 
@@ -135,7 +139,8 @@ def call(client: OpenAI, model: str, system: str, user: str, max_tokens: int, se
         seed: Sampling seed.
 
     Returns:
-        Latency in seconds and prompt, completion and cached token counts.
+        Latency in seconds, prompt, completion and cached token counts, and whether the reply
+        text was empty, which happens when a reasoning model uses the whole budget on reasoning.
     """
     start = time.perf_counter()
     response = client.chat.completions.create(
@@ -144,11 +149,13 @@ def call(client: OpenAI, model: str, system: str, user: str, max_tokens: int, se
         temperature=1.0,
         max_tokens=max_tokens,
         seed=seed,
+        **({"extra_body": EXTRA_BODY} if EXTRA_BODY else {}),
     )
     latency = time.perf_counter() - start
     usage = response.usage
     details = getattr(usage, "prompt_tokens_details", None)
     return {
+        "empty": not (response.choices[0].message.content or "").strip(),
         "latency_s": latency,
         "prompt_tokens": usage.prompt_tokens,
         "completion_tokens": usage.completion_tokens,
@@ -177,6 +184,7 @@ def summarize(wall_s: float, results: list[dict]) -> dict:
         "prompt_tokens_mean": round(prompt / len(results)),
         "completion_tokens_mean": round(completion / len(results), 1),
         "completion_tokens_max": max(r["completion_tokens"] for r in results),
+        "empty_fraction": round(sum(r["empty"] for r in results) / len(results), 3),
         "completion_tokens_per_s": round(completion / wall_s, 1),
         "cached_fraction": round(sum(r["cached_tokens"] for r in results) / prompt, 3),
     }
@@ -254,10 +262,13 @@ def main() -> None:
     parser.add_argument("--reps", type=int, default=3)
     parser.add_argument("--agents", type=int, default=10)
     parser.add_argument("--ticks", type=int, default=6)
+    parser.add_argument("--reasoning-effort", choices=("low", "medium", "high"), default=None, help="For gpt-oss models")
     args = parser.parse_args()
 
+    global EXTRA_BODY
+    EXTRA_BODY = {"reasoning_effort": args.reasoning_effort} if args.reasoning_effort else None
     client = OpenAI(base_url=args.base_url, api_key="EMPTY", timeout=600)
-    report: dict = {"model": args.model, "max_tokens": args.max_tokens}
+    report: dict = {"model": args.model, "max_tokens": args.max_tokens, "reasoning_effort": args.reasoning_effort}
 
     logger.info("Warming up")
     run_round(client, args.model, make_jobs(2, 2, args.agents, salt=900), args.max_tokens)

@@ -10,7 +10,8 @@
 #SBATCH --output=logs/sr-bench-%j.out
 # Start a vLLM server on one GPU, run the concurrency benchmark against it, and stop the server.
 # The job owns its server, so nothing stays running after it ends.
-# Usage: sbatch scripts/hipergator/bench_vllm.sbatch [navigator model name or hf checkpoint id]
+# Usage: [MAX_TOKENS=160] [REASONING_EFFORTS="default low"] sbatch scripts/hipergator/bench_vllm.sbatch [navigator model name or hf checkpoint id]
+# MAX_TOKENS is the completion limit. REASONING_EFFORTS lists efforts for a gpt-oss model, one benchmark each.
 # Submit from the repository root. Only models on the eligible list in config/eligible_models.py
 # start. The check exits with an error for Qwen, DeepSeek and other families from countries of concern.
 # A Qwen model starts only when QWEN_OVERRIDE holds the phrase the check prints in its warning,
@@ -44,6 +45,13 @@ done
 if [ "${READY}" -ne 1 ]; then echo "server not ready after 15 minutes"; tail -60 "logs/vllm-${SLURM_JOB_ID}.log"; exit 1; fi
 echo "server ready on ${PORT} after about $((i * 5)) s"
 
-uv run --no-project --with openai --with loguru python -m scripts.bench_vllm_concurrency \
-  --base-url "http://127.0.0.1:${PORT}/v1" --model "${MODEL}" \
-  --out "results/bench/${SAFE_NAME}_${SLURM_JOB_ID}.json"
+# One benchmark per reasoning effort. "default" sends no effort, so the model uses its own default.
+for EFFORT in ${REASONING_EFFORTS:-default}; do
+  EXTRA=()
+  SUFFIX=""
+  if [ "${EFFORT}" != "default" ]; then EXTRA=(--reasoning-effort "${EFFORT}"); SUFFIX="_${EFFORT}"; fi
+  uv run --no-project --with openai --with loguru python -m scripts.bench_vllm_concurrency \
+    --base-url "http://127.0.0.1:${PORT}/v1" --model "${MODEL}" --max-tokens "${MAX_TOKENS:-160}" \
+    ${EXTRA[@]+"${EXTRA[@]}"} \
+    --out "results/bench/${SAFE_NAME}_${SLURM_JOB_ID}${SUFFIX}.json"
+done
