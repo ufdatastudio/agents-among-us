@@ -57,19 +57,22 @@ def summarize(records: Iterable[dict]) -> list[dict]:
     Returns:
         One row per model and protocol, in the order of the P2 protocols.
     """
-    groups: dict[tuple[str, str], list[dict]] = {}
+    groups: dict[tuple[str, str, str], list[dict]] = {}
     for record in records:
-        groups.setdefault((record["model"], record["protocol"]), []).append(record)
+        groups.setdefault((record["model"], record.get("reasoning_effort") or "default", record["protocol"]), []).append(record)
     rows = []
-    for (model, protocol), games in groups.items():
+    for (model, effort, protocol), games in groups.items():
         finished = [g for g in games if g.get("result")]
         wins = sum(g["winner"] == "honest" for g in finished)
         low, high = wilson(wins, len(finished))
         correct = sum(g.get("stats", {}).get("honest_correct_votes", 0) for g in finished)
         incorrect = sum(g.get("stats", {}).get("honest_incorrect_votes", 0) for g in finished)
+        tokens = {k: sum(g.get("tokens", {}).get(k, 0) for g in finished) for k in ("api_output_tokens", "api_reasoning_tokens", "api_calls", "api_truncated_calls", "api_empty_replies")}
         rows.append(
             {
                 "model": model,
+                "effort": effort,
+                "token_limit": max((g.get("max_tokens", 0) for g in games), default=0),
                 "protocol": protocol,
                 "games": len(finished),
                 "failed": len(games) - len(finished),
@@ -81,9 +84,17 @@ def summarize(records: Iterable[dict]) -> list[dict]:
                 "mean_meetings": statistics.mean(g["meetings"] for g in finished) if finished else None,
                 "mean_statements": statistics.mean(g["statements"] for g in finished) if finished else None,
                 "mean_minutes": statistics.mean(g["wall_s"] for g in finished) / 60 if finished else None,
+                "reasoning_share": _ratio(tokens["api_reasoning_tokens"], tokens["api_output_tokens"]),
+                "truncated_share": _ratio(tokens["api_truncated_calls"], tokens["api_calls"]),
+                "empty_share": _ratio(tokens["api_empty_replies"], tokens["api_calls"]),
+                "tokens_per_call": _ratio(tokens["api_output_tokens"], tokens["api_calls"]),
             }
         )
-    return sorted(rows, key=lambda r: (r["model"], PROTOCOL_ORDER.get(r["protocol"], len(PROTOCOL_ORDER))))
+    return sorted(rows, key=lambda r: (r["model"], r["effort"], PROTOCOL_ORDER.get(r["protocol"], len(PROTOCOL_ORDER))))
+
+
+def _ratio(numerator: float, denominator: float) -> float | None:
+    return numerator / denominator if denominator else None
 
 
 def _fmt(value: float | None, spec: str) -> str:
@@ -100,15 +111,16 @@ def format_table(rows: Sequence[dict]) -> str:
         The table.
     """
     lines = [
-        "| Model | Protocol | Games | Failed | Honest win rate | 95% interval | Honest vote accuracy | Rounds | Meetings | Statements | Minutes |",
-        "|-------|----------|-------|--------|-----------------|--------------|----------------------|--------|----------|------------|---------|",
+        "| Model | Effort | Token limit | Protocol | Games | Failed | Honest win rate | 95% interval | Honest vote accuracy | Rounds | Meetings | Statements | Minutes | Tokens per call | Reasoning share | Cut at limit | Empty |",
+        "|-------|--------|-------------|----------|-------|--------|-----------------|--------------|----------------------|--------|----------|------------|---------|-----------------|-----------------|--------------|-------|",
     ]
     for r in rows:
         lines.append(
-            f"| {r['model']} | {r['protocol']} | {r['games']} | {r['failed']} | {_fmt(r['honest_win_rate'], '.2f')} "
-            f"| {r['ci_low']:.2f} to {r['ci_high']:.2f} | {_fmt(r['honest_vote_accuracy'], '.2f')} "
-            f"| {_fmt(r['mean_rounds'], '.1f')} | {_fmt(r['mean_meetings'], '.1f')} "
-            f"| {_fmt(r['mean_statements'], '.0f')} | {_fmt(r['mean_minutes'], '.1f')} |"
+            f"| {r['model']} | {r['effort']} | {r['token_limit']} | {r['protocol']} | {r['games']} | {r['failed']} "
+            f"| {_fmt(r['honest_win_rate'], '.2f')} | {r['ci_low']:.2f} to {r['ci_high']:.2f} "
+            f"| {_fmt(r['honest_vote_accuracy'], '.2f')} | {_fmt(r['mean_rounds'], '.1f')} | {_fmt(r['mean_meetings'], '.1f')} "
+            f"| {_fmt(r['mean_statements'], '.0f')} | {_fmt(r['mean_minutes'], '.1f')} | {_fmt(r['tokens_per_call'], '.0f')} "
+            f"| {_fmt(r['reasoning_share'], '.0%')} | {_fmt(r['truncated_share'], '.1%')} | {_fmt(r['empty_share'], '.1%')} |"
         )
     return "\n".join(lines)
 

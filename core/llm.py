@@ -2,6 +2,7 @@ import json
 import os
 import platform
 import re
+import threading
 import time
 
 from config.app_mode import get_allowed_providers, should_load_gpu
@@ -85,6 +86,8 @@ class ModelManager:
         self.api_clients = {}
         self.api_keys = {}
         self.token_usage = {}
+        # Replies of one meeting arrive from parallel threads in the situation room.
+        self._usage_lock = threading.Lock()
         self._load_api_keys_from_env()
 
     @classmethod
@@ -175,10 +178,7 @@ class ModelManager:
                 model_id, system_prompt, user_prompt, temperature, max_tokens=max_tokens
             )
 
-            if model_name not in self.token_usage:
-                self.token_usage[model_name] = {"input_tokens": 0, "output_tokens": 0}
-            self.token_usage[model_name]["input_tokens"] += response.input_tokens
-            self.token_usage[model_name]["output_tokens"] += response.output_tokens
+            self._record_usage(model_name, response)
 
             return self._postprocess_response(
                 response.text, preserve_think_tags=preserve_think_tags
@@ -187,6 +187,26 @@ class ModelManager:
         except Exception as e:
             log.error("[API ERROR on {}]: {}", model_name, e)
             return "move"
+
+    def _record_usage(self, model_name, response):
+        """Adds one reply to the running totals of its model.
+
+        Besides the tokens, the totals count calls, reasoning tokens, replies cut at the token limit,
+        empty replies and the longest reply, which show whether a reasoning model had enough budget.
+        """
+        with self._usage_lock:
+            usage = self.token_usage.setdefault(model_name, {"input_tokens": 0, "output_tokens": 0})
+            usage["input_tokens"] += response.input_tokens
+            usage["output_tokens"] += response.output_tokens
+            for key, value in (
+                ("calls", 1),
+                ("reasoning_tokens", response.reasoning_tokens),
+                ("reasoning_estimated_calls", int(response.reasoning_estimated)),
+                ("truncated_calls", int(response.truncated)),
+                ("empty_replies", int(response.empty)),
+            ):
+                usage[key] = usage.get(key, 0) + value
+            usage["max_output_tokens"] = max(usage.get("max_output_tokens", 0), response.output_tokens)
 
     def get_token_usage(self):
         """Return accumulated token usage per API model."""

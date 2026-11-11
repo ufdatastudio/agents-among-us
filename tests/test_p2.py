@@ -16,6 +16,7 @@ from scripts.run_p2 import (
     plan,
     read_discussion,
     read_stats,
+    read_tokens,
 )
 from scripts.summarize_p2 import format_table, summarize, wilson
 
@@ -137,7 +138,37 @@ def test_summarize_groups_by_model_and_protocol_and_skips_failures_in_the_rates(
     assert sequential["honest_win_rate"] == 0.5
     assert sequential["mean_minutes"] == pytest.approx(2.5)
     assert sequential["honest_vote_accuracy"] == 0.75
-    assert "| m | sequential | 2 | 1 | 0.50 |" in format_table(rows)
+    assert "| m | default | 0 | sequential | 2 | 1 | 0.50 |" in format_table(rows)
+
+
+def test_read_tokens_takes_the_per_model_totals_from_the_stats_file(tmp_path):
+    path = tmp_path / "stats.csv"
+    path.write_text(
+        "agent_name,api_input_tokens,api_output_tokens,api_calls,api_reasoning_tokens,api_reasoning_estimated_calls,"
+        "api_truncated_calls,api_empty_replies,api_max_output_tokens\n"
+        "Agent_0,5000,900,40,600,40,3,2,160\nAgent_1,5000,900,40,600,40,3,2,160\n",
+        encoding="utf-8",
+    )
+    tokens = read_tokens(path)
+    assert tokens["api_output_tokens"] == 900 and tokens["api_reasoning_tokens"] == 600
+    assert tokens["api_truncated_calls"] == 3 and tokens["api_max_output_tokens"] == 160
+    assert read_tokens(tmp_path / "missing.csv") == {}
+
+
+def test_summarize_reports_reasoning_share_and_keeps_efforts_apart():
+    def game(effort, reasoning):
+        return {
+            "model": "m", "protocol": "sequential", "result": "done", "winner": "honest", "rounds_played": 3, "meetings": 1,
+            "statements": 10, "wall_s": 60, "reasoning_effort": effort, "max_tokens": 768,
+            "tokens": {"api_output_tokens": 1000, "api_reasoning_tokens": reasoning, "api_calls": 50,
+                       "api_truncated_calls": 5, "api_empty_replies": 2},
+        }
+
+    rows = summarize([game("low", 300), game("medium", 800)])
+    assert [r["effort"] for r in rows] == ["low", "medium"]
+    assert rows[0]["reasoning_share"] == 0.3 and rows[1]["reasoning_share"] == 0.8
+    assert rows[0]["truncated_share"] == 0.1 and rows[0]["empty_share"] == 0.04
+    assert rows[0]["tokens_per_call"] == 20 and rows[0]["token_limit"] == 768
 
 
 def make_state(seed):

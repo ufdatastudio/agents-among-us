@@ -131,6 +131,36 @@ def read_stats(path: Path) -> dict:
     return totals
 
 
+TOKEN_COLUMNS = (
+    "api_input_tokens", "api_output_tokens", "api_calls", "api_reasoning_tokens", "api_reasoning_estimated_calls",
+    "api_truncated_calls", "api_empty_replies", "api_max_output_tokens",
+)
+
+
+def read_tokens(path: Path) -> dict:
+    """Reads the token totals of a game from its stats file.
+
+    The totals are kept per model and not per agent, so every agent of a model repeats them.
+    A game in which all agents run one model therefore has one set of totals, and the maximum
+    over the rows gives it.
+
+    Args:
+        path: The `stats.csv` of one game.
+
+    Returns:
+        Input, output and reasoning tokens, calls, replies cut at the limit, empty replies and the
+        longest reply, or an empty dict if the file is missing.
+    """
+    if not path.exists():
+        return {}
+    totals: dict[str, int] = {}
+    with path.open(newline="", encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            for column in TOKEN_COLUMNS:
+                totals[column] = max(totals.get(column, 0), int(float(row.get(column) or 0)))
+    return totals
+
+
 def read_discussion(path: Path) -> dict:
     """Counts the meetings and statements in a game's discussion log.
 
@@ -196,7 +226,12 @@ def run_game(protocol: Protocol, seed: int, args: argparse.Namespace, scenario: 
     record = {
         "tag": args.tag, "model": args.model, "protocol": protocol.name, "seed": seed, "game_id": game_id,
         "max_rounds": args.rounds, "returncode": code, "wall_s": round(wall, 1),
-        **parse_output(text), **read_discussion(game_dir / "discussion.log"), "stats": read_stats(game_dir / "stats.csv"),
+        # The reasoning effort and the reply limit the games ran with, so results of one model at
+        # different settings are not mixed.
+        "reasoning_effort": os.environ.get("VLLM_REASONING_EFFORT") or "default",
+        "max_tokens": int(os.environ.get("AAU_MAX_TOKENS", "160")),
+        **parse_output(text), **read_discussion(game_dir / "discussion.log"),
+        "stats": read_stats(game_dir / "stats.csv"), "tokens": read_tokens(game_dir / "stats.csv"),
     }
     logger.info("{} {} seed {}: {} in {:.0f} s", game_id, protocol.name, seed, record["result"], wall)
     return record

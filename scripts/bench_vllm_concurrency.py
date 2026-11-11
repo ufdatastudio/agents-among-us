@@ -17,6 +17,7 @@ cached token counts are reported:
 
 import argparse
 import json
+import math
 import random
 import statistics
 import time
@@ -25,6 +26,8 @@ from pathlib import Path
 
 from loguru import logger
 from openai import OpenAI
+
+from core.api_clients import reasoning_tokens_of
 
 SYSTEM_PROMPT = (
     "You are Agent_{agent}, an agent in a spaceship social deduction game. "
@@ -154,13 +157,32 @@ def call(client: OpenAI, model: str, system: str, user: str, max_tokens: int, se
     latency = time.perf_counter() - start
     usage = response.usage
     details = getattr(usage, "prompt_tokens_details", None)
+    text = response.choices[0].message.content or ""
+    reasoning_tokens, estimated = reasoning_tokens_of(response, text, usage.completion_tokens)
     return {
-        "empty": not (response.choices[0].message.content or "").strip(),
+        "empty": not text.strip(),
+        "truncated": response.choices[0].finish_reason == "length",
+        "reasoning_tokens": reasoning_tokens,
+        "reasoning_estimated": estimated,
         "latency_s": latency,
         "prompt_tokens": usage.prompt_tokens,
         "completion_tokens": usage.completion_tokens,
         "cached_tokens": getattr(details, "cached_tokens", 0) or 0,
     }
+
+
+def percentile(values: list[int], fraction: float) -> int:
+    """Gives a percentile of a list by the nearest-rank rule.
+
+    Args:
+        values: The values.
+        fraction: Share between 0 and 1, such as 0.9 for the 90th percentile.
+
+    Returns:
+        The smallest value with at least that share of the values at or below it.
+    """
+    ordered = sorted(values)
+    return ordered[max(0, math.ceil(fraction * len(ordered)) - 1)]
 
 
 def summarize(wall_s: float, results: list[dict]) -> dict:
@@ -183,8 +205,13 @@ def summarize(wall_s: float, results: list[dict]) -> dict:
         "max_latency_s": round(max(latencies), 3),
         "prompt_tokens_mean": round(prompt / len(results)),
         "completion_tokens_mean": round(completion / len(results), 1),
+        "completion_tokens_p50": percentile([r["completion_tokens"] for r in results], 0.5),
+        "completion_tokens_p90": percentile([r["completion_tokens"] for r in results], 0.9),
         "completion_tokens_max": max(r["completion_tokens"] for r in results),
         "empty_fraction": round(sum(r["empty"] for r in results) / len(results), 3),
+        "truncated_fraction": round(sum(r["truncated"] for r in results) / len(results), 3),
+        "reasoning_fraction": round(sum(r["reasoning_tokens"] for r in results) / max(1, completion), 3),
+        "reasoning_estimated_fraction": round(sum(r["reasoning_estimated"] for r in results) / len(results), 3),
         "completion_tokens_per_s": round(completion / wall_s, 1),
         "cached_fraction": round(sum(r["cached_tokens"] for r in results) / prompt, 3),
     }

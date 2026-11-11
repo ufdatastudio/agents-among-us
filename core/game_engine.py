@@ -1024,6 +1024,13 @@ class GameEngine:
             model_tokens = token_usage.get(stats.get("model_name", ""), {})
             stats["api_input_tokens"] = model_tokens.get("input_tokens", 0)
             stats["api_output_tokens"] = model_tokens.get("output_tokens", 0)
+            # Totals of the agent's model over the whole game. Reasoning models need these to show their cost.
+            stats["api_calls"] = model_tokens.get("calls", 0)
+            stats["api_reasoning_tokens"] = model_tokens.get("reasoning_tokens", 0)
+            stats["api_reasoning_estimated_calls"] = model_tokens.get("reasoning_estimated_calls", 0)
+            stats["api_truncated_calls"] = model_tokens.get("truncated_calls", 0)
+            stats["api_empty_replies"] = model_tokens.get("empty_replies", 0)
+            stats["api_max_output_tokens"] = model_tokens.get("max_output_tokens", 0)
 
         self.state.update_phase("GAME OVER")
         self.state.add_ui_event(f"{result.upper()}", "info")

@@ -9,11 +9,56 @@ from loguru import logger
 
 @dataclass
 class APIResponse:
-    """Response from an API provider."""
+    """Response from an API provider.
+
+    Attributes:
+        text: The reply text.
+        input_tokens: Prompt tokens.
+        output_tokens: Completion tokens, including any reasoning.
+        reasoning_tokens: Completion tokens spent on reasoning before the reply.
+        reasoning_estimated: True when `reasoning_tokens` was estimated and not reported by the server.
+        truncated: True when the reply stopped at the token limit.
+        empty: True when the reply text is empty, which happens when reasoning uses the whole budget.
+    """
 
     text: str
     input_tokens: int
     output_tokens: int
+    reasoning_tokens: int = 0
+    reasoning_estimated: bool = False
+    truncated: bool = False
+    empty: bool = False
+
+
+def reasoning_tokens_of(response, text: str, output_tokens: int) -> tuple[int, bool]:
+    """Counts the completion tokens a reasoning model spent on reasoning in one reply.
+
+    A server that reports `completion_tokens_details.reasoning_tokens` is trusted. Otherwise the
+    count is estimated from the reasoning text that vLLM's parser separates from the reply, by
+    splitting the completion tokens in proportion to the characters of reasoning and reply.
+
+    Args:
+        response: A chat completion from an OpenAI-compatible server.
+        text: The reply text, without reasoning.
+        output_tokens: Completion tokens of the whole reply.
+
+    Returns:
+        The number of reasoning tokens, and whether it is an estimate.
+    """
+    details = getattr(getattr(response, "usage", None), "completion_tokens_details", None)
+    reported = getattr(details, "reasoning_tokens", None)
+    if reported:
+        return int(reported), False
+    message = response.choices[0].message
+    extra = getattr(message, "model_extra", None) or {}
+    reasoning = ""
+    for name in ("reasoning_content", "reasoning"):
+        reasoning = getattr(message, name, None) or extra.get(name) or ""
+        if reasoning:
+            break
+    if not reasoning:
+        return 0, False
+    return round(output_tokens * len(reasoning) / (len(reasoning) + len(text))), True
 
 
 class OpenAICompatibleClient:
@@ -69,10 +114,16 @@ class OpenAICompatibleClient:
                 )
                 text = response.choices[0].message.content or ""
                 usage = response.usage
+                output_tokens = usage.completion_tokens if usage else 0
+                reasoning_tokens, estimated = reasoning_tokens_of(response, text, output_tokens)
                 return APIResponse(
                     text=text.strip(),
                     input_tokens=usage.prompt_tokens if usage else 0,
-                    output_tokens=usage.completion_tokens if usage else 0,
+                    output_tokens=output_tokens,
+                    reasoning_tokens=reasoning_tokens,
+                    reasoning_estimated=estimated,
+                    truncated=response.choices[0].finish_reason == "length",
+                    empty=not text.strip(),
                 )
             except (APIConnectionError, APITimeoutError, RateLimitError) as e:
                 last_error = e
