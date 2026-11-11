@@ -75,12 +75,26 @@ The plan starts with Python mixing for agents, because the audio pilot gives a b
 
 The room physics are simple in the first version. The gain falls with distance by an attenuation exponent, up to a maximum distance (`AudioStreamPlayer2D` has both settings). Each wall between source and listener takes away a fixed number of decibels, and an open door takes away none. Reverb and room acoustics come after that.
 
+### Speech and walls
+
+A conversation stays within its walls. Agents that talk in a room are heard by everyone in that room, and a listener in the next room behind a closed door does not hear the words. This is the condition under which the plan uses a 2D world.
+
+Godot's 2D audio players give a gain from distance and a maximum distance, and as far as the documentation says they have no occlusion by walls. The server therefore computes the wall loss itself, from the same map that blocks movement and sight.
+
+- Map. The server keeps the map as a grid of tiles that are floor, wall or door. A door is open or closed, and a door can be opened and closed in play.
+- Straight line. The gain from a source to a listener is the distance falloff minus a fixed loss in decibels for each wall tile on the straight line between them, counted by walking the grid. An open door tile costs nothing and a closed door costs a smaller loss than a wall.
+- Doorways. A straight line through a wall misses the sound that goes around through an open doorway. The gain is the larger of the straight line and the path through the nearest open door, with the distance taken along that path. A listener in the corridor beside an open door hears the room, and a listener behind the wall does not.
+- Settings. The wall loss, the closed door loss, the attenuation exponent and the maximum distance are parameters of the world, so the experiments on distance and information can change them, and each run records them.
+- Speech and noise. A listener gets words from a source only when it is louder than the other sounds that reach the listener. The mix for a listener goes through the ASR step, and a source below the level of the noise arrives as missing words.
+- Meetings. In a meeting every agent is in the meeting room, and the situation room decides what each agent hears. The wall rules apply to talk in the world outside meetings.
+
 ## The world
 
-- 2D and top-down for the first version. It is cheaper to render, easier on agents that read frames, and the existing maps are room graphs that fit a tile map. A 3D ship can follow if it is worth the cost.
+- 2D and top-down for the first version, decided. It is cheaper to render, easier on agents that read frames, and the existing maps are room graphs that fit a tile map. It depends on keeping a conversation inside its walls, see Speech and walls. A 3D ship can follow if it is worth the cost.
+- One wall layer. Movement, the sight of each agent and the sound read the same wall tiles, so one map says what blocks a body, a view and a voice.
 - Maps come from the room graphs of `config/settings.py`, laid out as tile maps with corridors and doors. Rooms keep their names, so a claim such as "I was in Storage" is still checkable.
 - Movement uses `CharacterBody2D` at a fixed physics rate. The rules that count in a round (3 moves, kills, bodies, reports) are rebuilt in terms of time and distance, and a test ties them to the Python engine's rules.
-- The language is GDScript. Godot 4 has no web export for C# projects, which would end the browser client, and the first test confirms it.
+- The language is GDScript, decided. Godot 4 has no web export for C# projects, which would end the browser client, and the first test confirms it.
 - The Godot version is 4.3 or later, because the single-threaded web export came with 4.3.
 
 ## Browser and multiplayer
@@ -101,7 +115,7 @@ Each phase ends with a test that can fail.
 | G0 | Spike on the open technical questions below | Each question has a written answer and a decision |
 | G1 | World core. Map, movement, doors, bodies, tasks, kills, meeting call, fixed-step clock, recorder, the oracle text perception and the Python bridge | A scripted game runs headless, and the same actions in the Python engine and in Godot give the same rounds, bodies and ejections |
 | G2 | Agents in the world with oracle text and the memory update | The existing agents finish games, and the memory accuracy and win rates have a baseline next to the P2 results |
-| G3 | Sound events, distance and wall gain, per-listener mixes, speech in the world | A listener behind a wall hears a source at the gain the physics predicts, and an ASR check recovers the words at the distances the mixes give |
+| G3 | Sound events, distance and wall gain, per-listener mixes, speech in the world | A listener behind a wall hears a source at the gain the physics predicts, and an ASR check recovers the words at the distances the mixes give. A conversation in a room is recovered by a listener in the room and not by a listener behind a closed door, and a listener at an open door gets a gain between the two |
 | G4 | Video frames per agent and a vision model | The same games run with oracle text, audio, video and audio with video, and the memory accuracy of each is measured |
 | G5 | Browser client, join codes, human text chat, humans and agents in one game | Two humans in two places finish a game with agents on the hosted server |
 | G6 | The situation room in the world. Humans in timed meetings, with text and then voice | A mixed meeting runs through the timed room, and the human seat works in `core/timed_discussion.py` |
@@ -112,6 +126,7 @@ Each phase ends with a test that can fail.
 - Headless. `godot --headless` runs the simulation faster than the wall clock. Rendering is a dummy under `--headless`, so video frames need a display driver. Check what runs on a compute node, for example a virtual display or an offscreen renderer, and the cost of a frame.
 - Per-listener audio. Whether one Godot process can give each agent its own audio mix, for example one viewport and listener per agent with the bus captured through `AudioEffectCapture`, or whether the mixes have to be built in Python.
 - Browser multiplayer. A browser client and a native server exchange state over a WebSocket peer, and the round trip time is measured.
+- Walls. On a toy map of two rooms, a corridor and a door, the grid walk gives the gain the physics predicts for a listener in the room, behind the wall, in the corridor with the door open and in the corridor with it closed. If a 2D map cannot keep a conversation inside its walls, the choice of 2D is reconsidered.
 - Language. A GDScript project exports to the web, and a C# project does not.
 - Determinism. The same seed and the same actions give the same states on two machines.
 - Tests of GDScript. A test framework such as GUT or gdUnit4 runs in a headless job.
@@ -120,6 +135,7 @@ Each phase ends with a test that can fail.
 
 - Perception. Oracle text, audio, video and both, with the memory accuracy, the win rate and the cost in tokens and frames of each.
 - Distance and information. Whether louder or quieter worlds (the attenuation and the wall loss) change who knows what at a meeting, and the false claims that follow.
+- Private talk. Whether agents use the walls to talk where others cannot hear, and whether Byzantine agents do so more than honest agents.
 - Humans among agents. Whether human players detect Byzantine agents better than agents do, and whether agents detect human impostors, which needs ethics approval.
 - The situation room with embodiment. The P2 comparison of turns against the room, repeated with agents that walked and listened to get their memories.
 
@@ -131,11 +147,18 @@ Each phase ends with a test that can fail.
 - Wall clock against virtual time. A human game runs at the wall clock rate, and an agent needs seconds to answer. The controller grants steps and waits for the agents, so a human game with slow agents pauses between steps. The plan needs a rule for how long it waits and what a slow agent does.
 - Rendering on a cluster. Frames need a renderer on a node without a display. If this is hard, video runs on a node with a GPU and a virtual display.
 - Hosting. The proxy question above, and whether the game server runs on the VM or on a separate host.
+- Wall settings. The loss in decibels for a wall and for a closed door are guesses that need calibration. A loss that is too high makes every room soundproof and removes what an agent overhears, and a loss that is too low removes private talk. The runs report the settings, and the experiments vary them.
 - Scope. G1 is a rebuild of the rules in a new engine, and the equivalence test is what keeps it honest.
 
-## Decisions for the research team
+## Decisions
 
-- 2D top-down for the first version, as proposed above.
-- GDScript, and the Godot version, which should be a stable 4.x release from 4.3 on.
+Decided.
+
+- 2D top-down for the first version, on the condition that a conversation stays within its walls. The G0 test of walls checks the condition.
+- GDScript.
+
+For the research team.
+
+- The Godot version, which should be a stable 4.x release from 4.3 on.
 - Whether the first public milestone is the watchable simulation (G1 and G2 with a browser viewer) or the playable game (G5).
 - Where the server is hosted.
