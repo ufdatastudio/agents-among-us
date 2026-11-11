@@ -380,6 +380,28 @@ Jobs 50742388 and 50744516 played full games of 10 agents (8 honest, 2 Byzantine
 - 99% of room statements still include an address tag, although the prompt says most statements need none. Granite treats the tag as part of the format, so addressing is a default of this model. Either the tag leaves the prompt or the experiments record it as always on.
 - The room never closed early. In every meeting some agent was still speaking in the last ticks, so `quiet_close_ticks` has not been exercised on a served model.
 
+### Reasoning models
+
+A reasoning model spends completion tokens on reasoning before it writes the reply. Those tokens take time within a tick, and they can use the whole token limit and leave an empty reply.
+
+Every experiment records the reasoning effort it ran with (`VLLM_REASONING_EFFORT`, or `default`) and the reply limit (`AAU_MAX_TOKENS`), and each game records totals for its model. The totals are completion tokens, reasoning tokens, replies that stopped at the limit and empty replies, and they are written to `stats.csv` as `api_*` columns. The server's own count of reasoning tokens is used when it reports one. Otherwise the count is estimated by splitting the completion tokens in proportion to the characters of reasoning text and reply text, and `api_reasoning_estimated_calls` says how many replies were estimated. The reasoning share is reasoning tokens over completion tokens. `scripts/summarize_p2.py` prints it for each model, effort and protocol, next to the tokens per call, the share of replies cut at the limit and the share of empty replies. The benchmark records the same, with the 50th and 90th percentile of completion length.
+
+What the numbers show so far, from the benchmark with gpt-oss-20b at a limit of 1024 tokens.
+
+| Reasoning effort | Mean completion tokens | Longest | Empty replies | 6-tick meeting |
+|------------------|------------------------|---------|---------------|----------------|
+| default (medium) | 770 to 1024, cut by the limit | 1024 | 40% to 60% from 5 simultaneous requests up | 44 s |
+| low | 65 to 194 | 394 | 0% | 13 s |
+
+For comparison the benchmark replies of Granite 3.3 8B averaged 13 tokens and those of Gemma 4 31B 56 tokens. At default effort about half of the replies needed more than 1024 tokens, so their true length is unknown. Jobs 50751707 and 50751708 repeat the benchmark with a limit of 4096 tokens at low, medium and high effort on gpt-oss-20b and gpt-oss-120b, so the length of the reasoning at each effort can be read from the percentiles. Benchmark prompts are synthetic, and a game prompt that asks for one room name may need fewer reasoning tokens than one that asks for an argument. The game test with low effort and a limit of 768 tokens measures that.
+
+The clock does not charge for reasoning. An agent that decides at tick t starts speaking within the onset jitter after t, however long its reasoning ran on the GPU, so reasoning is free in game time and costs only wall time. A person who thinks before speaking talks later. Two options follow.
+
+- Charge reasoning tokens to the clock. A reply with k reasoning tokens starts k divided by a `think_tokens_per_s` setting after the tick, and a reply that runs past the end of the discussion is dropped. The speed of reasoning then becomes a factor of the game, and methods that reason faster can be compared by what they win, such as lower effort, shorter chains, drafts from a small model, or a small model that reasons for a large one.
+- Keep the clock and compare efforts by quality and wall time only.
+
+The first option is a design choice and is not implemented.
+
 ### Measured audio stack (P1b)
 
 `scripts/audio_pilot.py` synthesizes scripted 20-word statements with 10 Kokoro voices, mixes them the way the room would for a silent listener, and transcribes the result with Whisper large-v3 in fp16 on an NVIDIA RTX PRO 6000. The result file is `results/audio_pilot/summary_50646536.json`. The WAV files stay on HiPerGator in `results/audio_pilot/wav_50646536/`.
