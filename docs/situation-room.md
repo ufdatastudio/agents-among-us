@@ -214,7 +214,7 @@ The room records the true segments, so the diarization error rate for each reade
 Agents argue by answering what others said. They need the justification and the speaker, which is why audio quality and diarization are experiment factors.
 
 - The prompts ask an agent to address speakers by name, answer the justification it heard, and give its own.
-- A reply may begin with `<to>Agent_5</to>`. The tag is stripped before synthesis and display, and the room stores it as `addressed_to`.
+- A reply may begin with `<to>Agent_5</to>`. The room stores the names as `addressed_to` and keeps them in the spoken text, so the reply is shown and synthesized as "Agent_5, ...". The names stay because models also wrap a name in the tag in the middle of a sentence, and deleting the tag would delete the name.
 - Every utterance records the cursor its speaker had at the start, so analyses can link a rebuttal to what the speaker had heard.
 - With `barge_in` on, an agent mid-utterance can cut itself off and answer an accusation at the next tick, so a rebuttal can follow an accusation within 1 tick.
 

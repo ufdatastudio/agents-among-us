@@ -9,10 +9,10 @@ from agents.prompts import BYZANTINE_DISCUSSION_INSTRUCTIONS_PREFIX, HONEST_DISC
 
 ROOM_MECHANICS = """
 6. This is a timed meeting and everyone speaks during the same window, so people talk over each other. Below is everything spoken so far. Speech that overlaps in time is interleaved in time order.
-7. Reply with your next statement in at most {max_words} words. Words past that limit are cut off, so put the point first.
+7. Reply with your next statement in one or two short sentences and at most {max_words} words. Words past that limit are cut off, so put the point first.
 8. Reply with <silent/> when you have nothing new to add. You may stay silent at any decision point and speak at the next one.
 9. Do not repeat what you or anyone else already said. React to the newest statements, answer accusations and questions aimed at you, and give your reason for any suspicion.
-10. To address someone, start with <to>Name</to>, for example <to>Agent_2</to>.
+10. Most statements are for the whole room and need no tag. Only when you answer or question one person, start with <to>Name</to> and then speak to them.
 11. Speak in first person. Do NOT include your name at the start. Do NOT use quotes. Output only the spoken words, or <silent/>.
 """
 

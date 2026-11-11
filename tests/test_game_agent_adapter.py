@@ -118,7 +118,7 @@ def test_an_address_tag_becomes_the_addressee(logs, tmp_path):
     adapter.begin_meeting(Meeting(1, "", None))
     adapter.hear(percept())
     reply = adapter.reply(Tick(1, 10.0, 170.0))
-    assert reply.text == "Where were you?"
+    assert reply.text == "Agent_1, Where were you?"
     assert reply.addressed_to == ("Agent_1",)
 
 

@@ -157,7 +157,7 @@ def test_addressed_agents_are_recorded():
     adapters = cast({"Red": {1: "<to>Blue</to> Where were you?"}})
     room = run_timed_discussion(adapters, MEETING, config())
     assert room.lanes["Red"].utterances[0].addressed_to == ("Blue",)
-    assert room.lanes["Red"].utterances[0].text == "Where were you?"
+    assert room.lanes["Red"].utterances[0].text == "Blue, Where were you?"
 
 
 def test_votes_are_collected_from_the_final_state():

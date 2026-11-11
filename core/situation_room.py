@@ -20,6 +20,7 @@ OVERLAP_MODES = ("clean", "interleaved", "noisy")
 TAG_POLICIES = ("every_chunk", "first_chunk")
 _EPSILON = 1e-9
 _TO_TAG = re.compile(r"<to>(.*?)</to>", re.IGNORECASE | re.DOTALL)
+_LEADING_TAGS = re.compile(r"^\s*((?:<to>.*?</to>\s*)+)", re.IGNORECASE | re.DOTALL)
 _SILENT_TAG = re.compile(r"<silent\s*/?>", re.IGNORECASE)
 
 
@@ -161,8 +162,10 @@ class Vote:
 def parse_reply(agent: str, tick: int, raw: str | None, roster: list[str]) -> Reply:
     """Turns a model's raw output into a reply.
 
-    A reply with the silent tag, or with no words, is silence. `<to>Name</to>` tags
-    are removed from the text and become `addressed_to`, keeping only names in the roster.
+    A reply with the silent tag, or with no words, is silence. The names in `<to>Name</to>`
+    tags become `addressed_to`, keeping only names in the roster. The names stay in the
+    spoken text, because models also use the tag inline around a name ("I trust <to>Red</to>").
+    A run of tags at the start becomes a spoken address followed by a comma.
 
     Args:
         agent: Agent who replies.
@@ -177,13 +180,32 @@ def parse_reply(agent: str, tick: int, raw: str | None, roster: list[str]) -> Re
         return Reply(agent, tick, None)
     by_lower = {name.lower(): name for name in roster}
     addressed: list[str] = []
-    for tag in _TO_TAG.findall(raw):
+    for name in _tag_names(raw, by_lower):
+        if name in roster and name not in addressed:
+            addressed.append(name)
+    prefix, rest = "", raw
+    leading = _LEADING_TAGS.match(raw)
+    if leading:
+        rest = raw[leading.end():]
+        prefix = ", ".join(_tag_names(leading.group(1), by_lower))
+        prefix += "" if re.match(r"\s*[,.;:!?]", rest) else ","
+    inline = _TO_TAG.sub(lambda match: " " + ", ".join(_tag_names(match.group(0), by_lower)) + " ", rest)
+    words = " ".join(inline.split())
+    if not words:
+        return Reply(agent, tick, None, tuple(addressed))
+    text = re.sub(r"\s+([,.;:!?])", r"\1", " ".join(f"{prefix} {words}".split()))
+    return Reply(agent, tick, text, tuple(addressed))
+
+
+def _tag_names(text: str, by_lower: dict[str, str]) -> list[str]:
+    """Lists the names inside the `<to>` tags of a text, using roster spelling where it matches."""
+    names = []
+    for tag in _TO_TAG.findall(text):
         for part in tag.split(","):
-            name = by_lower.get(part.strip().lower())
-            if name and name not in addressed:
-                addressed.append(name)
-    text = " ".join(_TO_TAG.sub("", raw).split())
-    return Reply(agent, tick, text or None, tuple(addressed))
+            part = part.strip()
+            if part:
+                names.append(by_lower.get(part.lower(), part))
+    return names
 
 
 def format_time(seconds: float) -> str:

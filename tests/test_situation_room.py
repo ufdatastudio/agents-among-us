@@ -212,12 +212,23 @@ def test_parse_reply_reads_silence_and_address_tags():
     assert parse_reply("Red", 1, "I will pass <SILENT />", ROSTER).text is None
     assert parse_reply("Red", 1, "   ", ROSTER).text is None
     reply = parse_reply("Red", 3, "<to>blue</to> You were in  Admin.", ROSTER)
-    assert reply.text == "You were in Admin."
+    assert reply.text == "Blue, You were in Admin."
     assert reply.addressed_to == ("Blue",)
     assert reply.tick == 3
     many = parse_reply("Red", 1, "<to>Blue, Lime</to><to>Nobody</to> Explain.", ROSTER)
     assert many.addressed_to == ("Blue", "Lime")
-    assert many.text == "Explain."
+    assert many.text == "Blue, Lime, Nobody, Explain."
+
+
+def test_parse_reply_keeps_the_names_a_model_wraps_in_tags():
+    leading = parse_reply("Red", 1, "<to>Blue</to>, I saw you in Admin.", ROSTER)
+    assert leading.text == "Blue, I saw you in Admin."
+    assert leading.addressed_to == ("Blue",)
+    inline = parse_reply("Red", 1, "I trust <to>Lime</to>. Let us check with <to>Blue</to> in Shields.", ROSTER)
+    assert inline.text == "I trust Lime. Let us check with Blue in Shields."
+    assert inline.addressed_to == ("Lime", "Blue")
+    assert parse_reply("Red", 1, "<to>Blue</to>", ROSTER).text is None
+    assert parse_reply("Red", 1, "<to>Blue</to>", ROSTER).addressed_to == ("Blue",)
 
 
 def test_statements_follow_the_observer_format():
