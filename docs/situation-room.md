@@ -148,11 +148,21 @@ For the vote the adapter writes what the agent heard to a per-agent file under `
 Some behaviors differ from turn-taking and need to be known when reading results.
 
 - The token budget of a reply is the agent's own (160, or 384 with thought capture). The room's `max_tokens` setting is not used yet, and `max_words` cuts the words after generation.
-- `ModelManager` returns `move` when an API call fails. The adapter treats that as silence, so it is never committed as a statement. A failed vote counts as a skip.
+- `ModelManager` returns `move` when an API call fails. The adapter treats that as silence, so it is never committed as a statement. A failed vote is asked again, as the next section describes.
 - Agents generate in parallel, up to `room_workers` at once. `main.py` sets 1 when the model runs in the same process. A lock in `GameState` guards the live-state file and the thought history.
 - The Observer classifiers receive the room's statements with `S_Num` capped at `num_discussion_messages`, as turn-taking caps it.
 - A game with a human seat falls back to turn-taking for its meetings, and hybrid pruning is not applied in the room.
 - Every `vllm:` model is checked against the eligible list when the game is set up, and the engine has no Qwen override.
+
+### Required votes
+
+Every model agent must vote for another agent. The vote prompts no longer offer `SKIP` and tell the agent it must vote, and `--allow_skip` restores the old rule. A reply that names no candidate is asked again up to `--vote_retries` times (2 by default) at sampling temperatures 0.1, 0.7 and 1.0. When an agent still has no valid vote, the engine rewinds the meeting and runs it again from its first tick or first turn.
+
+The rewind cuts the meeting's lines out of `discussion.log` and `discussion_chat.csv`, which the agents read, and saves them with the votes that were collected in `voided_meetings.jsonl`. The room's record is renamed to `room/room_round<N>_voided<K>.jsonl`, and a meeting held again uses other onset delays. After `--meeting_attempts` attempts (3 by default) the game stops with `MeetingFailed`, and `run_p2.py` records it as a failed game with `stopped_for_votes`. Votes reach `vote.log` and the stats only after every agent has voted, so a rewound meeting leaves no votes behind. The token counters keep the calls of rewound meetings, because they were paid for.
+
+Three rules stay as they were. A tie ejects nobody. A human seat may still skip, and its skip does not rewind a meeting. A rewound meeting in turn-taking mode asks a human seat for its messages again. The runner records `redone_meetings` for each game, and the summarizer prints the share of honest ballots skipped and the meetings redone per game.
+
+The pilots below played before this rule, so their honest vote accuracy counts cast votes only and their skipped ballots are listed beside it.
 
 ### Transports
 
@@ -279,16 +289,17 @@ The SGD, SVM and LR classifiers were trained on sequential transcripts, so their
 | `core/audio/` | Started in P1b. `mix.py` (per-reader mix, overlap, WAV), `metrics.py` (word error rate, recall), `tts.py` (Kokoro voices) and `asr.py` (Whisper) exist and are tested. `diarize.py` is still to write |
 | `core/transport.py` | `InProcessTransport` is done, with a `max_workers` limit for a model loaded in the same process. The `File` transport is still to write, with `Network` left for later |
 | `core/timed_discussion.py` | The tick loop over adapters and the simultaneous vote tick are done. The turn-based runner stays in `core/game_engine.py` as the control |
-| `core/game_engine.py` | Done in Phase 1a. `discussion_mode` (`turns` or `timed`), `room_config` and `room_workers` select and set the runner. The vote bookkeeping moved into `_record_vote`, which both modes use. A `vllm:` model that is not on the eligible list stops the game at setup |
+| `core/game_engine.py` | Done in Phase 1a. `discussion_mode` (`turns` or `timed`), `room_config` and `room_workers` select and set the runner. The vote bookkeeping moved into `_record_vote`, which both modes use. Every model agent has to vote, and a meeting without a valid vote is rewound and held again (`allow_skip`, `vote_retries`, `max_meeting_attempts`). A `vllm:` model that is not on the eligible list stops the game at setup |
 | `core/api_clients.py` | A `vllm` provider that talks to the server at `VLLM_BASE_URL` and needs no key. Model names look like `vllm:ibm-granite/granite-3.3-8b-instruct` |
-| `main.py` | `--discussion_mode`, `--room_budget_s`, `--room_tick_s`, `--room_max_words`, `--room_overlap`, `--room_seed` and `--room_workers`. A composition file may set `discussion_mode` |
+| `main.py` | `--discussion_mode`, `--room_budget_s`, `--room_tick_s`, `--room_max_words`, `--room_overlap`, `--room_seed`, `--room_workers`, `--allow_skip`, `--vote_retries` and `--meeting_attempts`. A composition file may set `discussion_mode` |
 | `core/state.py` | A lock around the live-state save and the thought publishing, because agents generate in parallel. Seeded start rooms are still to do |
-| `agents/honest_agent.py`, `agents/byzantine_agent.py` | Unchanged. The adapter builds the room prompt itself and calls the agent's own system prompt, vote method and model client |
-| `agents/prompts.py` | Unchanged. The room reuses its behavior rules and the `<think>` appendix idea |
+| `agents/honest_agent.py`, `agents/byzantine_agent.py` | The adapter builds the room prompt itself and calls the agent's own system prompt, vote method and model client. `vote()` drops the offer to skip when `SKIP` is not a candidate, returns `None` for a reply that names nobody, and reads the sampling temperature from `vote_temperature` |
+| `agents/prompts.py` | The room reuses its behavior rules and the `<think>` appendix idea. `require_vote()` removes the offer to skip from a voting prompt |
+| `core/voting.py` | `ask_until_valid()` asks again while a reply names no candidate, at rising temperatures |
 | `core/logger.py` | Unchanged. The engine writes `room/room_round<N>.jsonl` and each agent's final percept to the game's log folder |
 | `scripts/hipergator/run_game.sbatch` | Done. Starts a vLLM server and times full games in each mode in `MODES` |
 | `config/protocols.py` | Done. The 11 P2 protocols as `main.py` flags. The noisy cells drop 10% of the words and tag only each speaker's first line |
-| `scripts/run_p2.py`, `scripts/summarize_p2.py` | Done. The runner plays the grid with several games at once and resumes after a stop. The summarizer prints win rate with a Wilson interval, vote accuracy, rounds, meetings, statements and minutes for each model and protocol |
+| `scripts/run_p2.py`, `scripts/summarize_p2.py` | Done. The runner plays the grid with several games at once and resumes after a stop. The summarizer prints win rate with a Wilson interval, vote accuracy, skipped votes, redone meetings, rounds, meetings, statements and minutes for each model and protocol |
 | `scripts/hipergator/run_p2.sbatch` | Done. Starts a vLLM server on one GPU and runs the P2 grid against it |
 | `submit_games.sh` | Longer time limit, vLLM startup, seed from the array index |
 | `tests/test_situation_room.py` | pytest with a fake generator and no GPU |
@@ -521,7 +532,37 @@ Job 50749760 played 55 games, 5 seeds in each of the 11 protocols, with at most 
 | budget 180 s | 15 | 2 | 29% | 159 | 3.8 |
 | budget 300 s | 15 | 5 | 25% | 266 | 5.1 |
 
-These are leads and not results. Honest vote accuracy is lower in the timed protocols (31%, interval 27% to 35%) than in sequential (55%, 41% to 69%), and it falls as the budget grows while the statements per game rise from 51 to 159 to 266. The intervals treat votes as independent, but votes cluster within games, so they are too narrow. The win rates of single cells run from 0 to 3 of 5 and overlap, and 5 games per cell cannot separate them. Longer budgets cost more wall time, from 2.8 minutes to 5.1 minutes a game. The run extends to 20 seeds per cell (job 50756783, same tag), which adds 165 games.
+These are leads and not results. Honest vote accuracy is lower in the timed protocols (31%, interval 27% to 35%) than in sequential (55%, 41% to 69%), and it falls as the budget grows while the statements per game rise from 51 to 159 to 266. The intervals treat votes as independent, but votes cluster within games, so they are too narrow. The win rates of single cells run from 0 to 3 of 5 and overlap, and 5 games per cell cannot separate them. Longer budgets cost more wall time, from 2.8 minutes to 5.1 minutes a game. The run was extended to 20 seeds per cell (job 50756783, same tag), and the next section pools it.
+
+### P2 pilots before the vote rule
+
+Three pilots finished with no failed game in 330. Granite 3.3 8B has 20 seeds per cell (jobs 50749760 and 50756783, 220 games). gpt-oss-120b at low reasoning effort with a reply limit of 768 tokens has 5 seeds (job 50756793, 55 games). Gemma 4 31B has 5 seeds and ran on the code before the reasoning counters (job 50749761, 55 games), so it has no token columns. All three let agents skip their vote. Accuracy is the share of cast honest votes that went to a Byzantine, and the last column gives the share of honest ballots that were skips.
+
+| Model | Group | Games | Honest wins | Honest vote accuracy | Honest ballots skipped |
+|-------|-------|-------|-------------|----------------------|------------------------|
+| Granite 3.3 8B | no discussion | 20 | 12 (60%) | 55% | 0% |
+| Granite 3.3 8B | sequential | 20 | 8 (40%) | 47% | 17% |
+| Granite 3.3 8B | timed clean | 60 | 11 (18%) | 36% | - |
+| Granite 3.3 8B | timed interleaved | 60 | 14 (23%) | 35% | - |
+| Granite 3.3 8B | timed noisy | 60 | 22 (37%) | 39% | - |
+| Granite 3.3 8B | timed, all 9 cells | 180 | 47 (26%) | 37% | 7% |
+| gpt-oss-120b | no discussion | 5 | 0 | 29% | 20% |
+| gpt-oss-120b | sequential | 5 | 0 | 16% | 10% |
+| gpt-oss-120b | timed clean | 15 | 6 (40%) | 42% | - |
+| gpt-oss-120b | timed interleaved | 15 | 8 (53%) | 50% | - |
+| gpt-oss-120b | timed noisy | 15 | 5 (33%) | 44% | - |
+| gpt-oss-120b | timed, all 9 cells | 45 | 19 (42%) | 46% | 2% |
+| Gemma 4 31B | no discussion | 5 | 0 | 100% of 3 cast votes | 96% |
+| Gemma 4 31B | sequential | 5 | 1 | 36% | 21% |
+| Gemma 4 31B | timed clean | 15 | 1 (7%) | 15% | - |
+| Gemma 4 31B | timed interleaved | 15 | 1 (7%) | 28% | - |
+| Gemma 4 31B | timed noisy | 15 | 4 (27%) | 33% | - |
+| Gemma 4 31B | timed, all 9 cells | 45 | 6 (13%) | 26% | 26% |
+
+Granite wins most often with no discussion (60%, interval 39% to 78%) and least in clean timed rooms (18%, 11% to 30%), and the two intervals do not overlap. Its honest vote accuracy follows the same order, 55%, 47% and 37%. gpt-oss-120b shows the opposite order. It never won without a discussion or in turns (0 of 5 each), and it won 19 of 45 timed games. Gemma won 7 of 55 games and skipped 96% of its honest ballots when it had no discussion, which is why its 100% accuracy there rests on 3 votes. Gemma needed 21 to 25 minutes a game, against 3 to 5 minutes for Granite and about 5 minutes for gpt-oss-120b.
+gpt-oss-120b used 104 completion tokens a call on average, of which 62% to 85% were reasoning, and at most 0.1% of its replies were cut at 768 tokens.
+
+The cells of gpt-oss-120b and Gemma have 5 games each, so only the direction of a gap is informative. The intervals treat games as independent, although games with one seed share their start rooms.
 
 ## Open questions
 
