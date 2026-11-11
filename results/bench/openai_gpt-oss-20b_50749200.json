@@ -1,0 +1,159 @@
+{
+  "model": "openai/gpt-oss-20b",
+  "max_tokens": 1024,
+  "reasoning_effort": null,
+  "sweep": {
+    "1": {
+      "requests": 1,
+      "wall_s": 4.121,
+      "mean_latency_s": 4.121,
+      "max_latency_s": 4.121,
+      "prompt_tokens_mean": 1304,
+      "completion_tokens_mean": 1024.0,
+      "completion_tokens_max": 1024,
+      "empty_fraction": 1.0,
+      "completion_tokens_per_s": 248.5,
+      "cached_fraction": 0.11
+    },
+    "2": {
+      "requests": 2,
+      "wall_s": 4.71,
+      "mean_latency_s": 3.763,
+      "max_latency_s": 4.71,
+      "prompt_tokens_mean": 1313,
+      "completion_tokens_mean": 770.0,
+      "completion_tokens_max": 1007,
+      "empty_fraction": 0.0,
+      "completion_tokens_per_s": 327.0,
+      "cached_fraction": 0.11
+    },
+    "5": {
+      "requests": 5,
+      "wall_s": 6.446,
+      "mean_latency_s": 5.206,
+      "max_latency_s": 6.439,
+      "prompt_tokens_mean": 1305,
+      "completion_tokens_mean": 814.2,
+      "completion_tokens_max": 1024,
+      "empty_fraction": 0.6,
+      "completion_tokens_per_s": 631.5,
+      "cached_fraction": 0.074
+    },
+    "10": {
+      "requests": 10,
+      "wall_s": 7.999,
+      "mean_latency_s": 6.979,
+      "max_latency_s": 7.994,
+      "prompt_tokens_mean": 1311,
+      "completion_tokens_mean": 886.0,
+      "completion_tokens_max": 1024,
+      "empty_fraction": 0.6,
+      "completion_tokens_per_s": 1107.6,
+      "cached_fraction": 0.079
+    },
+    "20": {
+      "requests": 20,
+      "wall_s": 9.092,
+      "mean_latency_s": 7.435,
+      "max_latency_s": 9.084,
+      "prompt_tokens_mean": 1315,
+      "completion_tokens_mean": 825.6,
+      "completion_tokens_max": 1024,
+      "empty_fraction": 0.4,
+      "completion_tokens_per_s": 1816.1,
+      "cached_fraction": 0.109
+    }
+  },
+  "sequential": {
+    "requests": 10,
+    "wall_s": 30.722,
+    "mean_latency_s": 3.072,
+    "max_latency_s": 4.04,
+    "prompt_tokens_mean": 1302,
+    "completion_tokens_mean": 776.8,
+    "completion_tokens_max": 1024,
+    "empty_fraction": 0.5,
+    "completion_tokens_per_s": 252.8,
+    "cached_fraction": 0.112
+  },
+  "growing": [
+    {
+      "requests": 10,
+      "wall_s": 4.92,
+      "mean_latency_s": 2.893,
+      "max_latency_s": 4.914,
+      "prompt_tokens_mean": 603,
+      "completion_tokens_mean": 418.7,
+      "completion_tokens_max": 766,
+      "empty_fraction": 0.0,
+      "completion_tokens_per_s": 851.0,
+      "cached_fraction": 0.239,
+      "tick": 1
+    },
+    {
+      "requests": 10,
+      "wall_s": 7.75,
+      "mean_latency_s": 6.481,
+      "max_latency_s": 7.75,
+      "prompt_tokens_mean": 841,
+      "completion_tokens_mean": 849.1,
+      "completion_tokens_max": 1024,
+      "empty_fraction": 0.5,
+      "completion_tokens_per_s": 1095.6,
+      "cached_fraction": 0.171,
+      "tick": 2
+    },
+    {
+      "requests": 10,
+      "wall_s": 7.808,
+      "mean_latency_s": 7.006,
+      "max_latency_s": 7.806,
+      "prompt_tokens_mean": 1081,
+      "completion_tokens_mean": 910.3,
+      "completion_tokens_max": 1024,
+      "empty_fraction": 0.6,
+      "completion_tokens_per_s": 1165.9,
+      "cached_fraction": 0.533,
+      "tick": 3
+    },
+    {
+      "requests": 10,
+      "wall_s": 7.999,
+      "mean_latency_s": 7.341,
+      "max_latency_s": 7.998,
+      "prompt_tokens_mean": 1315,
+      "completion_tokens_mean": 938.2,
+      "completion_tokens_max": 1024,
+      "empty_fraction": 0.7,
+      "completion_tokens_per_s": 1172.8,
+      "cached_fraction": 0.621,
+      "tick": 4
+    },
+    {
+      "requests": 10,
+      "wall_s": 8.006,
+      "mean_latency_s": 7.149,
+      "max_latency_s": 8.004,
+      "prompt_tokens_mean": 1554,
+      "completion_tokens_mean": 908.1,
+      "completion_tokens_max": 1024,
+      "empty_fraction": 0.6,
+      "completion_tokens_per_s": 1134.3,
+      "cached_fraction": 0.68,
+      "tick": 5
+    },
+    {
+      "requests": 10,
+      "wall_s": 7.729,
+      "mean_latency_s": 6.41,
+      "max_latency_s": 7.728,
+      "prompt_tokens_mean": 1791,
+      "completion_tokens_mean": 837.9,
+      "completion_tokens_max": 1024,
+      "empty_fraction": 0.3,
+      "completion_tokens_per_s": 1084.1,
+      "cached_fraction": 0.72,
+      "tick": 6
+    }
+  ]
+}
