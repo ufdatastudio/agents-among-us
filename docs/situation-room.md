@@ -147,6 +147,7 @@ For the vote the adapter writes what the agent heard to a per-agent file under `
 
 Some behaviors differ from turn-taking and need to be known when reading results.
 
+- The statement limit is `--room_max_words` (40 by default), and `run_p2.py` and `run_p2.sbatch` pass it through (`ROOM_MAX_WORDS`). Above 40 words the prompt asks for a few sentences instead of one or two short ones. A word is about 1.3 tokens, so a limit above about 100 words also needs a larger `AAU_MAX_TOKENS`.
 - The token budget of a reply is the agent's own (160, or 384 with thought capture). The room's `max_tokens` setting is not used yet, and `max_words` cuts the words after generation.
 - `ModelManager` returns `move` when an API call fails. The adapter treats that as silence, so it is never committed as a statement. A failed vote is asked again, as the next section describes.
 - Agents generate in parallel, up to `room_workers` at once. `main.py` sets 1 when the model runs in the same process. A lock in `GameState` guards the live-state file and the thought history.
@@ -161,6 +162,8 @@ Every model agent must vote for another agent. The vote prompts no longer offer 
 The rewind cuts the meeting's lines out of `discussion.log` and `discussion_chat.csv`, which the agents read, and saves them with the votes that were collected in `voided_meetings.jsonl`. The room's record is renamed to `room/room_round<N>_voided<K>.jsonl`, and a meeting held again uses other onset delays. After `--meeting_attempts` attempts (3 by default) the game stops with `MeetingFailed`, and `run_p2.py` records it as a failed game with `stopped_for_votes`. Votes reach `vote.log` and the stats only after every agent has voted, so a rewound meeting leaves no votes behind. The token counters keep the calls of rewound meetings, because they were paid for.
 
 Three rules stay as they were. A tie ejects nobody. A human seat may still skip, and its skip does not rewind a meeting. A rewound meeting in turn-taking mode asks a human seat for its messages again. The runner records `redone_meetings` for each game, and the summarizer prints the share of honest ballots skipped and the meetings redone per game.
+
+A reply is read by `agents/vote_reading.py`. A reply that is only a name, or that follows a phrase such as "I vote for", is settled by rules. So is a reply that mentions one name that is not negated, which fixes the old reading in which "Agent_5, not Agent_2" voted for Agent_2. A reply with several names and no marker, or one that describes the candidate, goes to the voter's own model with the meeting text it heard, and the model must answer with a candidate or NONE. Each reading is written to `votes.jsonl` with its method (`exact`, `marker`, `single`, `llm`, `ambiguous` or `none`), so a run shows how often replies needed the model. A dependency parser was not used, because a language model also resolves "the one who claimed to be in Electrical", and the compute nodes cannot download a model for it.
 
 The pilots below played before this rule, so their honest vote accuracy counts cast votes only and their skipped ballots are listed beside it.
 
@@ -295,6 +298,8 @@ The SGD, SVM and LR classifiers were trained on sequential transcripts, so their
 | `core/state.py` | A lock around the live-state save and the thought publishing, because agents generate in parallel. Seeded start rooms are still to do |
 | `agents/honest_agent.py`, `agents/byzantine_agent.py` | The adapter builds the room prompt itself and calls the agent's own system prompt, vote method and model client. `vote()` drops the offer to skip when `SKIP` is not a candidate, returns `None` for a reply that names nobody, and reads the sampling temperature from `vote_temperature` |
 | `agents/prompts.py` | The room reuses its behavior rules and the `<think>` appendix idea. `require_vote()` removes the offer to skip from a voting prompt |
+| `agents/vote_reading.py` | Reads which candidate a vote reply chooses, with rules first and the voter's model for the replies the rules cannot settle |
+| `scripts/analyze_p2_text.py` | Reads the transcripts of P2 games and measures speech acts, claims about places checked against the agents' own observation logs, accusations, the influence of accusations on honest votes, and what agents pick up from the room |
 | `core/voting.py` | `ask_until_valid()` asks again while a reply names no candidate, at rising temperatures |
 | `core/logger.py` | Unchanged. The engine writes `room/room_round<N>.jsonl` and each agent's final percept to the game's log folder |
 | `scripts/hipergator/run_game.sbatch` | Done. Starts a vLLM server and times full games in each mode in `MODES` |
@@ -564,7 +569,47 @@ gpt-oss-120b used 104 completion tokens a call on average, of which 62% to 85% w
 
 The cells of gpt-oss-120b and Gemma have 5 games each, so only the direction of a gap is informative. The intervals treat games as independent, although games with one seed share their start rooms.
 
+### What agents say and believe
+
+The analysis reads the game folders of the three pilots above (330 games, 43,595 statements) with `scripts/analyze_p2_text.py`. It uses rules and not a model, so the labels are approximate. I checked the accusations by hand on 40 statements drawn after the rules were written. The rules reported 28 accusations and 23 were right (82%), and they found 23 of the 38 accusations I read in those statements (61%). Most misses are implicit, as in "let's focus on Agent_8's alibi" or "voting for Agent_3". The rules undercount accusations, so some candidates in the rows "accused by nobody" were accused, which narrows the contrasts between rows. A first sample of 40, on which the rules were adjusted, scored higher (24 of 25 right, 24 of 30 found) and is not a fair test. The check of claims about places is a lower bound, because a claim counts as false only when it was not true at any earlier tick of the agent's own observation log. The gpt-oss-120b and Gemma samples have 5 games per protocol, so those rows show direction only. Every row below is the clean room, with the turn-taking rows beside it.
+
+What each role says. Each cell is the share of statements with that kind of speech act, and a statement can have several.
+
+| Model | Setting | Role | Statements | Words | Accuse | Call a vote | Defend self | Report | Question | Cut at the limit | Opens with a name |
+|-------|---------|------|------------|-------|--------|-------------|-------------|--------|----------|------------------|-------------------|
+| Granite 3.3 8B | clean | Byzantine | 2040 | 28 | 51% | 11% | 21% | 34% | 21% | 11% | 94% |
+| Granite 3.3 8B | clean | honest | 5700 | 27 | 62% | 25% | 10% | 35% | 14% | 9% | 97% |
+| Granite 3.3 8B | turns | Byzantine | 149 | 94 | 72% | 20% | 44% | 64% | 7% | - | 1% |
+| Granite 3.3 8B | turns | honest | 459 | 92 | 85% | 35% | 34% | 77% | 8% | - | 0% |
+| gpt-oss-120b | clean | Byzantine | 726 | 25 | 51% | 18% | 3% | 23% | 17% | 4% | 46% |
+| gpt-oss-120b | clean | honest | 1954 | 29 | 81% | 69% | 8% | 41% | 3% | 5% | 31% |
+| gpt-oss-120b | turns | Byzantine | 50 | 71 | 96% | 80% | 32% | 94% | 2% | - | 0% |
+| gpt-oss-120b | turns | honest | 126 | 81 | 98% | 94% | 42% | 96% | 0% | - | 0% |
+| Gemma 4 31B | clean | Byzantine | 680 | 24 | 44% | 27% | 2% | 8% | 18% | 3% | 83% |
+| Gemma 4 31B | clean | honest | 1733 | 24 | 58% | 45% | 2% | 22% | 12% | 3% | 66% |
+| Gemma 4 31B | turns | Byzantine | 38 | 65 | 79% | 37% | 29% | 50% | 26% | - | 0% |
+| Gemma 4 31B | turns | honest | 106 | 66 | 87% | 29% | 10% | 76% | 6% | - | 10% |
+
+Statements in the room average 24 to 29 words against 65 to 94 in turns, and the 40-word limit cuts 3% to 11% of them. A higher limit would therefore change few statements, and the instruction to answer in one or two short sentences is the stronger limit. Honest gpt-oss agents call a vote in 69% of their statements, against 18% for its Byzantines. Byzantine agents ask questions more often than honest agents in all three models (17% to 21% against 3% to 14%). Byzantine Gemma and gpt-oss agents report what they saw less than half as often as honest ones (8% against 22%, and 23% against 41%), and Granite's Byzantines report as often as its honest agents (34% and 35%). Granite and Gemma open most room statements with the name of the agent addressed, which is the address tag.
+
+What agents believe and how well they hear.
+
+| Model | Honest false claims | Byzantine false claims | Honest accusations at a Byzantine (chance) | Byzantine accusations at a Byzantine (chance) | Same, turns | Honest vote for an honest candidate accused only by Byzantines | Same, accused only by honest agents | Same, accused by both | Honest votes for the most accused agent (turns) |
+|-------|-----|-----|-----|-----|-----|-----|-----|-----|-----|
+| Granite 3.3 8B | 32% | 36% | 28% (30%) | 8% (14%) | 37% (28%) | 10% (n=132) | 13% (n=493) | 41% (n=681) | 62% (86%) |
+| gpt-oss-120b | 21% | 16% | 38% (29%) | 13% (12%) | 14% (32%) | 2% (n=101) | 11% (n=142) | 41% (n=236) | 83% (88%) |
+| Gemma 4 31B | 20% | 40% (n=53) | 22% (31%) | 10% (15%) | 42% (29%) | 8% (n=24) | 0% (n=76) | 60% (n=169) | 94% (79%) |
+
+Chance is the share of Byzantines among the other active agents at the time of the statement. An honest agent that is told nothing would aim 29% to 31% of its accusations at a Byzantine.
+
+- Hearing. In the clean room each reader receives every statement up to the tick, so the record is complete except for the statements made in the same tick, which average 2.8 to 3.9 per statement. An agent has heard 38 to 47 earlier statements when it speaks. The accused agent speaks again in the same meeting after 79% (Granite), 93% (gpt-oss) and 91% (Gemma) of accusations, and its next statement names the accuser in 61%, 50% and 49%. In turns the answers name the accuser in 42% to 43%.
+- Believability. Granite's honest and Byzantine agents make false claims about places at nearly the same rate, and 62% of the honest agents' claims to have been with another agent were false, so a false claim does not separate its liars from its honest agents. Gemma's Byzantine agents make false claims twice as often as its honest agents. Honest Granite agents aim 28% of their accusations at a Byzantine, which is the rate of a random pick, and honest gpt-oss agents aim 38% (46% with interleaved speech) in the room and 14% in turns, where the first speakers anchor the rest. Its win rate follows, 42% in the timed rooms and 0 of 5 in turns.
+- Influence. Honest voters follow an accusation about as readily from a Byzantine as from an honest agent in Granite (10% and 13% of voter and candidate pairs end in a vote, against 3% when nobody accused the candidate), and much less readily from a Byzantine in gpt-oss (2% and 11%). Votes concentrate on the most accused agent, which got 62% (Granite), 83% (gpt-oss) and 94% (Gemma) of honest votes in the room and 86%, 88% and 79% in turns, whether or not that agent was a Byzantine.
+- Knowing and choosing anyway. The public text cannot show what an agent knew. The Granite games with private reasoning (`CAPTURE=1`) add the reasoning of each agent before each reply and each vote, which allows the comparison of "this agent is lying" in the reasoning with the vote that follows.
+
 ## Open questions
+
+- Interruption. `barge_in` exists in the room and is off by default, and `main.py` has no flag for it. An agent that is speaking is not asked at a tick, and with `barge_in` it is asked and may replace its statement, but it is not told that others have started to talk over it. Letting a speaker hear the room and choose to continue or stop at each tick is designed and not built, and a shorter `tick_s` makes the choice finer.
 
 - Default for `barge_in`, to be set from P4.
 - Wall-clock scenario, to measure what inference latency costs a model. Adapters would hear continuously and post when ready.
