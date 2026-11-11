@@ -112,7 +112,7 @@ DISCUSSION_MODES = ("turns", "timed")
 
 class GameEngine:
     def __init__(self, game_id, num_agents=NUM_BYZ + NUM_HONEST, num_rounds=DEFAULT_NUM_ROUNDS, num_ticks=None, num_discussion_messages=2,skip_discussion=False,
-                 discussion_mode="turns", room_config=None, room_workers=None):
+                 discussion_mode="turns", room_config=None, room_workers=None, seed=None):
         """Creates the engine.
 
         Args:
@@ -121,6 +121,7 @@ class GameEngine:
             room_config: RoomConfig for the timed discussion, or None for the defaults.
             room_workers: Agents that may generate at the same time in the timed discussion, or None
                 for all of them. Use 1 when the model runs inside this process.
+            seed: Seed of the scenario. It sets the start rooms, so games with one seed begin alike.
         """
         if discussion_mode not in DISCUSSION_MODES:
             raise ValueError(f"discussion_mode must be one of {DISCUSSION_MODES}, got {discussion_mode!r}")
@@ -131,6 +132,7 @@ class GameEngine:
         self.num_discussion_messages = num_discussion_messages
         self.skip_discussion = skip_discussion
         self.discussion_mode = discussion_mode
+        self.seed = seed
         self.room_config = room_config or RoomConfig()
         self.room_transport = InProcessTransport(room_workers)
         self.agents = []
@@ -298,7 +300,7 @@ class GameEngine:
                 check_eligible(model_name.partition(":")[2])
 
         self.logger = LogManager(self.game_id, self.agents, scen_name)
-        self.state = GameState(self.agents, self.logger)
+        self.state = GameState(self.agents, self.logger, seed=self.seed)
         self.state.world_data["global"]["human_experiment"] = human_experiment
         self.state.world_data["global"]["human_agent"] = human_agent
         self.state.world_data["global"]["capture_thoughts"] = self.capture_thoughts

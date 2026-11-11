@@ -287,6 +287,9 @@ The SGD, SVM and LR classifiers were trained on sequential transcripts, so their
 | `agents/prompts.py` | Unchanged. The room reuses its behavior rules and the `<think>` appendix idea |
 | `core/logger.py` | Unchanged. The engine writes `room/room_round<N>.jsonl` and each agent's final percept to the game's log folder |
 | `scripts/hipergator/run_game.sbatch` | Done. Starts a vLLM server and times full games in each mode in `MODES` |
+| `config/protocols.py` | Done. The 11 P2 protocols as `main.py` flags. The noisy cells drop 10% of the words and tag only each speaker's first line |
+| `scripts/run_p2.py`, `scripts/summarize_p2.py` | Done. The runner plays the grid with several games at once and resumes after a stop. The summarizer prints win rate with a Wilson interval, vote accuracy, rounds, meetings, statements and minutes for each model and protocol |
+| `scripts/hipergator/run_p2.sbatch` | Done. Starts a vLLM server on one GPU and runs the P2 grid against it |
 | `submit_games.sh` | Longer time limit, vLLM startup, seed from the array index |
 | `tests/test_situation_room.py` | pytest with a fake generator and no GPU |
 
@@ -451,6 +454,9 @@ The reasoning models (gpt-oss and Magistral) spend part of `max_tokens` on think
 | P5 | Does hearing change the game | Text `interleaved` as the baseline. Audio with a separated ear at `oracle` and `estimated` diarization. Audio with a mix ear as the cocktail-party stress test. A native ear at `oracle` and `none` if a model is approved. 4 cells per model without the native ear, 50 games per cell, on 1 or 2 models | 200 per model, plus 100 for the native ear |
 
 Run the models that fit on one GPU first.
+
+P2 runs from `scripts/hipergator/run_p2.sbatch`. One job serves one model on one GPU and plays the grid 6 games at a time, each game in its own `main.py` process. A seed visits all 11 protocols before the next seed starts, so an interrupted run still has paired cells, and a job resubmitted with the same `TAG` plays only the missing games. The scenario seed fixes the start rooms. Sampling is not seeded, so games with one seed diverge after the first move, and the pairing controls the start and not the whole game.
+The pilot plays 5 seeds per cell with thought capture off and 10 rounds, which is 55 games per model. It starts with Granite 3.3 8B and Gemma 4 31B, the models that fit on one RTX PRO 6000 and were measured above. The large model waits for either two or more GPUs for Llama 3.3 70B, or a check that gpt-oss-120b answers within a larger `AAU_MAX_TOKENS`.
 The reference model for P3 is chosen after P2, from the models whose win rate is stable across protocols.
 
 Every protocol replays the same seeds, so scenarios differ only in how agents talk.

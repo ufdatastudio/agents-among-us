@@ -7,12 +7,23 @@ from datetime import datetime
 from config.settings import ROOMS, NUM_ROUNDS
 
 class GameState:
-    def __init__(self, agents, log_manager):
+    def __init__(self, agents, log_manager, seed=None):
+        """Creates the world.
+
+        Args:
+            agents: The agents in the game.
+            log_manager: The game's LogManager.
+            seed: Seed for the start rooms, or None for a random game. Games with the same seed start
+                every agent in the same room, which lets experiments replay one scenario under
+                different discussion protocols.
+        """
         self.agents = agents
         self.logger = log_manager
         # The situation room lets agents generate in parallel, and each writes its thought and the live state.
         self._lock = threading.RLock()
-        self.live_state_file = os.path.join("logs", "live_state.json")
+        # AAU_LIVE_STATE gives each game of a parallel batch its own file.
+        self.live_state_file = os.environ.get("AAU_LIVE_STATE", os.path.join("logs", "live_state.json"))
+        rng = random.Random(seed)
         
         # Onserver tracking
         self.enabled_classifiers = {}  
@@ -48,7 +59,7 @@ class GameState:
 
         # Initialize Data
         for agent in agents:
-            start_room = random.choice(list(ROOMS.keys()))
+            start_room = rng.choice(list(ROOMS.keys()))
             #start_room = "Cafeteria"
             alignment = 'B' if agent.role == 'byzantine' else 'H'
             self.world_data["agents"][agent.name] = {
