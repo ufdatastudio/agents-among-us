@@ -13,7 +13,9 @@ from scripts.analyze_p2_text import (
     claim_profile,
     extract_claims,
     extract_edges,
+    finished_ids,
     influence_profile,
+    load_games,
     jaccard,
     label_statement,
     listening_profile,
@@ -223,3 +225,13 @@ def test_the_report_has_every_table_and_parses_a_game_folder(tmp_path):
     for title in ("speech act", "Claims about places", "Accusations by role", "Honest votes by what", "What agents pick up"):
         assert title in text
     assert parse_game(tmp_path) is None
+
+
+def test_only_the_games_that_finished_are_read(tmp_path):
+    write_game_folder(tmp_path)
+    results = tmp_path / "p2.jsonl"
+    results.write_text(json.dumps({"game_id": "tag_clean-180_1", "result": "Byzantines Win"}) + "\n" + json.dumps({"game_id": "tag_clean-60_1", "result": None}) + "\n", encoding="utf-8")
+    assert finished_ids([results]) == {"tag_clean-180_1"}
+    assert [g.game_id for g in load_games([tmp_path], finished_ids([results]))] == ["tag_clean-180_1"]
+    assert load_games([tmp_path], {"tag_clean-60_1"}) == []
+    assert len(load_games([tmp_path])) == 1
