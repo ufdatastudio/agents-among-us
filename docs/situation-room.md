@@ -386,14 +386,21 @@ A reasoning model spends completion tokens on reasoning before it writes the rep
 
 Every experiment records the reasoning effort it ran with (`VLLM_REASONING_EFFORT`, or `default`) and the reply limit (`AAU_MAX_TOKENS`), and each game records totals for its model. The totals are completion tokens, reasoning tokens, replies that stopped at the limit and empty replies, and they are written to `stats.csv` as `api_*` columns. The server's own count of reasoning tokens is used when it reports one. Otherwise the count is estimated by splitting the completion tokens in proportion to the characters of reasoning text and reply text, and `api_reasoning_estimated_calls` says how many replies were estimated. The reasoning share is reasoning tokens over completion tokens. `scripts/summarize_p2.py` prints it for each model, effort and protocol, next to the tokens per call, the share of replies cut at the limit and the share of empty replies. The benchmark records the same, with the 50th and 90th percentile of completion length.
 
-What the numbers show so far, from the benchmark with gpt-oss-20b at a limit of 1024 tokens.
+What the benchmark shows. Jobs 50751707 (gpt-oss-20b) and 50751708 (gpt-oss-120b) sent the same prompts with a limit of 4096 tokens at each reasoning effort. The ranges run over 1, 2, 5, 10 and 20 simultaneous requests, and every reasoning count was reported by the server.
 
-| Reasoning effort | Mean completion tokens | Longest | Empty replies | 6-tick meeting |
-|------------------|------------------------|---------|---------------|----------------|
-| default (medium) | 770 to 1024, cut by the limit | 1024 | 40% to 60% from 5 simultaneous requests up | 44 s |
-| low | 65 to 194 | 394 | 0% | 13 s |
+| Model | Effort | Mean tokens per reply | 90th percentile | Longest | Reasoning share | Cut at 4096 | Empty | 6-tick meeting |
+|-------|--------|-----------------------|-----------------|---------|-----------------|-------------|-------|----------------|
+| gpt-oss-20b | low | 79 to 138 | up to 232 | 307 | 24% to 49% | 0% | 0% | 11 s |
+| gpt-oss-20b | medium | 898 to 1,409 | up to 2,613 | 4,096 | 91% to 95% | 5% in one round | 5% in one round | 102 s |
+| gpt-oss-20b | high | 3,584 to 4,096 | 4,096 | 4,096 | 100% | 80% to 100% | 80% to 100% | 199 s |
+| gpt-oss-120b | low | 132 to 203 | up to 305 | 368 | 54% to 66% | 0% | 0% | 20 s |
+| gpt-oss-120b | medium | 1,217 to 2,171 | up to 2,429 | 3,291 | 94% to 97% | 0% | 0% | 127 s |
 
-For comparison the benchmark replies of Granite 3.3 8B averaged 13 tokens and those of Gemma 4 31B 56 tokens. At default effort about half of the replies needed more than 1024 tokens, so their true length is unknown. Jobs 50751707 and 50751708 repeat the benchmark with a limit of 4096 tokens at low, medium and high effort on gpt-oss-20b and gpt-oss-120b, so the length of the reasoning at each effort can be read from the percentiles. Benchmark prompts are synthetic, and a game prompt that asks for one room name may need fewer reasoning tokens than one that asks for an argument. The game test (job 50751709) played 3 rounds in each mode with gpt-oss-20b at low effort and a limit of 768 tokens. vLLM reports the reasoning tokens itself, so no count was estimated. The timed game made 175 calls that averaged 110 completion tokens, 64% of them reasoning, with a longest reply of 391 tokens, no reply cut at the limit and none empty. The turn-taking game made 78 calls that averaged 100 tokens, 44% of them reasoning, with a longest reply of 327 tokens. Room statements averaged 28 words against 93 words in turn-taking. The timed game took 141 s and the turn-taking game 77 s, each with 2 meetings, and the Byzantines won both. The totals mix movement, discussion and voting calls, so the reasoning share of each phase is not yet known.
+The answer to how many tokens reasoning needs depends on the effort. Low effort fits in 512 tokens and a limit of 768 leaves a wide margin. Medium effort averages 900 to 2,200 tokens, reaches 4,096 in about 1 reply in 20 on the 20b model, so a limit of 6,000 or more is prudent. High effort on the 20b model did not finish within 4,096 tokens in most replies, so its length is above that. A meeting of 6 ticks takes 11 s to 20 s at low effort, 100 s to 130 s at medium and about 200 s at high. High effort is not usable in the room with these models. The high-effort run of the 120b model is still to come.
+
+For comparison the benchmark replies of Granite 3.3 8B averaged 13 tokens and those of Gemma 4 31B 56 tokens. Benchmark prompts are synthetic, and a game prompt that asks for one room name may need fewer reasoning tokens than one that asks for an argument. The game test (job 50751709) played 3 rounds in each mode with gpt-oss-20b at low effort and a limit of 768 tokens. The timed game made 175 calls that averaged 110 completion tokens, 64% of them reasoning, with a longest reply of 391 tokens, no reply cut at the limit and none empty. The turn-taking game made 78 calls that averaged 100 tokens, 44% of them reasoning, with a longest reply of 327 tokens. Room statements averaged 28 words against 93 words in turn-taking. The timed game took 141 s and the turn-taking game 77 s, each with 2 meetings, and the Byzantines won both. The totals mix movement, discussion and voting calls, so the reasoning share of each phase is not yet known.
+
+Loading gpt-oss-120b needs more than 64 GB of host memory. The first P2 job for it (50755230) was killed for memory while loading, and the rerun requests 128 GB.
 
 The clock does not charge for reasoning. An agent that decides at tick t starts speaking within the onset jitter after t, however long its reasoning ran on the GPU, so reasoning is free in game time and costs only wall time. A person who thinks before speaking talks later. Two options follow.
 
@@ -495,6 +502,25 @@ Metrics.
 Comprehension probe. In 20% of meetings, a discarded extra call after the last tick asks each agent which agents each speaker mentioned. The answers are scored against the name mentions in the clean utterances, as precision and recall per reader. No LLM judge is needed, and the call leaves the game state unchanged.
 
 Sizing. At 50 games per cell the 95% interval on a win rate is about ±14 points, and about ±10 at 100 games. Start with 20 games per cell to screen, then add games to the cells that matter. Fit `win ~ model * role * protocol + (1 | seed)` for the final comparison, with Wilson intervals for single cells.
+
+### P2 pilot on Granite 3.3 8B
+
+Job 50749760 played 55 games, 5 seeds in each of the 11 protocols, with at most 10 rounds, thought capture off, 6 games at a time on one RTX PRO 6000. It took 38 minutes and no game failed. A game lasted 4.0 rounds on average, because the Byzantines tend to win early. The pilot predates the reasoning counters, so its records have no token columns. Honest vote accuracy is the share of cast votes that went to a Byzantine, and a random pick among the other 9 agents would score about 22%.
+
+| Group | Games | Honest wins | Honest vote accuracy | Statements per game | Minutes per game |
+|-------|-------|-------------|----------------------|---------------------|------------------|
+| all | 55 | 14 (25%) | 35% | 133 | 3.9 |
+| sequential | 5 | 2 | 55% | 29 | 4.1 |
+| no discussion | 5 | 3 | 49% | 0 | 3.3 |
+| timed, all 9 cells | 45 | 9 | 31% | 159 | 3.9 |
+| timed clean | 15 | 2 | 31% | 144 | 3.7 |
+| timed interleaved | 15 | 2 | 30% | 170 | 3.9 |
+| timed noisy | 15 | 5 | 31% | 162 | 4.1 |
+| budget 60 s | 15 | 2 | 38% | 51 | 2.8 |
+| budget 180 s | 15 | 2 | 29% | 159 | 3.8 |
+| budget 300 s | 15 | 5 | 25% | 266 | 5.1 |
+
+These are leads and not results. Honest vote accuracy is lower in the timed protocols (31%, interval 27% to 35%) than in sequential (55%, 41% to 69%), and it falls as the budget grows while the statements per game rise from 51 to 159 to 266. The intervals treat votes as independent, but votes cluster within games, so they are too narrow. The win rates of single cells run from 0 to 3 of 5 and overlap, and 5 games per cell cannot separate them. Longer budgets cost more wall time, from 2.8 minutes to 5.1 minutes a game. The run extends to 20 seeds per cell (job 50756783, same tag), which adds 165 games.
 
 ## Open questions
 
