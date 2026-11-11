@@ -186,7 +186,18 @@ class ModelManager:
 
         except Exception as e:
             log.error("[API ERROR on {}]: {}", model_name, e)
+            self._record_api_error(model_name)
             return "move"
+
+    def _record_api_error(self, model_name):
+        """Counts a call that failed, such as a prompt longer than the server's context, for the game's stats.
+
+        A failed call returns `move`, which the game reads as silence or as a vote that names nobody, so
+        without a count the failures hide in the results.
+        """
+        with self._usage_lock:
+            usage = self.token_usage.setdefault(model_name, {"input_tokens": 0, "output_tokens": 0})
+            usage["api_errors"] = usage.get("api_errors", 0) + 1
 
     def _record_usage(self, model_name, response):
         """Adds one reply to the running totals of its model.

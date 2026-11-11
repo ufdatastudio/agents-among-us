@@ -235,3 +235,15 @@ def test_summaries_keep_runs_with_other_settings_apart():
 
     rows = summarize([game(), game(capture=True), game(room_max_words=90), game(room_max_words=40)])
     assert sorted((r["effort"], r["games"]) for r in rows) == [("default", 2), ("default +think", 1), ("default words 90", 1)]
+
+
+def test_summarize_reports_api_errors_per_game():
+    def game(errors):
+        return {
+            "model": "m", "protocol": "none", "result": "done", "winner": "honest", "rounds_played": 3, "meetings": 2,
+            "statements": 0, "wall_s": 60, "tokens": {"api_errors": errors, "api_calls": 10},
+        }
+
+    (row,) = summarize([game(4), game(0)])
+    assert row["errors_per_game"] == 2.0
+    assert "| 2.0 |" in format_table([row])

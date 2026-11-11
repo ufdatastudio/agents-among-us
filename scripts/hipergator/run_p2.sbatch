@@ -12,11 +12,12 @@
 # on the same scenario seeds, with several games at once. The job owns its server, so nothing
 # stays running after it ends.
 # Usage: [GAMES_PER_CELL=5] [ROUNDS=10] [WORKERS=6] [PROTOCOLS=sequential,clean-180] [TAG=...] \
-#        [ROOM_MAX_WORDS=40] [CAPTURE=1] \
+#        [ROOM_MAX_WORDS=40] [CAPTURE=1] [MAX_MODEL_LEN=32768] \
 #        sbatch scripts/hipergator/run_p2.sbatch [model]
 # Submit from the repository root. Only models on the eligible list in config/eligible_models.py start,
 # and the runner checks the model again. TAG names the output file results/p2/<model>_<TAG>.jsonl, and a
 # job that ran out of time can be resubmitted with the same TAG to play only the games that are missing.
+# A 300 s meeting in the interleaved rendering gives a prompt of more than 16k tokens, so the server's context is 32k by default.
 # For a gpt-oss model also set AAU_MAX_TOKENS (a larger reply limit) and VLLM_REASONING_EFFORT.
 set -euo pipefail
 source "${SLURM_SUBMIT_DIR}/scripts/hipergator/env.sh"
@@ -28,7 +29,7 @@ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
 uv run --no-project --with vllm vllm serve "${MODEL}" \
   --host 127.0.0.1 --port "${PORT}" \
-  --max-model-len 16384 \
+  --max-model-len "${MAX_MODEL_LEN:-32768}" \
   --enable-prompt-tokens-details \
   --served-model-name "${MODEL}" > "logs/vllm-${SLURM_JOB_ID}.log" 2>&1 &
 SERVER_PID=$!

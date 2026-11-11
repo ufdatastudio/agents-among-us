@@ -69,7 +69,7 @@ def summarize(records: Iterable[dict]) -> list[dict]:
         incorrect = sum(g.get("stats", {}).get("honest_incorrect_votes", 0) for g in finished)
         skipped = sum(g.get("stats", {}).get("honest_skipped_votes", 0) for g in finished)
         redone = [g["redone_meetings"] for g in games if "redone_meetings" in g]
-        tokens = {k: sum(g.get("tokens", {}).get(k, 0) for g in finished) for k in ("api_output_tokens", "api_reasoning_tokens", "api_calls", "api_truncated_calls", "api_empty_replies")}
+        tokens = {k: sum(g.get("tokens", {}).get(k, 0) for g in finished) for k in ("api_output_tokens", "api_reasoning_tokens", "api_calls", "api_truncated_calls", "api_empty_replies", "api_errors")}
         rows.append(
             {
                 "model": model,
@@ -92,6 +92,7 @@ def summarize(records: Iterable[dict]) -> list[dict]:
                 "truncated_share": _ratio(tokens["api_truncated_calls"], tokens["api_calls"]),
                 "empty_share": _ratio(tokens["api_empty_replies"], tokens["api_calls"]),
                 "tokens_per_call": _ratio(tokens["api_output_tokens"], tokens["api_calls"]),
+                "errors_per_game": _ratio(tokens["api_errors"], len(finished)),
             }
         )
     return sorted(rows, key=lambda r: (r["model"], r["effort"], PROTOCOL_ORDER.get(r["protocol"], len(PROTOCOL_ORDER))))
@@ -133,8 +134,8 @@ def format_table(rows: Sequence[dict]) -> str:
         The table.
     """
     lines = [
-        "| Model | Effort | Token limit | Protocol | Games | Failed | Honest win rate | 95% interval | Honest vote accuracy | Rounds | Meetings | Statements | Minutes | Tokens per call | Reasoning share | Cut at limit | Empty | Honest votes skipped | Meetings redone per game |",
-        "|-------|--------|-------------|----------|-------|--------|-----------------|--------------|----------------------|--------|----------|------------|---------|-----------------|-----------------|--------------|-------|---------------------|--------------------------|",
+        "| Model | Effort | Token limit | Protocol | Games | Failed | Honest win rate | 95% interval | Honest vote accuracy | Rounds | Meetings | Statements | Minutes | Tokens per call | Reasoning share | Cut at limit | Empty | Honest votes skipped | Meetings redone per game | API errors per game |",
+        "|-------|--------|-------------|----------|-------|--------|-----------------|--------------|----------------------|--------|----------|------------|---------|-----------------|-----------------|--------------|-------|---------------------|--------------------------|---------------------|",
     ]
     for r in rows:
         lines.append(
@@ -143,7 +144,7 @@ def format_table(rows: Sequence[dict]) -> str:
             f"| {_fmt(r['honest_vote_accuracy'], '.2f')} | {_fmt(r['mean_rounds'], '.1f')} | {_fmt(r['mean_meetings'], '.1f')} "
             f"| {_fmt(r['mean_statements'], '.0f')} | {_fmt(r['mean_minutes'], '.1f')} | {_fmt(r['tokens_per_call'], '.0f')} "
             f"| {_fmt(r['reasoning_share'], '.0%')} | {_fmt(r['truncated_share'], '.1%')} | {_fmt(r['empty_share'], '.1%')} "
-            f"| {_fmt(r['honest_skipped_share'], '.0%')} | {_fmt(r['redone_per_game'], '.2f')} |"
+            f"| {_fmt(r['honest_skipped_share'], '.0%')} | {_fmt(r['redone_per_game'], '.2f')} | {_fmt(r['errors_per_game'], '.1f')} |"
         )
     return "\n".join(lines)
 

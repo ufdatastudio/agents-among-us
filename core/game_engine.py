@@ -1142,6 +1142,7 @@ class GameEngine:
             stats["api_reasoning_estimated_calls"] = model_tokens.get("reasoning_estimated_calls", 0)
             stats["api_truncated_calls"] = model_tokens.get("truncated_calls", 0)
             stats["api_empty_replies"] = model_tokens.get("empty_replies", 0)
+            stats["api_errors"] = model_tokens.get("api_errors", 0)
             stats["api_max_output_tokens"] = model_tokens.get("max_output_tokens", 0)
 
         self.state.update_phase("GAME OVER")

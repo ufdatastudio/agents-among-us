@@ -137,7 +137,7 @@ def read_stats(path: Path) -> dict:
 
 TOKEN_COLUMNS = (
     "api_input_tokens", "api_output_tokens", "api_calls", "api_reasoning_tokens", "api_reasoning_estimated_calls",
-    "api_truncated_calls", "api_empty_replies", "api_max_output_tokens",
+    "api_truncated_calls", "api_empty_replies", "api_max_output_tokens", "api_errors",
 )
 
 

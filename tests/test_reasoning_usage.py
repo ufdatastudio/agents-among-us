@@ -104,3 +104,15 @@ def test_the_benchmark_summary_reports_reasoning_share_and_cut_replies():
     assert summary["reasoning_fraction"] == 0.8
     assert summary["truncated_fraction"] == 0.5 and summary["empty_fraction"] == 0.5
     assert summary["completion_tokens_p50"] == 100 and summary["completion_tokens_p90"] == 100
+
+
+def test_a_failed_call_is_counted_and_reads_as_move():
+    class Failing:
+        def generate(self, *args, **kwargs):
+            raise RuntimeError("Error code: 400 - This model's maximum context length is 16384 tokens")
+
+    manager = ModelManager()
+    manager.api_clients["vllm"] = Failing()
+    assert manager._generate_api("vllm:m", "system", "user", 0.1) == "move"
+    assert manager._generate_api("vllm:m", "system", "user", 0.1) == "move"
+    assert manager.get_token_usage()["vllm:m"]["api_errors"] == 2
