@@ -32,6 +32,23 @@ STATEMENT_LINE = re.compile(r"^Agent_\d+: ", re.MULTILINE)
 MEETING_LINE = re.compile(r"^=== Round \d+ ===", re.MULTILINE)
 
 
+def scenario_name(model: str, tag: str) -> str:
+    """Names the scenario of a run, which is also its config file and the folder of its game logs.
+
+    The tag is part of the name, because two runs of one model in one checkout, such as a run with private
+    reasoning beside a run without it, would otherwise write the same config file, and each game reads the
+    file when it starts.
+
+    Args:
+        model: Hugging Face checkpoint the server serves.
+        tag: Label of the run.
+
+    Returns:
+        The scenario name.
+    """
+    return f"p2_{model.replace('/', '_')}_{tag}"
+
+
 def composition(name: str, model: str, honest: int = 8, byzantine: int = 2, capture: bool = False) -> dict:
     """Builds the composition of a game in which every agent runs the same served model.
 
@@ -317,7 +334,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     protocols = [protocol_by_name(name) for name in args.protocols.split(",")]
     out = args.out or Path("results/p2") / f"{model.replace('/', '_')}_{args.tag}.jsonl"
     out.parent.mkdir(parents=True, exist_ok=True)
-    scenario = f"p2_{model.replace('/', '_')}"
+    scenario = scenario_name(model, args.tag)
     config_dir = Path("logs") / "game_configs"
     config_dir.mkdir(parents=True, exist_ok=True)
     (config_dir / f"{scenario}.json").write_text(json.dumps(composition(scenario, model, capture=args.capture)))
