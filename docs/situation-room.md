@@ -659,6 +659,8 @@ These tasks start after the current ones (the P2 reruns with required votes, the
 
 ### A visual world in Godot
 
+The plan is on the branch `godot-world`, in `docs/godot-world.md`. This section keeps the summary.
+
 The goal is a world that people can watch and play in, and that agents can live in. Rooms have sprites and sounds, humans can join as players, and the same world runs as a visible simulation or as a headless one for experiments. The situation room stays the place where meetings happen.
 
 What the world has to do.
