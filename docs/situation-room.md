@@ -1,7 +1,7 @@
 # Situation Room
 
 Design for timed, simultaneous discussion in Agents Among Us, plus the experiments that use it.
-Status is design, two HiPerGator pilots (vLLM concurrency and the audio stack), and a text-only integration. Phases 0 and 1a are done. The room, the three text renderers, the tick loop, the vote tick, an in-process transport and a scripted adapter exist and are tested with no GPU, as do `core/audio/` and the benchmark scripts. The engine runs a full game in `timed` mode with the existing honest and Byzantine agents, through an adapter, against any OpenAI-compatible server, and a smoke test ran 2 rounds of 10 agents through `main.py` against a fake server. P2 has played 660 games against models served on HiPerGator (Granite 3.3 8B, gpt-oss-120b and Gemma 4 31B), and the `File` transport is still to do. Work happens on the `situation-room` branch.
+Status is design, two HiPerGator pilots (vLLM concurrency and the audio stack), and a text-only integration. Phases 0 and 1a are done. The room, the three text renderers, the tick loop, the vote tick, an in-process transport and a scripted adapter exist and are tested with no GPU, as do `core/audio/` and the benchmark scripts. The engine runs a full game in `timed` mode with the existing honest and Byzantine agents, through an adapter, against any OpenAI-compatible server, and a smoke test ran 2 rounds of 10 agents through `main.py` against a fake server. P2 has played 659 games against models served on HiPerGator (Granite 3.3 8B, gpt-oss-120b and Gemma 4 31B, with one more Gemma game that timed out before its first move), and the `File` transport is still to do. Work happens on the `situation-room` branch.
 
 ## Goal
 
@@ -518,7 +518,7 @@ The reasoning models (gpt-oss and Magistral) spend part of `max_tokens` on think
 Run the models that fit on one GPU first.
 
 P2 runs from `scripts/hipergator/run_p2.sbatch`. One job serves one model on one GPU and plays the grid 6 games at a time, each game in its own `main.py` process. A seed visits all 11 protocols before the next seed starts, so an interrupted run still has paired cells, and a job resubmitted with the same `TAG` plays only the missing games. The scenario seed fixes the start rooms. Sampling is not seeded, so games with one seed diverge after the first move, and the pairing controls the start and not the whole game.
-The pilot plays 5 seeds per cell with thought capture off and 10 rounds, which is 55 games per model. It started with Granite 3.3 8B and Gemma 4 31B, the models that fit on one RTX PRO 6000 and were measured above, and gpt-oss-120b joined as the large model at low reasoning effort with a limit of 768 tokens. Granite and gpt-oss were extended to 20 seeds, which is 220 games each, and the extension of Gemma to 20 seeds is running. Llama 3.3 70B waits for two GPUs.
+The pilot plays 5 seeds per cell with thought capture off and 10 rounds, which is 55 games per model. It started with Granite 3.3 8B and Gemma 4 31B, the models that fit on one RTX PRO 6000 and were measured above, and gpt-oss-120b joined as the large model at low reasoning effort with a limit of 768 tokens. All three models were extended to 20 seeds, which is 220 games each. One Gemma game, the sequential game of seed 18, made no progress after it started and timed out, so Gemma has 219 finished games. Llama 3.3 70B waits for two GPUs.
 The reference model for P3 is chosen after P2, from the models whose win rate is stable across protocols.
 
 Every protocol replays the same seeds, so scenarios differ only in how agents talk.
@@ -537,7 +537,7 @@ Sizing. At 50 games per cell the 95% interval on a win rate is about ±14 points
 
 ### P2 results
 
-The results come from three runs on one RTX PRO 6000 each, with 10 rounds, thought capture off, 6 games at a time and every agent required to vote. Granite 3.3 8B ran with its defaults (tag `v7-granite`, 220 games). gpt-oss-120b ran at low reasoning effort with a limit of 768 tokens (tag `v4-gpt-oss-120b`, 220 games). Gemma 4 31B ran with a limit of 1,024 tokens (tag `v6-gemma`, the 55 games of the pilot). The extension of Gemma to 20 seeds is still running, so the Gemma rows rest on 5 games per protocol and the tables are drawn again when it ends. Earlier pilots of these models had defects that this section's runs removed, which were the skipped votes, the quotation cleaning, the context limit, Gemma's cut thinking and a shared config file. Their numbers are not kept.
+The results come from three runs on one RTX PRO 6000 each, with 10 rounds, thought capture off, 6 games at a time and every agent required to vote. Granite 3.3 8B ran with its defaults (tag `v7-granite`, 220 games). gpt-oss-120b ran at low reasoning effort with a limit of 768 tokens (tag `v4-gpt-oss-120b`, 220 games). Gemma 4 31B ran with a limit of 1,024 tokens (tag `v6-gemma`, 220 games planned and 219 finished). The sequential game of seed 18 wrote the line that loads its config and nothing after it, and it ended at the limit of 3,600 s per game with no round played, so the sequential cell of Gemma has 19 games. The stall came before any model call, and its cause is not known. Earlier pilots of these models had defects that this section's runs removed, which were the skipped votes, the quotation cleaning, the context limit, Gemma's cut thinking and a shared config file. Their numbers are not kept.
 
 | Model | Setting | Games | Honest wins | Honest vote accuracy | Meetings redone per game | API errors | Reasoning share | Minutes per game |
 |---|---|---|---|---|---|---|---|---|
@@ -547,11 +547,11 @@ The results come from three runs on one RTX PRO 6000 each, with 10 rounds, thoug
 | gpt-oss-120b | no discussion | 20 | 3 (15%) | 35% | 0.00 | 0 | 83% | 3.1 |
 | gpt-oss-120b | turns | 20 | 6 (30%) | 45% | 0.10 | 0 | 56% | 4.7 |
 | gpt-oss-120b | timed room | 180 | 64 (36%) | 44% | 0.00 | 0 | 64% | 5.1 |
-| Gemma 4 31B | no discussion | 5 | 4 (80%) | 64% | 0.00 | 0 | 98% | 26.5 |
-| Gemma 4 31B | turns | 5 | 1 (20%) | 45% | 0.00 | 0 | 36% | 18.4 |
-| Gemma 4 31B | timed room | 45 | 15 (33%) | 35% | 0.00 | 0 | 25% | 23.6 |
+| Gemma 4 31B | no discussion | 20 | 14 (70%) | 69% | 0.00 | 0 | 97% | 26.5 |
+| Gemma 4 31B | turns | 19 | 6 (32%) | 47% | 0.00 | 0 | 41% | 19.5 |
+| Gemma 4 31B | timed room | 180 | 67 (37%) | 39% | 0.00 | 0 | 29% | 22.3 |
 
-Honest vote accuracy is the share of honest votes that went to a Byzantine, and a random pick among the other agents would score about 22% to 30%. A skipped vote no longer exists, so a meeting that lacks a vote is rewound, and the table gives the rewinds per game. No game stopped for a missing vote and no call failed with an API error. The reasoning share is the share of completion tokens that are reasoning, from the server where it reports them and from the think blocks in the reply for Granite and Gemma.
+Honest vote accuracy is the share of honest votes that went to a Byzantine, and a random pick among the other agents would score about 22% to 30%. A skipped vote no longer exists, so a meeting that lacks a vote is rewound, and the table gives the rewinds per game. No game stopped for a missing vote and no call failed with an API error. Gemma returned an empty reply 10 times in 46,445 calls, 8 of them with no discussion, where its thinking is longest. The reasoning share is the share of completion tokens that are reasoning, from the server where it reports them and from the think blocks in the reply for Granite and Gemma.
 
 ![Honest win rate by discussion setting for three models](figures/p2_win_rate.png)
 
@@ -563,12 +563,13 @@ Figure 5. Granite 3.3 8B in each protocol, with 20 games in each cell. The inter
 
 ![Accuracy of the honest votes and meetings rewound per game](figures/p2_votes.png)
 
-Figure 6. Accuracy of the honest votes that were cast, and the meetings rewound per game, by setting. The Gemma bars for no discussion and turns rest on 5 games each.
+Figure 6. Accuracy of the honest votes that were cast, and the meetings rewound per game, by setting.
 
-- Only the cells of the timed rooms (180, 180 and 45 games) have narrow intervals. gpt-oss wins 36% of its timed games (95% interval 29% to 43%), Gemma 33% (21% to 48%) and Granite 25% (19% to 32%). The no-discussion and turn cells have 5 to 20 games and their intervals run over 20 points, so for gpt-oss and Gemma no setting beats another in these data.
-- Granite shows a cost for discussion. It wins 10 of 20 games with no discussion (50%, interval 30% to 70%), 2 of 20 in turns (10%, 3% to 30%) and 45 of 180 in timed rooms (25%). A Fisher exact test gives p = 0.014 for no discussion against turns and p = 0.031 for no discussion against timed rooms. The tests treat the games as independent and were not adjusted for 3 contrasts, so they are a guide and the cluster-robust intervals are still to do.
-- Honest vote accuracy is 32% to 59% for Granite, 35% to 45% for gpt-oss and 35% to 64% for Gemma. Granite with no discussion votes better than a random pick (59%, 246 votes) and worse with discussion (32% in turns and 38% in timed rooms). The Gemma value for no discussion rests on 5 games.
-- A game takes 2.4 to 4.3 minutes for Granite, 3.1 to 5.1 for gpt-oss and 18 to 27 for Gemma, whose reasoning share is 98% when there is no discussion and 25% in the timed room.
+- Only the cells of the timed rooms (180 games each) have narrow intervals. gpt-oss wins 36% of its timed games (95% interval 29% to 43%), Gemma 37% (30% to 44%) and Granite 25% (19% to 32%). The no-discussion and turn cells have 19 to 20 games and their intervals run 27 to 40 points wide.
+- Granite and Gemma show a cost for discussion. Granite wins 10 of 20 games with no discussion (50%, interval 30% to 70%), 2 of 20 in turns (10%, 3% to 30%) and 45 of 180 in timed rooms (25%). Gemma wins 14 of 20 (70%, 48% to 85%), 6 of 19 in turns (32%, 15% to 54%) and 67 of 180 in timed rooms (37%). A Fisher exact test of no discussion against turns gives p = 0.014 for Granite and p = 0.026 for Gemma, and of no discussion against timed rooms p = 0.031 and p = 0.007. The tests treat the games as independent and were not adjusted for the 6 contrasts of the 3 models. Only the Gemma contrast with timed rooms stays below 0.05 after a Bonferroni correction (0.05 / 6 = 0.008), so the tests are a guide and the cluster-robust intervals are still to do.
+- gpt-oss shows no cost. It wins 3 of 20 games with no discussion (15%, 5% to 36%), 6 of 20 in turns (30%, 15% to 52%) and 64 of 180 in timed rooms (36%), which points the other way, and p = 0.45 for no discussion against turns and p = 0.081 against timed rooms. No setting beats another for gpt-oss in these data.
+- Honest vote accuracy is 32% to 59% for Granite, 35% to 45% for gpt-oss and 39% to 69% for Gemma. Granite and Gemma vote more accurately with no discussion (59% on 246 votes and 69% on 240 votes) than with it (Granite 32% in turns and 38% in timed rooms, Gemma 47% and 39%), and each of these values is above the 22% to 30% of a random pick.
+- A game takes 2.4 to 4.3 minutes for Granite, 3.1 to 5.1 for gpt-oss and 19.5 to 26.5 for Gemma, whose reasoning share is 97% when there is no discussion and 29% in the timed room.
 
 ### What agents say and believe
 
@@ -586,10 +587,10 @@ What each role says. Each cell is the share of statements with that kind of spee
 | gpt-oss-120b | clean | Honest | 7302 | 29 | 80% | 67% | 9% | 41% | 4% | 5% | 31% |
 | gpt-oss-120b | turns | Byzantine | 174 | 75 | 87% | 65% | 18% | 97% | 0% | - | 0% |
 | gpt-oss-120b | turns | Honest | 510 | 80 | 99% | 93% | 35% | 95% | 0% | - | 0% |
-| Gemma 4 31B | clean | Byzantine | 655 | 27 | 46% | 27% | 3% | 6% | 21% | 3% | 89% |
-| Gemma 4 31B | clean | Honest | 1522 | 29 | 69% | 54% | 2% | 24% | 12% | 2% | 82% |
-| Gemma 4 31B | turns | Byzantine | 38 | 65 | 84% | 45% | 26% | 45% | 18% | - | 0% |
-| Gemma 4 31B | turns | Honest | 110 | 65 | 86% | 43% | 15% | 75% | 7% | - | 12% |
+| Gemma 4 31B | clean | Byzantine | 2500 | 27 | 46% | 28% | 3% | 7% | 21% | 4% | 89% |
+| Gemma 4 31B | clean | Honest | 5922 | 29 | 69% | 54% | 2% | 23% | 13% | 2% | 84% |
+| Gemma 4 31B | turns | Byzantine | 146 | 66 | 82% | 39% | 25% | 46% | 19% | - | 3% |
+| Gemma 4 31B | turns | Honest | 406 | 66 | 87% | 36% | 13% | 76% | 6% | - | 9% |
 
 ![Speech acts of honest and Byzantine agents in the clean room for three models](figures/text_speech_acts.png)
 
@@ -599,15 +600,15 @@ Figure 7. Speech acts in the clean room. Solid bars are honest agents and hatche
 
 Figure 8. Words per statement in the room and in turns, and the share of room statements cut at the 40-word limit.
 
-Statements in the room average 25 to 29 words against 65 to 90 in turns, and the 40-word limit cuts 2% to 11% of them, most for Granite. A higher limit would therefore change few statements, and the instruction to answer in one or two short sentences is the stronger limit. Honest gpt-oss agents accuse in 80% of their statements and call a vote in 67%, against 19% for its Byzantines. Byzantine agents ask questions more often than honest agents in all three models (20% against 12% for Granite, 14% against 4% for gpt-oss and 21% against 12% for Gemma). Byzantine Gemma and gpt-oss agents report what they saw less often than honest ones (6% against 24%, and 22% against 41%), and Granite's Byzantines report as often as its honest agents (37% and 37%). Granite and Gemma open most room statements with the name of the agent addressed (97% to 98% and 82% to 89%), which is the address tag, and gpt-oss does so in 31% to 39%.
+Statements in the room average 25 to 29 words against 66 to 90 in turns, and the 40-word limit cuts 2% to 11% of them, most for Granite. A higher limit would therefore change few statements, and the instruction to answer in one or two short sentences is the stronger limit. Honest gpt-oss agents accuse in 80% of their statements and call a vote in 67%, against 19% for its Byzantines. Byzantine agents ask questions more often than honest agents in all three models (20% against 12% for Granite, 14% against 4% for gpt-oss and 21% against 13% for Gemma). Byzantine Gemma and gpt-oss agents report what they saw less often than honest ones (7% against 23%, and 22% against 41%), and Granite's Byzantines report as often as its honest agents (37% and 37%). Granite and Gemma open most room statements with the name of the agent addressed (97% to 98% and 84% to 89%), which is the address tag, and gpt-oss does so in 31% to 39%.
 
 What agents believe and how well they hear.
 
 | Model | Honest false claims | Byzantine false claims | Honest accusations at a Byzantine (chance) | Same, turns | Byzantine accusations at a Byzantine (chance) | Honest vote for an honest candidate accused only by Byzantines | Same, only by honest agents | Same, by both | Honest votes for the most accused agent (turns) |
 |---|---|---|---|---|---|---|---|---|---|
 | Granite 3.3 8B | 29% | 39% | 29% (29%) | 34% (30%) | 13% (13%) | 10% (n=215) | 15% (n=474) | 39% (n=725) | 58% (74%) |
-| gpt-oss-120b | 21% | 19% | 40% (30%) | 42% (29%) | 10% (14%) | 6% (n=508) | 10% (n=516) | 43% (n=814) | 76% (77%) |
-| Gemma 4 31B | 21% | 38% (n=60) | 36% (32%) | 38% (29%) | 10% (15%) | 7% (n=46) | 8% (n=87) | 53% (n=194) | 82% (71%) |
+| gpt-oss-120b | 20% | 20% | 40% (30%) | 42% (29%) | 10% (14%) | 6% (n=508) | 10% (n=516) | 43% (n=814) | 76% (77%) |
+| Gemma 4 31B | 17% | 30% | 35% (31%) | 46% (29%) | 9% (15%) | 8% (n=214) | 8% (n=323) | 55% (n=708) | 78% (76%) |
 
 Chance is the share of Byzantines among the other active agents at the time of the statement. An honest agent that is told nothing would aim 28% to 32% of its accusations at a Byzantine.
 
@@ -623,21 +624,21 @@ Figure 10. Claims about places that never held at any earlier tick. Solid bars a
 
 Figure 11. Honest votes for an honest candidate by who accused that candidate in the meeting (left), and the share of honest votes that went to the most accused agent (right).
 
-- Believability. Granite's Byzantine agents make false claims about places in 39% of their claims and its honest agents in 29%. gpt-oss shows no difference (19% and 21%), and Gemma's Byzantine agents are at 38% against 21% (60 claims). Honest Granite agents aim 29% of their accusations at a Byzantine, which is the rate of a random pick (29%). Honest gpt-oss agents aim 40% (30% by chance) and honest Gemma agents 36% (32%).
-- Turns against the room. The honest accusations hit a Byzantine at 42% for gpt-oss and 38% for Gemma in turns, against 40% and 36% in the room, and at 34% for Granite against 29%. These turn cells have 5 to 20 games, and none of them shows the poorer aim in turns that the 5-game pilot of gpt-oss suggested.
-- Influence. An honest candidate who only Byzantine agents accused got 10% of the votes of the honest voters in the pairs of Granite, 6% for gpt-oss and 7% for Gemma (46 pairs). One that only honest agents accused got 15%, 10% and 8%, and one that both accused got 39%, 43% and 53%. In all three models an accusation by an honest agent draws a few more votes than one by a Byzantine, and the gap is small next to the jump when both accuse, so the votes follow the number of accusers more than who they are. The votes concentrate on the most accused agent, which got 58% (Granite), 76% (gpt-oss) and 82% (Gemma) of honest votes in the room and 74%, 77% and 71% in turns, whether or not that agent was a Byzantine.
+- Believability. Granite's Byzantine agents make false claims about places in 39% of their claims and its honest agents in 29%. gpt-oss shows no difference (19% and 21%), and Gemma's Byzantine agents are at 30% against 17% (326 and 2,048 claims). Honest Granite agents aim 29% of their accusations at a Byzantine, which is the rate of a random pick (29%). Honest gpt-oss agents aim 40% (30% by chance) and honest Gemma agents 35% (31%).
+- Turns against the room. The honest accusations hit a Byzantine at 42% for gpt-oss and 46% for Gemma in turns, against 40% and 35% in the room, and at 34% for Granite against 29%. These turn cells have 19 to 20 games, and none of them shows the poorer aim in turns that the 5-game pilot of gpt-oss suggested.
+- Influence. An honest candidate who only Byzantine agents accused got 10% of the votes of the honest voters in the pairs of Granite, 6% for gpt-oss and 8% for Gemma (214 pairs). One that only honest agents accused got 15%, 10% and 8%, and one that both accused got 39%, 43% and 55%. For Granite and gpt-oss an accusation by an honest agent draws a few more votes than one by a Byzantine, and for Gemma the two draw the same share. The gap is small next to the jump when both accuse, so the votes follow the number of accusers more than who they are. The votes concentrate on the most accused agent, which got 58% (Granite), 76% (gpt-oss) and 78% (Gemma) of honest votes in the room and 74%, 77% and 76% in turns, whether or not that agent was a Byzantine.
 
 | Model | Accused agent speaks again, clean | Answer names the accuser, clean | Same, turns | Statements heard before speaking | Same tick, unheard |
 |---|---|---|---|---|---|
 | Granite 3.3 8B | 79% | 62% | 40% | 36 | 2.8 |
 | gpt-oss-120b | 92% | 49% | 45% | 42 | 3.9 |
-| Gemma 4 31B | 90% | 56% | 54% | 41 | 3.5 |
+| Gemma 4 31B | 90% | 52% | 58% | 40 | 3.6 |
 
 ![How often the accused agent speaks again and names the accuser, in the room and in turns](figures/text_listening.png)
 
 Figure 12. What agents pick up. The left panel is the share of accusations after which the accused agent speaks again in the meeting, and the right panel is the share of those answers that name the accuser.
 
-- Hearing. In the clean room each reader receives every statement up to the tick, so the record is complete except for the statements made in the same tick, which average 2.8 to 3.9 per statement. An agent has heard 36 to 42 earlier statements when it speaks. The accused agent speaks again in the same meeting after 79% (Granite), 92% (gpt-oss) and 90% (Gemma) of accusations, and its next statement names the accuser in 62%, 49% and 56%. In turns the answers name the accuser in 40%, 45% and 54%.
+- Hearing. In the clean room each reader receives every statement up to the tick, so the record is complete except for the statements made in the same tick, which average 2.8 to 3.9 per statement. An agent has heard 36 to 42 earlier statements when it speaks. The accused agent speaks again in the same meeting after 79% (Granite), 92% (gpt-oss) and 90% (Gemma) of accusations, and its next statement names the accuser in 62%, 49% and 52%. In turns the answers name the accuser in 40%, 45% and 58%.
 
 ### What agents think before they vote
 
