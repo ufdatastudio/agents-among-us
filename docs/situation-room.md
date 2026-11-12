@@ -1,7 +1,7 @@
 # Situation Room
 
 Design for timed, simultaneous discussion in Agents Among Us, plus the experiments that use it.
-Status is design, two HiPerGator pilots (vLLM concurrency and the audio stack), and a text-only integration. Phases 0 and 1a are done. The room, the three text renderers, the tick loop, the vote tick, an in-process transport and a scripted adapter exist and are tested with no GPU, as do `core/audio/` and the benchmark scripts. The engine runs a full game in `timed` mode with the existing honest and Byzantine agents, through an adapter, against any OpenAI-compatible server, and a smoke test ran 2 rounds of 10 agents through `main.py` against a fake server. P2 has played 660 games against models served on HiPerGator (Granite 3.3 8B, gpt-oss-120b and Gemma 4 31B), and the `File` transport is still to do. Work happens on the `situation-room` branch.
+Status is design, three HiPerGator pilots (vLLM concurrency, the audio stack and diarization), and a text-only integration. Phases 0 and 1a are done. The room, the three text renderers, the tick loop, the vote tick, an in-process transport and a scripted adapter exist and are tested with no GPU, as do `core/audio/` and the benchmark scripts. The engine runs a full game in `timed` mode with the existing honest and Byzantine agents, through an adapter, against any OpenAI-compatible server, and a smoke test ran 2 rounds of 10 agents through `main.py` against a fake server. P2 has played 660 games against models served on HiPerGator (Granite 3.3 8B, gpt-oss-120b and Gemma 4 31B), and the `File` transport is still to do. Work happens on the `situation-room` branch.
 
 ## Goal
 
@@ -200,10 +200,10 @@ The audio pipeline.
 
 Whisper large-v3 (speech recognition) and Kokoro (speech synthesis) are both in Navigator's catalog, so the audio stack follows the same rule as the language models. Both run from the `/blue` cache on HiPerGator, as the P1b measurements below show.
 
-Three components are not on Navigator and wait for approval.
+Three components are not on Navigator. Research Computing approved the diarization model on 2026-11-12, and the native ear and the speech separation model wait for approval.
 
 - Native ear. None of Navigator's language models takes audio, and the Gemma 4 31B config has `audio_config: null`. The one candidate found, `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, is not in Navigator's catalog, builds on a Nemotron 3 Nano backbone that is itself excluded, and its card says it was improved using Qwen models. It is excluded, and a question about it is with Research Computing. The native ear has no model until an eligible one is found.
-- Model-based diarization. `nvidia/Nemotron-3-Diarization` is a streaming Sortformer with the OpenMDW license and no gating. Until it is approved, `estimated` labels come from the oracle labels with errors injected at a chosen diarization error rate, which also makes that rate a controlled factor.
+- Model-based diarization. `nvidia/Nemotron-3-Diarization` is a streaming Sortformer with the OpenMDW license and no gating. Research Computing approved it on 2026-11-12 (request 85601) after finding no Chinese models involved. `core/audio/diarize.py` runs it and the P1c pilot below measures it. The `estimated` labels can also come from the oracle labels with errors injected at a chosen diarization error rate, which makes that rate a controlled factor.
 - Speech separation. The mix ear needs it to do better than Whisper alone.
 
 ### Diarization
@@ -213,7 +213,7 @@ Speaker identity is its own channel, with 3 levels.
 | Level | What the agent receives |
 |-------|-------------------------|
 | `oracle` | The exact speaker labels and segment times from the room. In the cascade ear every transcribed span is tagged with the true speaker |
-| `estimated` | Labels with errors that agents can see. They come from a diarization model run on the mix, or from the oracle labels with injected errors until a model is approved. Errors merge or split speakers and miss overlapped speech |
+| `estimated` | Labels with errors that agents can see. They come from a diarization model run on the mix, or from the oracle labels with injected errors at a chosen rate. Errors merge or split speakers and miss overlapped speech |
 | `none` | No labels. The agent separates speakers by voice and content, which needs a native ear. A cascade ear delivers unlabeled text |
 
 A roll call before the discussion, outside the budget, lets each agent say its name once. Under `none`, that is how agents bind voices to names. In the audio modality agents are called by color name, such as Red and Orange, because `Agent_3` is hard to say and to recognize.
@@ -289,7 +289,7 @@ The SGD, SVM and LR classifiers were trained on sequential transcripts, so their
 | `core/adapters/` | `base.py` (the `AgentAdapter` protocol), `scripted.py` (a deterministic fake for tests and dry runs) and `game_agent.py` (wraps an existing honest or Byzantine agent) are done. The wrapped agent reaches a model through `ModelManager`, so the `vllm` and API providers need no adapter of their own. `remote.py` is still to write |
 | `agents/room_prompts.py` | Done in Phase 1a. The room instructions for each role, built on the turn-based behavior rules |
 | `core/adapters/ears.py`, `core/adapters/mouths.py` | New. `TextEar`, `SeparatedEar`, `MixEar`, `NativeEar`, `TextMouth`, `TtsMouth` |
-| `core/audio/` | Started in P1b. `mix.py` (per-reader mix, overlap, WAV), `metrics.py` (word error rate, recall), `tts.py` (Kokoro voices) and `asr.py` (Whisper) exist and are tested. `diarize.py` is still to write |
+| `core/audio/` | Started in P1b. `mix.py` (per-reader mix, overlap, WAV), `metrics.py` (word error rate, recall), `tts.py` (Kokoro voices), `asr.py` (Whisper), `der.py` (the diarization error rate against the true segments) and `diarize.py` (Nemotron 3 Diarization) exist. The tests cover all but `diarize.py`, which the P1c pilot exercises |
 | `core/transport.py` | `InProcessTransport` is done, with a `max_workers` limit for a model loaded in the same process. The `File` transport is still to write, with `Network` left for later |
 | `core/timed_discussion.py` | The tick loop over adapters and the simultaneous vote tick are done. The turn-based runner stays in `core/game_engine.py` as the control |
 | `core/game_engine.py` | Done in Phase 1a. `discussion_mode` (`turns` or `timed`), `room_config` and `room_workers` select and set the runner. The vote bookkeeping moved into `_record_vote`, which both modes use. Every model agent has to vote, and a meeting without a valid vote is rewound and held again (`allow_skip`, `vote_retries`, `max_meeting_attempts`). A `vllm:` model that is not on the eligible list stops the game at setup |
@@ -468,6 +468,54 @@ What this means for the design.
 
 Figure 3. Whisper large-v3 on a mix of Kokoro voices. Each point averages 10 trials.
 
+### Measured diarization (P1c)
+
+`scripts/diarization_pilot.py` builds mixes of Kokoro statements as in P1b (10 voices at speed 0.85, a silent listener) and runs `nvidia/Nemotron-3-Diarization` on each, once with the whole recording in view and once streaming at the default latency of 1.04 s. The error is the diarization error rate against the true segments of the clips, in frames of 10 ms and with no collar. Overlapped speech counts once for each speaker, and the labels of the model are matched to the true speakers in the way that agrees most. The reference follows the energy of each clean clip and joins pauses shorter than 0.3 s. The result file is `results/diarization_pilot/summary_51027681.json`, from one RTX PRO 6000 in 3 minutes. Each row averages 10 trials.
+
+The first table has speakers starting within 6 s of each other. The error is split into speech that was missed, speech that was invented and speech given to the wrong speaker, and the last column is the streaming run.
+
+| Speakers | Overlapped share | Error, whole recording | Missed | False alarm | Confused | Speakers found | Error, streaming |
+|----------|------------------|------------------------|--------|-------------|----------|----------------|------------------|
+| 1 | 0% | 2% | 0% | 2% | 0% | 1.0 | 2% |
+| 2 | 47% | 4% | 1% | 3% | 0% | 2.0 | 4% |
+| 3 | 72% | 6% | 1% | 5% | 0% | 3.0 | 6% |
+| 5 | 85% | 16% | 6% | 3% | 6% | 4.7 | 18% |
+| 8 | 82% | 28% | 13% | 2% | 14% | 5.9 | 34% |
+| 9 | 88% | 36% | 19% | 1% | 16% | 5.9 | 41% |
+| 10 | 86% | 42% | 22% | 1% | 19% | 5.9 | 46% |
+
+- Up to 3 speakers the model finds every speaker and gives almost no speech to the wrong one. Its error is mostly false alarm, because it keeps a speaker active through pauses that the reference splits, and even a single speaker scores 2%.
+- Errors grow from 5 speakers on. With 8 speakers the model finds 5.9 on average, and it misses 13% of the speech and gives 14% to the wrong speaker. With 9 and 10 speakers the number found stays at 5.9, which is below the limit of 8 speakers of the model.
+- The window of onsets matters less than the number of speakers. The table shows the error of the whole recording, with the overlapped share in brackets.
+
+| Window of onsets | 2 speakers | 5 speakers | 8 speakers | 10 speakers |
+|------------------|------------|------------|------------|-------------|
+| 2 s | 5% (75%) | 17% (85%) | 35% (82%) | 52% (81%) |
+| 6 s | 4% (47%) | 16% (85%) | 28% (82%) | 42% (86%) |
+| 12 s | 8% (48%) | 12% (71%) | 27% (87%) | 39% (84%) |
+
+A meeting has several statements from each speaker. In the second table 5, 7 or 9 speakers say 3 statements each, spread over 60 s or 180 s, and a speaker never talks over itself.
+
+| Meeting | Speakers | Overlapped share | Error, whole recording | Missed | False alarm | Confused | Speakers found | Error, streaming |
+|---------|----------|------------------|------------------------|--------|-------------|----------|----------------|------------------|
+| 60 s | 5 | 67% | 11% | 2% | 5% | 4% | 4.9 | 14% |
+| 60 s | 7 | 81% | 15% | 4% | 5% | 6% | 6.7 | 21% |
+| 60 s | 9 | 85% | 28% | 12% | 3% | 13% | 7.6 | 33% |
+| 180 s | 5 | 27% | 24% | 3% | 4% | 17% | 4.4 | 25% |
+| 180 s | 7 | 42% | 22% | 3% | 4% | 16% | 6.0 | 28% |
+| 180 s | 9 | 45% | 28% | 4% | 5% | 19% | 7.2 | 31% |
+
+- A long recording gives the model more room to confuse voices. In 180 s with 5 speakers, 17% of the speech goes to the wrong speaker and the error is 24%, against 11% in 60 s. A meeting with 7 speakers (22%) is no worse than one with 5, so the limit of 8 speakers is not the cause. The voices of Kokoro may sound more alike than human voices, which would raise the confusion, and this pilot cannot tell.
+- A listener in a 10 agent room hears 9 voices. At 3 minutes the model then finds 7.2 of them on average and labels 28% of the speech wrongly, and the standard deviation over trials is 3 to 5 points.
+- Streaming at 1.04 s adds 0 to 6 points of error to the whole recording.
+- The model is fast. A 175 s mix takes 0.12 s with the whole recording and 1.9 s streaming, so labeling the mix of each reader at every tick costs little next to Whisper.
+
+What this means for the design.
+
+- The `estimated` level can use the model as it is. A room of 9 voices over 3 minutes then gives agents labels with an error of about 30%, most of it voices that were merged, and a short meeting with 5 to 7 voices gives about 10% to 15%. The injected-error condition can sweep this range.
+- The labels are arrival-order indices from 0 to 7, not names. The roll call binds a label to a name, and a listener who hears 9 voices has to cope with 8 labels.
+- The numbers come from one synthetic voice set, 10 trials per cell and a reference taken from clip energy, so they say how this stack behaves and say little about human speech. The next steps are labeling in a live game tick by tick and relating the diarization error rate of each reader to the outcome of the game (P5).
+
 ### Model eligibility
 
 Florida Statute [288.860](https://www.flsenate.gov/Laws/Statutes/2025/288.860) defines the foreign countries of concern as the People's Republic of China, the Russian Federation, Iran, North Korea, Cuba, the Maduro regime in Venezuela and Syria, with the entities they control. The byzantine-agents README records that UF Research Computing's acceptable-use policy (new user training, Module 4) bars large language models from organizations in those countries on any UF computing resource, and that fine-tuning does not make them acceptable. Qwen comes from Alibaba in China, so it falls under that policy.
@@ -498,7 +546,7 @@ Excluded after the audit.
 - `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, the native-ear candidate. The card says it was improved using Qwen3-VL-30B-A3B-Instruct, Qwen3.5-122B-A10B, Qwen3.5-397B-A17B, Qwen2.5-VL-72B-Instruct and gpt-oss-120b. Its architecture section names the excluded Nemotron 3 Nano 30B-A3B as the language backbone. The training data table lists Qwen models as annotators for most of its public datasets, and also DeepSeek OCR, GLM-4.1V-9B-Thinking and Kimi-K2.5 for a few. Navigator does not list it. The license is the NVIDIA Open Model Agreement.
 - `medgemma-27b-it`, which is tuned for medicine and not used in the game.
 
-The audio stack passed. Whisper large-v3 (OpenAI) and Kokoro (built on StyleTTS 2) have no Chinese-origin base, and the audio environment has no packages from the Qwen or DeepSeek ecosystems. `nvidia/Nemotron-3-Diarization` is an NVIDIA model, but it trains on Mandarin meeting corpora (AISHELL-4 and AliMeeting), which its pending approval should consider.
+The audio stack passed. Whisper large-v3 (OpenAI) and Kokoro (built on StyleTTS 2) have no Chinese-origin base, and the audio environment has no packages from the Qwen or DeepSeek ecosystems. `nvidia/Nemotron-3-Diarization` is an NVIDIA model, but it trains on Mandarin meeting corpora (AISHELL-4 and AliMeeting), and Research Computing approved it on 2026-11-12 (request 85601) after finding no Chinese models involved.
 
 The 8B models fit one L4 or part of an RTX PRO 6000. The 70B and 120B models need 2 or more GPUs, as the byzantine-agents notes describe.
 The reasoning models (gpt-oss and Magistral) spend part of `max_tokens` on thinking, so their limit needs its own check in P1.
@@ -510,6 +558,7 @@ The reasoning models (gpt-oss and Magistral) spend part of `max_tokens` on think
 | P0 | Does the room behave correctly | Done. 46 tests with a scripted adapter and no GPU. Three deliberately injected bugs (always-ready agents, a shuffle that depends on the tick, a barge-in that does not cut) each made a test fail | 0 |
 | P1 | What does a game cost and does it read well | 1 GPU, 1 small model, 5 games per protocol. Measure minutes per game and parse failures, check that `interleaved` is legible, tune defaults. Run one game with each agent on its own GPU to confirm the barrier works across processes | about 25 |
 | P1b | Does the audio stack work | Done once on 1 RTX PRO 6000 with Kokoro and Whisper large-v3, see Measured audio stack. Still to do. Map word recall against overlap share with wider onsets, cap Whisper's generation length, and test a speech separation model once it is approved | 0 |
+| P1c | Does model-based diarization work on room mixes | Done once on 1 RTX PRO 6000 with Kokoro mixes and Nemotron 3 Diarization, see Measured diarization. Scores its labels against the true segments by number of speakers, overlap and meeting length. Still to do. Label a live game tick by tick, and relate the error of each reader to the outcome | 0 |
 | P2 | How much does the protocol matter | 3 models (small, medium, large), homogeneous. Sequential, timed `clean`, `interleaved` and `noisy` at budgets 60, 180 and 300 s, and no discussion. 11 cells per model, 50 games per cell | 1,650 |
 | P3 | How does each model perform | Each of the 9 eligible models as crew against a fixed reference model as impostors, then swapped, under sequential, timed `clean` and timed `interleaved`. 50 games per cell | 2,700 |
 | P4 | Which knobs matter | `tick_s` 5, 10, 20. Impostors 1, 2, 3. `dropout` 0, 0.1, 0.3. 9 cells per model, 50 games per cell, on 1 or 2 models | 450 per model |
@@ -699,7 +748,7 @@ Open design questions.
 ## Open questions
 
 - Wall-clock scenario, to measure what inference latency costs a model. Adapters would hear continuously and post when ready.
-- Approval for models that are not on Navigator. `nvidia/Nemotron-3-Diarization` for model-based diarization, a speech separation model for the mix ear, and an eligible audio-capable model for the native ear, for which none is known yet.
+- Approval for models that are not on Navigator. A speech separation model for the mix ear, and an eligible audio-capable model for the native ear, for which none is known yet. The diarization model is approved.
 - Human seat in timed mode. The current human input path uses a 30 s timeout per message.
 - Default for `quiet_close_ticks`, to be set from the P1 pilot.
 - The movement phase is still sequential. Making it simultaneous is a separate change.
