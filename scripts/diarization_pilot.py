@@ -8,8 +8,9 @@ Measurements:
     overlap: k speakers start within a window of w seconds, for several k and w. Shows how the error grows with the
         number of speakers and with the share of speech that overlaps. The model labels at most 8 speakers, and a
         listener in a 10 agent room hears 9 voices.
-    meeting: 9 speakers, 3 statements each, spread over a meeting of 60 s or 180 s. Shows whether labels stay
-        attached to the same voice over a whole discussion.
+    meeting: 5, 7 or 9 speakers with 3 statements each, spread over a meeting of 60 s or 180 s. Shows whether labels
+        stay attached to the same voice over a whole discussion, and whether the limit of 8 speakers or the
+        similarity of the voices is the cause when speakers are lost.
 
 Each mix is scored with the model seeing the whole recording and with streaming input at one latency.
 
@@ -98,19 +99,21 @@ def overlap_trial(
 def meeting_trial(
     synthesizer: Synthesizer,
     voices: dict[str, str],
+    speakers: int,
     length_s: float,
     statements: int,
     rng: random.Random,
     diarizer: Diarizer,
     modes: list[str | None],
 ) -> tuple[dict, np.ndarray]:
-    """Builds a meeting of 9 speakers with several statements each and scores the mix a listener hears.
+    """Builds a meeting with several statements per speaker and scores the mix a listener hears.
 
     A speaker never talks over itself, as in the room.
 
     Args:
         synthesizer: Kokoro.
         voices: A voice for each agent name.
+        speakers: Number of speakers the listener hears, at most 9 because the listener is one of the 10 agents.
         length_s: Statements start inside this many seconds.
         statements: Statements per speaker.
         rng: Random source.
@@ -122,7 +125,7 @@ def meeting_trial(
     """
     listener = rng.choice(NAMES)
     clips = []
-    for name in (n for n in NAMES if n != listener):
+    for name in rng.sample([n for n in NAMES if n != listener], speakers):
         previous_end = 0.0
         for start in sorted(rng.uniform(0.0, length_s - 8.0) for _ in range(statements)):
             samples = synthesizer.synthesize(utterance(name, rng), voices[name], speed=TTS_SPEED)
@@ -132,7 +135,7 @@ def meeting_trial(
     until_s = max(c.end_s for c in clips)
     mix = mix_for_reader(clips, reader=listener, until_s=until_s)
     row = {
-        "kind": "meeting", "speakers": len(NAMES) - 1, "window_s": length_s, "mix_s": round(until_s, 1),
+        "kind": "meeting", "speakers": speakers, "window_s": length_s, "mix_s": round(until_s, 1),
         "overlap_fraction": round(overlap_fraction(clips), 3), "scores": score(mix, clips, diarizer, modes),
     }
     return row, mix
@@ -177,6 +180,7 @@ def main() -> None:
     parser.add_argument("--windows", default="2,6,12", help="onset windows in seconds for the overlap trials")
     parser.add_argument("--reps", type=int, default=10, help="trials per overlap cell")
     parser.add_argument("--meeting-lengths", default="60,180")
+    parser.add_argument("--meeting-speakers", default="5,7,9", help="speakers heard in a meeting")
     parser.add_argument("--meeting-reps", type=int, default=10)
     parser.add_argument("--statements", type=int, default=3, help="statements per speaker in a meeting")
     parser.add_argument("--streaming-mode", default="low_latency", help="streaming mode beside the offline run, or none")
@@ -206,16 +210,17 @@ def main() -> None:
                 {m: round(statistics.mean(r["scores"][m]["der"] for r in cell), 3) for m in cell[0]["scores"]},
             )
     for length_s in [float(x) for x in args.meeting_lengths.split(",")]:
-        for rep in range(args.meeting_reps):
-            row, mix = meeting_trial(synthesizer, voices, length_s, args.statements, rng, diarizer, modes)
-            rows.append(row)
-            if args.wav_dir is not None and rep == 0:
-                write_wav(args.wav_dir / f"meeting_{length_s:g}s.wav", mix)
-        cell = [r for r in rows if r["kind"] == "meeting" and r["window_s"] == length_s]
-        logger.info(
-            "meeting {:g}s overlap={:.2f} {}", length_s, statistics.mean(r["overlap_fraction"] for r in cell),
-            {m: round(statistics.mean(r["scores"][m]["der"] for r in cell), 3) for m in cell[0]["scores"]},
-        )
+        for speakers in [int(x) for x in args.meeting_speakers.split(",")]:
+            for rep in range(args.meeting_reps):
+                row, mix = meeting_trial(synthesizer, voices, speakers, length_s, args.statements, rng, diarizer, modes)
+                rows.append(row)
+                if args.wav_dir is not None and rep == 0:
+                    write_wav(args.wav_dir / f"meeting_{length_s:g}s_k{speakers}.wav", mix)
+            cell = [r for r in rows if r["kind"] == "meeting" and r["window_s"] == length_s and r["speakers"] == speakers]
+            logger.info(
+                "meeting {:g}s k={} overlap={:.2f} {}", length_s, speakers, statistics.mean(r["overlap_fraction"] for r in cell),
+                {m: round(statistics.mean(r["scores"][m]["der"] for r in cell), 3) for m in cell[0]["scores"]},
+            )
 
     report = {
         "seed": args.seed, "tts_speed": TTS_SPEED, "modes": [m or "offline" for m in modes],
