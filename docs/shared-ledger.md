@@ -43,23 +43,47 @@ The reader-side design leaves how agents speak unchanged. The writer-side design
 
 ## Other designs for shared agent state
 
-The descriptions come from the abstracts read on 2026-11-12, except S-Bus, whose full text was read.
+The descriptions come from the full text of S-Bus, PatchBoard, CoAgent and MAP-Graph and from the abstracts of the others, all read on 2026-11-12. Only S-Bus states a code release. PatchBoard, MAP-Graph and CoAgent ran their main results on Qwen or DeepSeek models, which the model rule of this project excludes, so a comparison has to reimplement their ideas on eligible models.
 
 | Work | Shared structure and mechanism | Fit for the room |
 |------|--------------------------------|------------------|
 | AgileLog (Bhat et al., SOSP 2026, arXiv 2604.14590) | A forkable shared log. An agent works on a fork that is isolated from the live log in logic and in performance | Forks give the rewind of a meeting and a way to run several protocols from one meeting start |
-| PatchBoard (Zhang et al., arXiv 2605.29313) | A shared JSON state that agents change through schema-checked patches in place of dialogue, with a kernel that checks role-specific write contracts. It reports 84.6% success on ALFWorld against 30.8% for LangGraph | It replaces speech with state writes, so it fits as a condition with no talk and leaves out what the room studies |
-| CoAgent (Lyu et al., arXiv 2606.15376) | Concurrency control for agents that write one git tree, cluster or document. It fixes a serialization order, applies writes speculatively and undoes misplaced ones | A meeting has no write conflicts, because claims append and votes are independent. The server settles world actions such as doors and tasks |
+| PatchBoard (Zhang et al., arXiv 2605.29313) | A shared JSON state tree that workers change through JSON Patch operations, which a sequential kernel accepts only if they pass syntax, role-specific write grants, schema validity and invariants. Each worker reads a bounded view, and a rejection returns to that worker. It reports 84.6% success on 630 ALFWorld episodes against 30.8% for LangGraph. Its fault tests observed no contamination from unauthorized writes or bad paths, and false claims that satisfy the schema remain possible, with 0.43 contamination | Close on audit, role views and checks. It replaces dialogue with state writes, claims have one status field that only a verifier writes, and beliefs and votes are not described, so it fits as a condition with no talk |
+| CoAgent (Lyu et al., arXiv 2606.15376) | Concurrency control for peer agents that write files, rows or cluster objects through tools with declared footprints. A serialization order is fixed at launch, each read returns the value as of the reader's rank, writes apply in place, a misordered write is undone and reapplied, and a lower-ranked write notifies the readers it affects. It reports 95% correct against 13% with no control on 10 cells of 2 agents | A meeting has no write conflicts, because claims append and votes are independent, and a reader would not see claims of higher-ranked agents. It assumes cooperative agents. The server settles world actions such as doors and tasks |
 | S-Bus (Khan, arXiv 2605.17076) | Keyed shards of opaque text. The server logs each read over HTTP, and a commit that rests on a stale read of another shard is rejected | Ruled out as the shared structure of the room, see the next section |
 | CodeCRDT (Pugachev, arXiv 2510.18893) | CRDTs for concurrent code generation with eventual consistency | A set of appended claims already converges, and the game needs a fixed order of events, which eventual consistency does not give |
 | STORM (Liu et al., arXiv 2605.20563) | A consistent view of a shared codebase, with conflicting edits detected when they are written | The same fit as CoAgent |
-| MAP-Graph (Wang et al., arXiv 2608.10509) | A typed graph of agents, sources, memories, claims and actions, with provenance, permission filtering and retrieval weighted by the trust of the path. It has no concurrency control | Closest to typed records with views, and a reference for ranking claims by the trust of their source |
+| MAP-Graph (Wang et al., arXiv 2608.10509) | A provenance graph of agents, tools, resources, messages, memories, claims and actions, kept for one task beside a vector store. A permission filter decides what each role may read, retrieval is ranked by similarity times a trust that follows the derivation path, and an action gate can block, redact or reverify an action. It reports 94.96% task success against 74.67% for the best baseline on 2,700 templated tasks | The closest on typed records, per-reader filtering and provenance. Trust comes from source labels and writer reliability constants, claims are extracted by text rules, writers are sequential, and it has no contradiction handling or replay |
 
 Eugene Wu's group (DAPLab, Columbia) is the other place to look. I read its publication page, his homepage and the arXiv abstracts on 2026-11-12.
 
 - I found no paper of the group that proposes a shared data structure for several agents with consistency levels. Its published pieces are about the environment of one agent. Agentic Data Environments (arXiv 2607.07397) names branching for state safety and data flow control for data safety, BranchBench (arXiv 2604.17180) benchmarks branchable databases, and StateFork (arXiv 2609.38648, title only) builds branchable infrastructure. Data flow control (arXiv 2606.05679) enforces policies over how data flows through queries, and Environment Steering (arXiv 2609.35807) models the execution state of an agent as tables and steers the agent when a policy is violated.
 - Multi-agent coordination appears as a benchmark, Passes Alone, Fails Together (arXiv 2609.25396, title and venue only), and as a topic of a course announced for spring 2027, Data Systems with and for Agents.
 - Two parts transfer to the room. Branching gives paired runs from one meeting start, and data flow policies give a way to state what an agent may read.
+
+## Where this work sits
+
+The table compares what each design states, from the papers above. A dash means the paper does not state it.
+
+| Design | Shared state | Typed claims | View of each reader | Why a write happened | Checks on writes | Concurrency | Liars |
+|--------|--------------|--------------|---------------------|----------------------|------------------|-------------|-------|
+| S-Bus | Keyed text shards | - | - (a write token) | - (read versions) | A stale read of another shard | Optimistic, per shard | Out of scope |
+| CoAgent | Objects behind tools | - | By serialization rank | - | None, undo and notify | Fixed order with undo | Out of scope |
+| PatchBoard | JSON state tree | Claim list, one verifier status | By role and budget | Worker, trigger, view hash | Syntax, grants, schema, invariants | One sequential kernel | Faults injected, schema-valid falsehoods pass |
+| MAP-Graph | Provenance graph | Claims extracted by rules | By permission, then ranked by trust | Derivation edges | Action gate on trust | - | Poisoned sources in the benchmark |
+| AgileLog | Forkable log | - | A fork | - | - | Linearizable log | - |
+| This work | Typed append-only records | Claims, beliefs, votes with citations | Per reader, from the map | Citations to records the writer could read | Reader-side status, later honest-only | Tick barrier | Impostors that lie by design |
+
+Four points set this work apart.
+
+- The adversary is part of the game. The neighbours assume cooperative agents or script the faults in a benchmark, and the room has agents whose job is to lie, with the engine as a source of verified facts. A claim is judged against what the reader itself observed, in place of a trust constant attached to its source.
+- The view of a reader comes from the world. Who may read a record is computed from the map, and what a reader heard is rendered from overlapping speech, so two readers get two views of one statement. Permission filters in the neighbours rest on roles and scopes.
+- The read set is exact. The percept is the result of a query, and the room logs it, so which records an agent used is known. S-Bus shows what is lost without that, since 74% of the reads it measures go through conversation history.
+- The tick is a barrier, so every reader sees one snapshot and no concurrency control is needed. CoAgent and S-Bus address agents that overwrite shared state, which the room does not do.
+
+Four parts are not new, and the plan uses them in place of claiming them. An append-only log with a sequencer is the shared log of AgileLog and of consensus systems. Validating the premises of a write is S-Bus and CoAgent. A kernel that checks writes against a schema is PatchBoard. A provenance graph with permission filtering and trust is MAP-Graph. The claim is limited to the combination for conversations among agents that include liars, and it is a claim to test. Nothing here shows yet that a board helps agents vote, and P6 is the test.
+
+The 3 closest designs also make comparison conditions. The ideas can be reimplemented in the room on eligible models. A state board with schema-checked writes and no speech follows PatchBoard, a board that ranks claims by the trust of their source follows MAP-Graph, and optimistic validation of world actions follows S-Bus and CoAgent if the Godot server ever needs it.
 
 ## S-Bus
 

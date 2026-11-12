@@ -32,14 +32,14 @@ Despite their impressive capabilities, LLMs struggle to effectively utilize text
 
 ## Getting started
 
-The `situation-room` and `godot-world` branches have the same code, and `godot-world` adds the plan and the tile map of the Godot world. This section goes from a test on your laptop to the experiment runs on HiPerGator. The web UI in [Usage](#usage) plays a game in a browser.
+The situation room and the Godot world are on one branch, `godot-world`. The earlier branch `situation-room` was merged into it. This section goes from a test on your laptop to the experiment runs on HiPerGator. The web UI in [Usage](#usage) plays a game in a browser.
 
 ### Set up and test
 
 ```bash
 git clone https://github.com/ufdatastudio/agents-among-us.git
 cd agents-among-us
-git checkout situation-room
+git checkout godot-world
 uv sync --extra api
 APP_MODE=navigator uv run --extra api --with pytest python -m pytest tests agents -q
 ```
@@ -109,7 +109,7 @@ uv run --no-project --with huggingface_hub hf download ibm-granite/granite-3.3-8
 
 # For each run, start from a fresh checkout so that later edits do not change games that are still to start.
 git fetch origin
-git worktree add --detach .worktrees/run1 origin/situation-room
+git worktree add --detach .worktrees/run1 origin/godot-world
 cd .worktrees/run1
 uv run --extra api python -c pass
 uv run --no-project python -m config.eligible_models granite-3.3-8b-instruct

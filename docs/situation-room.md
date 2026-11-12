@@ -1,7 +1,7 @@
 # Situation Room
 
 Design for timed, simultaneous discussion in Agents Among Us, plus the experiments that use it.
-Status is design, three HiPerGator pilots (vLLM concurrency, the audio stack and diarization), and a text-only integration. Phases 0 and 1a are done. The room, the three text renderers, the tick loop, the vote tick, an in-process transport and a scripted adapter exist and are tested with no GPU, as do `core/audio/` and the benchmark scripts. The engine runs a full game in `timed` mode with the existing honest and Byzantine agents, through an adapter, against any OpenAI-compatible server, and a smoke test ran 2 rounds of 10 agents through `main.py` against a fake server. P2 has played 660 games against models served on HiPerGator (Granite 3.3 8B, gpt-oss-120b and Gemma 4 31B), and the `File` transport is still to do. Work happens on the `situation-room` branch.
+Status is design, three HiPerGator pilots (vLLM concurrency, the audio stack and diarization), and a text-only integration. Phases 0 and 1a are done. The room, the three text renderers, the tick loop, the vote tick, an in-process transport and a scripted adapter exist and are tested with no GPU, as do `core/audio/` and the benchmark scripts. The engine runs a full game in `timed` mode with the existing honest and Byzantine agents, through an adapter, against any OpenAI-compatible server, and a smoke test ran 2 rounds of 10 agents through `main.py` against a fake server. P2 has played 660 games against models served on HiPerGator (Granite 3.3 8B, gpt-oss-120b and Gemma 4 31B), and the `File` transport is still to do. Work happens on the `godot-world` branch, which includes the earlier `situation-room` branch.
 
 ## Goal
 

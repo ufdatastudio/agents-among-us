@@ -1,6 +1,6 @@
 # A Godot world for Agents Among Us
 
-This is a plan. The only code so far is the tile map of the first world and its picture, see The first map. The work started on the branch `godot-world`, which was built on `situation-room` because the world reuses the situation room, the agent adapters, the audio stack and the transcript analysis of that branch, and the two have been merged.
+This is a plan. The only code so far is the tile map of the first world and its picture, see The first map. The work is on the branch `godot-world`, which includes the earlier `situation-room` branch because the world reuses the situation room, the agent adapters, the audio stack and the transcript analysis of that branch.
 
 ## Goal
 
