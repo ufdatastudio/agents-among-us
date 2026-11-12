@@ -619,6 +619,19 @@ Figure 6. Accuracy of the honest votes that were cast, and the meetings rewound 
 - gpt-oss shows no cost. It wins 3 of 20 games with no discussion (15%, 5% to 36%), 6 of 20 in turns (30%, 15% to 52%) and 64 of 180 in timed rooms (36%), which points the other way, and p = 0.45 for no discussion against turns and p = 0.081 against timed rooms. No setting beats another for gpt-oss in these data.
 - Honest vote accuracy is 32% to 59% for Granite, 35% to 45% for gpt-oss and 39% to 69% for Gemma. Granite and Gemma vote more accurately with no discussion (59% on 246 votes and 69% on 240 votes) than with it (Granite 32% in turns and 38% in timed rooms, Gemma 50% and 39%), and each of these values is above the 22% to 30% of a random pick.
 - A game takes 2.4 to 4.3 minutes for Granite, 3.1 to 5.1 for gpt-oss and 18.8 to 26.5 for Gemma, whose reasoning share is 97% when there is no discussion and 29% in the timed room.
+- The budget of the timed room sets the cost and leaves the outcome unchanged. The table pools the clean, interleaved and noisy renderings, 60 games in each row. Within a model the win rates differ by at most 7 points across budgets and the intervals are 21 to 24 points wide. A meeting of 180 s needs 1.8 to 1.9 times the model calls of 60 s, and 300 s needs 1.3 to 1.5 times the calls of 180 s. The default stays at 180 s. The budget of 60 s is the cheaper setting for sweeps of other factors, and 300 s adds cost with no gain in these data.
+
+| Model | Budget | Honest wins | Honest vote accuracy | Minutes per game | Model calls per game |
+|-------|--------|-------------|----------------------|------------------|----------------------|
+| Gemma 4 31B | 60 s | 20 (33%) | 37% | 15.8 | 132 |
+| Gemma 4 31B | 180 s | 24 (40%) | 38% | 23.6 | 248 |
+| Gemma 4 31B | 300 s | 23 (38%) | 41% | 27.5 | 333 |
+| Granite 3.3 8B | 60 s | 16 (27%) | 39% | 2.6 | 152 |
+| Granite 3.3 8B | 180 s | 14 (23%) | 37% | 3.7 | 285 |
+| Granite 3.3 8B | 300 s | 15 (25%) | 37% | 4.7 | 411 |
+| gpt-oss-120b | 60 s | 21 (35%) | 45% | 3.5 | 146 |
+| gpt-oss-120b | 180 s | 23 (38%) | 45% | 5.0 | 255 |
+| gpt-oss-120b | 300 s | 20 (33%) | 42% | 6.9 | 381 |
 
 ### What agents say and believe
 
@@ -747,6 +760,7 @@ Open design questions.
 
 ## Open questions
 
+- Shared state. Whether a typed ledger, in place of per-agent text logs and rendered transcripts, helps agents inside and outside a meeting, with a comparison to run, is in [shared-ledger.md](shared-ledger.md).
 - Wall-clock scenario, to measure what inference latency costs a model. Adapters would hear continuously and post when ready.
 - Approval for models that are not on Navigator. A speech separation model for the mix ear, and an eligible audio-capable model for the native ear, for which none is known yet. The diarization model is approved.
 - Human seat in timed mode. The current human input path uses a 30 s timeout per message.

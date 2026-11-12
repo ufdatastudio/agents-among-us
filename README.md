@@ -60,7 +60,7 @@ APP_MODE=api LLM_MODE=LOCAL uv run --extra api python -m main --composition_name
   --num_rounds 2 --seed 1 --room_seed 1 --discussion_mode timed --room_overlap interleaved --room_budget_s 60
 ```
 
-`APP_MODE=api` reads no `.env` file, so the key comes from your shell. The game prints `Game Over. Result: ...` and writes its folder to `logs/quickstart/Game_quick1_Run0/`. That game took about a minute and used about 400,000 input tokens.
+`APP_MODE=api` reads no `.env` file, so the key comes from your shell. The game prints `Game Over. Result: ...` and writes its folder to `logs/quickstart/Game_quick1_Run0/`. That game took about a minute and used about 400,000 input tokens, and Navigator bills by the token, so use the local server below for repeated runs.
 
 | File | Content |
 |------|---------|
