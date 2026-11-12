@@ -48,6 +48,7 @@ def main():
     parser.add_argument("--room_max_words", type=int, default=40, help="Words kept from one statement in the room")
     parser.add_argument("--room_overlap", choices=("clean", "interleaved", "noisy"), default="clean", help="How overlapping speech is shown to the listener")
     parser.add_argument("--room_seed", type=int, default=0, help="Seed for onsets, shuffles and dropout in the room")
+    parser.add_argument("--room_board", action="store_true", help="End each percept with the board of the meeting, the claims set against what the reader saw")
     parser.add_argument("--seed", type=int, default=None, help="Scenario seed. Games with one seed start every agent in the same room")
     parser.add_argument("--room_dropout", type=float, default=0.0, help="Fraction of words a listener misses in noisy mode")
     parser.add_argument("--room_tag_policy", choices=("every_chunk", "first_chunk"), default="every_chunk", help="Speaker tags in noisy mode")
@@ -113,6 +114,7 @@ def main():
         overlap=args.room_overlap,
         dropout=args.room_dropout,
         tag_policy=args.room_tag_policy,
+        board=args.room_board,
         seed=args.room_seed,
     )
 

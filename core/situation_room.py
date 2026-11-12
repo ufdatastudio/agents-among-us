@@ -14,6 +14,9 @@ import re
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
+from core.board import record_statement, render_board, retract
+from core.ledger import Ledger, Record
+
 SILENT = "<silent/>"
 INAUDIBLE = "[inaudible]"
 OVERLAP_MODES = ("clean", "interleaved", "noisy")
@@ -40,6 +43,7 @@ class RoomConfig:
         dropout: Fraction of words replaced by INAUDIBLE in noisy mode.
         tag_policy: Speaker tags on every chunk or only a speaker's first, in noisy mode.
         barge_in: Whether an agent that is mid-utterance may speak again at a tick.
+        board: Whether each percept ends with the board of the meeting, which needs a ledger.
         seed: Seed for onsets, shuffles and dropout.
     """
 
@@ -54,6 +58,7 @@ class RoomConfig:
     dropout: float = 0.0
     tag_policy: str = "every_chunk"
     barge_in: bool = False
+    board: bool = False
     seed: int = 0
 
     def __post_init__(self) -> None:
@@ -316,14 +321,24 @@ class Lane:
 class Room:
     """The record of one discussion and the renderings of it for each reader."""
 
-    def __init__(self, agents: list[str], config: RoomConfig) -> None:
+    def __init__(self, agents: list[str], config: RoomConfig, ledger: Ledger | None = None, round_num: int = 0) -> None:
         """Creates an empty room.
 
         Args:
             agents: Names of the agents in the room, in a fixed order.
             config: Settings of the discussion.
+            ledger: Ledger of the game. Each statement then writes its claims to it, and the board reads it.
+            round_num: Round of the game in which the meeting happens.
+
+        Raises:
+            ValueError: If the board is on and there is no ledger.
         """
+        if config.board and ledger is None:
+            raise ValueError("the board needs a ledger")
         self.config = config
+        self.ledger = ledger
+        self.round_num = round_num
+        self._claims: dict[tuple[str, float], list[Record]] = {}
         self.agents = list(agents)
         self.lanes = {name: Lane(name) for name in agents}
         self.closed_at: float | None = None
@@ -380,7 +395,7 @@ class Room:
         if start_s < lane.free_at - _EPSILON:
             if not self.config.barge_in:
                 raise ValueError(f"{author} is still speaking at {start_s:.2f} s and barge_in is off")
-            lane.utterances[-1] = lane.utterances[-1].cut(start_s)
+            self._replace(lane, lane.utterances[-1].cut(start_s))
         pace = (duration_s / len(words)) if duration_s else 1.0 / self.config.words_per_s
         utterance = Utterance(
             author=author,
@@ -393,7 +408,23 @@ class Room:
             addressed_to=addressed_to,
         )
         lane.utterances.append(utterance)
+        self._write_claims(utterance)
         return utterance
+
+    def _write_claims(self, utterance: Utterance) -> None:
+        """Writes the claims of an utterance to the ledger, if there is one."""
+        if self.ledger is not None and utterance.words:
+            self._claims[(utterance.author, utterance.start_s)] = record_statement(
+                self.ledger, utterance.author, utterance.text, utterance.end_s, self.agents, self.round_num
+            )
+
+    def _replace(self, lane: "Lane", shorter: Utterance) -> None:
+        """Puts a cut utterance in place of the last one of a lane, and corrects its claims in the ledger."""
+        old = lane.utterances[-1]
+        lane.utterances[-1] = shorter
+        if self.ledger is not None and shorter is not old:
+            retract(self.ledger, self._claims.pop((old.author, old.start_s), []), self.agents)
+            self._write_claims(shorter)
 
     def close(self, at_s: float) -> None:
         """Ends the discussion, cutting every utterance still in progress.
@@ -403,7 +434,7 @@ class Room:
         """
         for lane in self.lanes.values():
             if lane.utterances:
-                lane.utterances[-1] = lane.utterances[-1].cut(at_s)
+                self._replace(lane, lane.utterances[-1].cut(at_s))
         self.closed_at = at_s
 
     def percept(self, reader: str, t: float, tick: int) -> Percept:
@@ -418,6 +449,9 @@ class Room:
             The percept for the reader.
         """
         text = render(self, reader, t)
+        if self.config.board:
+            # With nothing claimed yet the percept stays empty, so a prompt still says that nobody has spoken.
+            text = "\n\n".join(part for part in (text, render_board(self.ledger, reader, t, self.round_num)) if part)
         self.percept_log.append({"reader": reader, "tick": tick, "t": t, "text": text})
         return Percept(reader=reader, tick=tick, t=t, cursor=t, modality="text", text=text)
 

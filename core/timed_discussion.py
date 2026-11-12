@@ -7,6 +7,7 @@ from functools import partial
 from loguru import logger
 
 from core.adapters.base import AgentAdapter
+from core.ledger import Ledger
 from core.situation_room import Meeting, Percept, Reply, Room, RoomConfig, Tick, Vote
 from core.transport import InProcessTransport
 from core.voting import SKIP
@@ -39,6 +40,7 @@ def run_timed_discussion(
     config: RoomConfig,
     transport: InProcessTransport | None = None,
     reply_timeout_s: float | None = None,
+    ledger: Ledger | None = None,
 ) -> Room:
     """Runs a discussion in which every agent speaks during the same timed window.
 
@@ -54,13 +56,14 @@ def run_timed_discussion(
         config: Settings of the discussion.
         transport: How to reach the adapters. Defaults to the in-process transport.
         reply_timeout_s: Time to wait for the replies of one tick, or None to wait for ever.
+        ledger: Ledger of the game, to which the room writes claims and from which the board reads.
 
     Returns:
         The room, closed, with every utterance committed.
     """
     transport = transport or InProcessTransport()
     names = [a.name for a in adapters]
-    room = Room(names, config)
+    room = Room(names, config, ledger, meeting.round_num)
     for adapter in adapters:
         adapter.begin_meeting(meeting)
 

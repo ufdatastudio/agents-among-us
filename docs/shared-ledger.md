@@ -1,6 +1,6 @@
 # Shared ledger for the room and the world
 
-Status is design only, and no code exists. The ledger idea comes from the group's work on crews of agents that operate a shared database. That work is in a private repository and a manuscript under review, so this page describes the ledger in general terms and cites only public work. The questions are whether the room and the Godot world should keep their state in one ledger, what that changes for agents inside and outside a meeting, and how to measure it.
+Status is a design with condition B built. The records, the board and the room wiring exist and are tested, and the comparison runs have not been played. The ledger idea comes from the group's work on crews of agents that operate a shared database. That work is in a private repository and a manuscript under review, so this page describes the ledger in general terms and cites only public work. The questions are whether the room and the Godot world should keep their state in one ledger, what that changes for agents inside and outside a meeting, and how to measure it.
 
 ## How state is kept today
 
@@ -109,7 +109,7 @@ If the world server later lets agents write mutable state that other agents chan
 All conditions use the same 20 scenario seeds, interleaved overlap and a budget of 180 s, which the budget table in `docs/situation-room.md` supports, and P2 already has the baseline row of each model.
 
 - T. The transcript rendering of today, already measured.
-- B. Board, reader side. Utterances and engine facts are ledger records, and the percept of a reader is a query that groups the statements by subject, each with its status against the reader's facts.
+- B. Board, reader side. Utterances and engine facts are ledger records, and the percept of a reader is the interleaved transcript followed by a query that groups the claims by subject, each next to what the reader saw. The transcript stays, so the overlap of speech is the same as in T and the board is the only difference.
 - W. The board with writer-side checks for honest agents.
 - F. A fork of the ledger at the first meeting, so that T, B and W start from one state and differ from the meeting onward.
 
@@ -117,16 +117,33 @@ The measures are honest vote accuracy against the 22% to 30% of a random pick, h
 
 A condition of 20 games took about 80 minutes of one RTX PRO 6000 for Gemma 4 31B in P2, 12 minutes for Granite 3.3 8B and 17 minutes for gpt-oss-120b, from the minutes per game at 6 games at a time. B and W on the 3 models then cost about 4 GPU-hours plus the server starts. Prompts will change size, so the first games need a look. The runs use vLLM on HiPerGator and the code is tested with the scripted adapter, with no calls to Navigator.
 
+## Condition B as built
+
+The code is `core/ledger.py` (records, readers, append, view, JSON lines), `core/board.py` (facts, claims, the board query) and `core/claims.py` (the rules that read claims, accusations and observation logs, moved out of the analysis script so that the room and the analysis use one copy).
+
+- The engine writes one fact for each observation an agent logs, with the room, the agents beside it and the agents in the adjacent rooms, and only that agent may read it.
+- The room writes the claims and accusations of a statement when the statement is committed, readable by everyone in the meeting. A statement is on the board from the time its last word is spoken, so a listener never sees the board ahead of the transcript. A statement that is cut off when the room closes is corrected by a note that cites its claims, and the ledger keeps both.
+- The board lists at most 10 agents with 6 lines each. Each claim line says who made it, and then what the reader saw of the agent in that room: saw them there (with the round and tick, and whether it was next door), saw them only elsewhere, or did not see them. A claim about the reader is checked against where the reader was. Accusations and vouching are counted for each agent. The board says that not having seen something proves nothing, since a claim is true if it was true at any tick and a reader sees only part of the ship.
+- With nothing claimed yet the percept stays empty, so the first tick reads as in T.
+- `--room_board` turns the board on, the protocol `board-180` is `interleaved-180` with it, and a timed game writes `room/ledger.jsonl` in its folder. A game without the flag writes the ledger and leaves the prompts unchanged.
+- Claims come from the rules of the analysis script, so they are as noisy as the claim measures of P2. A sentence that lists rooms gives a claim for each.
+
+To play it on HiPerGator, with the model settings that the baseline row used:
+
+```bash
+TAG=p6-granite PROTOCOLS=board-180 GAMES_PER_CELL=20 sbatch scripts/hipergator/run_p2.sbatch granite-3.3-8b-instruct
+```
+
 ## Build order
 
-1. `core/ledger.py` with records, readers, append, view and a board query, tested with the scripted adapter. A minimal copy with field names that match the group's ledger keeps this repository self-contained and lets the traces load in the group's tools.
-2. The room writes utterances as claims, and a board renderer sits beside the three text renderers.
-3. The engine writes facts for positions and events, with the readers computed from the room each agent is in, and later from the tile map.
-4. Condition B on a small model with the scripted adapter, then P6 on HiPerGator.
+1. Done. `core/ledger.py`, a minimal ledger written for the room. Its field names differ from the group's ledger, so loading its traces there needs a small converter.
+2. Done. The room writes claims, and the board follows the transcript in the percept.
+3. Done for facts of positions. Events such as bodies and kills, and readers computed from the tile map, come later.
+4. Next. Play `board-180` on the 3 models against the P2 rows of `interleaved-180`, with paired seeds.
 5. Writer-side checks, then forks for paired runs, then the Godot server as the sequencer with spectators as readers.
 
 ## Open decisions
 
 - Whether B comes before W, or whether the two run together.
-- Whether the minimal ledger goes into this public repository now or stays in the private one until the paper is public.
+- Whether the minimal ledger stays in this public repository. It is written for the room and copies no code or text from the private repository.
 - Whether impostors may ever be constrained by checks.

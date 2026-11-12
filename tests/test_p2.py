@@ -43,7 +43,8 @@ def test_protocol_flags_select_the_mode_budget_and_noise():
 
 def test_an_unknown_protocol_is_an_error():
     assert protocol_by_name("clean-180").name == "clean-180"
-    with pytest.raises(KeyError, match="no P2 protocol"):
+    assert protocol_by_name("board-180").args[-1] == "--room_board"
+    with pytest.raises(KeyError, match="no protocol named"):
         protocol_by_name("clean-90")
 
 

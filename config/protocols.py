@@ -50,12 +50,18 @@ P2_PROTOCOLS = (
     NO_DISCUSSION,
 )
 
+# Protocols of the shared ledger comparison in docs/shared-ledger.md. `board-180` is the interleaved room of 180 s
+# whose percepts end with the board of the meeting, so it differs from `interleaved-180` only by the board.
+BOARD_180 = Protocol("board-180", (*timed("interleaved", 180).args, "--room_board"))
+P6_PROTOCOLS = (BOARD_180,)
+ALL_PROTOCOLS = (*P2_PROTOCOLS, *P6_PROTOCOLS)
+
 
 def protocol_by_name(name: str) -> Protocol:
-    """Finds a P2 protocol by its name.
+    """Finds a P2 or P6 protocol by its name.
 
     Args:
-        name: For example `sequential`, `clean-180` or `none`.
+        name: For example `sequential`, `clean-180`, `none` or `board-180`.
 
     Returns:
         The protocol.
@@ -63,7 +69,7 @@ def protocol_by_name(name: str) -> Protocol:
     Raises:
         KeyError: If no P2 protocol has the name.
     """
-    for protocol in P2_PROTOCOLS:
+    for protocol in ALL_PROTOCOLS:
         if protocol.name == name:
             return protocol
-    raise KeyError(f"no P2 protocol named {name!r}, choose from {[p.name for p in P2_PROTOCOLS]}")
+    raise KeyError(f"no protocol named {name!r}, choose from {[p.name for p in ALL_PROTOCOLS]}")

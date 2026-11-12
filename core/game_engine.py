@@ -1061,7 +1061,9 @@ class GameEngine:
             return view
 
         adapters = [GameAgentAdapter(a, names, config, view_for, room_dir, self.vote_retries) for a in active_agents]
-        room = run_timed_discussion(adapters, Meeting(round_num, reason, caller_name), config, self.room_transport)
+        room = run_timed_discussion(
+            adapters, Meeting(round_num, reason, caller_name), config, self.room_transport, ledger=self.state.ledger
+        )
         by_name = {a.name: a for a in active_agents}
         for utterance in room.utterances():
             if not utterance.words:
@@ -1078,6 +1080,7 @@ class GameEngine:
             )
             self.state.record_chat(agent.name, utterance.text)
         room.write_jsonl(room_dir / f"room_round{round_num}.jsonl")
+        self.state.ledger.write_jsonl(room_dir / "ledger.jsonl")
         self.state.save_json()
         log.info(
             "Room round {}: {} ticks, {} utterances, closed at {:.0f} s{}",

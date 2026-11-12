@@ -4,7 +4,10 @@ import os
 import random
 import threading
 from datetime import datetime
+from collections import defaultdict
 from config.settings import ROOMS, NUM_ROUNDS
+from core.board import record_observation
+from core.ledger import Ledger
 
 class GameState:
     def __init__(self, agents, log_manager, seed=None):
@@ -19,6 +22,9 @@ class GameState:
         """
         self.agents = agents
         self.logger = log_manager
+        # Every observation an agent logs is also a fact in the ledger that only that agent may read.
+        self.ledger = Ledger()
+        self._ticks = defaultdict(int)
         # The situation room lets agents generate in parallel, and each writes its thought and the live state.
         self._lock = threading.RLock()
         # AAU_LIVE_STATE gives each game of a parallel batch its own file.
@@ -171,6 +177,7 @@ class GameState:
     
         surroundings = {loc: {"occupants": occupants, "bodies": current_room_bodies}}
         adj_log_str = ""
+        adjacent_seen = {}
         if loc in ROOMS:
             for neighbor in ROOMS[loc]:
                 neighbor_data = self.world_data["rooms"][neighbor].copy()
@@ -178,6 +185,7 @@ class GameState:
                 surroundings[neighbor] = neighbor_data
                 occ = [p for p in self.world_data["rooms"][neighbor]["occupants"] if p != agent_name]
                 adj_log_str += f"\n    [{neighbor}] -> Occupants: {occ if occ else 'None'}"
+                adjacent_seen[neighbor] = occ
 
         teammate_str = ""
         if agent_data["role"] == "byzantine":
@@ -212,6 +220,11 @@ class GameState:
                 f"Bodies Seen: {bodies_log_str}\n"
             )
             self.logger.write_log("agent", agent_name, log_entry)
+            self._ticks[(agent_name, round_num)] += 1
+            record_observation(
+                self.ledger, agent_name, round_num, self._ticks[(agent_name, round_num)], loc,
+                [o for o in occupants if o != agent_name], adjacent_seen,
+            )
 
         # Agent View
         view = {

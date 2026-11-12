@@ -91,6 +91,19 @@ def test_a_timed_meeting_logs_the_room_and_collects_the_votes(tmp_path, monkeypa
     assert (base / "room" / "Agent_1_round1_heard.log").exists()
 
 
+def test_a_board_meeting_writes_its_claims_to_the_ledger_and_shows_the_board(tmp_path, monkeypatch):
+    config = RoomConfig(budget_s=60.0, tick_s=10.0, quiet_close_ticks=2, board=True)
+    engine = make_engine(tmp_path, monkeypatch, discussion_mode="timed", room_config=config)
+    engine.run_discussion_phase(1)
+    base = tmp_path / engine.logger.base_dir
+    claims = [r for r in engine.state.ledger.records if r.type == "claim"]
+    assert {r.author for r in claims} == {"Agent_0", "Agent_1", "Agent_2", "Agent_3"}
+    assert {r.subject for r in claims if r.content["kind"] == "accuse"} == {"Agent_0"}
+    written = [json.loads(line) for line in (base / "room" / "ledger.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert len(written) == len(engine.state.ledger)
+    assert "Board of this meeting" in (base / "room" / "Agent_1_round1_heard.log").read_text(encoding="utf-8")
+
+
 def test_a_human_seat_falls_back_to_turn_taking(tmp_path, monkeypatch):
     engine = make_engine(tmp_path, monkeypatch, discussion_mode="timed")
     assert engine._use_timed_discussion(engine.agents) is True
