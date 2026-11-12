@@ -116,6 +116,36 @@ The picture shows the map that `core/world_map.py` builds and `scripts/draw_worl
 
 To draw it again, run `uv run python -m scripts.draw_world_map --out docs/media/godot-world-map.png`.
 
+### Recorded games on the map
+
+![Round 1 of a recorded game on the map. Agents walk to their rooms, Agent_1 tags Agent_5 in Communications, and Agent_2 reports the body.](media/world-gemma-4-31b-it-interleaved-180-seed3.gif)
+
+`scripts/make_world_replay.py` plays a finished game of the Python engine on the tile map as a video, and `scripts/world_replay.py` plans the walks. Agents walk through doors and corridors to their rooms, a tag leaves a body, a report calls the agents in play to the Cafeteria, the statements of the meeting appear as they were spoken, and the votes and the ejection follow. The viewer sees the roles, which the agents never saw.
+
+The videos are animations of games that already ran, and no Godot simulation produced them. The engine logs the room of each agent at each tick and nothing in between. The replay draws the route from one room to the next, the spot of each agent inside a room and the seat at the table, and none of these came from the game. Every walk takes 1.6 s whatever its length.
+
+- Order. A tick follows `GameEngine.run_movement_phase`. Tags come first, and the tagger and the victim must be in the same room. A report comes next, and it ends the round and drops the moves of that tick, so the agents are where they stood when they chose. Moves come last.
+- Bodies. A body stays where the victim was tagged until a meeting ends, including a body from a round that had no meeting.
+- Meetings. The agents in play walk to fixed seats around the table. The statements come from `room/room_round<N>.jsonl` with the start and end times of the room, and meeting time plays 4 times faster than it happened (`--speed`). A protocol without a clock gets its statements one after another at 2.5 words a second.
+- Routes. A move that has no walk raises an error, so a game that renders had a walkable route for every move it made.
+
+| Video | Game | Rounds | Result | Length |
+|-------|------|--------|--------|--------|
+| [world-gemma-4-31b-it-interleaved-180-seed3.mp4](media/world-gemma-4-31b-it-interleaved-180-seed3.mp4) | Gemma 4 31B, P2, scenario seed 3 | 2 | Byzantine agents win | 2:16 |
+| [world-gpt-oss-120b-interleaved-180-seed2.mp4](media/world-gpt-oss-120b-interleaved-180-seed2.mp4) | gpt-oss-120b, run `p6-gptoss`, seed 2 | 5 | Honest agents win | 4:24 |
+| [world-granite-3-3-8b-instruct-interleaved-180-seed16.mp4](media/world-granite-3-3-8b-instruct-interleaved-180-seed16.mp4) | Granite 3.3 8B, run `p6-granite`, seed 16 | 5 | Byzantine agents win | 4:28 |
+
+All 3 games use `interleaved-180`, 10 agents and 2 Byzantine agents. The Gemma game ends after the second meeting with 2 honest and 2 Byzantine agents in play. Round 4 of the 2 longer games has no report. A tag in that round of the gpt-oss-120b game leaves a body that waits for the next meeting, and nobody is tagged in that round of the Granite game.
+
+To record another game, point the script at a game folder from a run of `scripts/run_p2.py`. A game of 5 rounds and 10 agents renders about 5,300 frames in 1 minute on 8 cores, and `ffmpeg` has to be on the path.
+
+```bash
+uv run --with matplotlib python -m scripts.make_world_replay logs/p2_<model>/Game_<tag>_interleaved-180_3_Run0 --out docs/media
+uv run --with matplotlib python -m scripts.make_world_replay GAME --still 12.5 --still 60 --out /path/for/pictures
+```
+
+The replay has no tasks, sound or sight, and it shows only what the logs record. `tests/test_world_replay.py` checks the rules above on a game of 4 agents, and `tests/test_make_world_replay.py` checks the frames, the pictures and the video.
+
 ## Browser and multiplayer
 
 The web client runs the same project exported to HTML, WebAssembly and a pack file, which any static server can deliver.
