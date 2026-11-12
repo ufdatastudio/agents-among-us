@@ -301,6 +301,7 @@ The SGD, SVM and LR classifiers were trained on sequential transcripts, so their
 | `agents/vote_reading.py` | Reads which candidate a vote reply chooses, with rules first and the voter's model for the replies the rules cannot settle |
 | `scripts/make_figures.py` | Draws the figures of this doc from `docs/figures/data.json`. `data` collects the numbers from the P2 results, the game folders and the doc's tables, and `plot` draws the PNG files with `uv run --with matplotlib python -m scripts.make_figures plot` |
 | `scripts/analyze_p2_text.py` | Reads the transcripts of P2 games and measures speech acts, claims about places checked against the agents' own observation logs, accusations, the influence of accusations on honest votes, and what agents pick up from the room |
+| `scripts/make_replay.py` | Renders one meeting of a recorded game as an MP4, a GIF and still frames, with Pillow and ffmpeg. It draws the seats, the speech as it was spoken, the lanes of who spoke when, the votes and the result. The replay of seed 3 of gpt-oss-120b in `interleaved-180` is in `docs/media/` and in the README |
 | `core/voting.py` | `ask_until_valid()` asks again while a reply names no candidate, at rising temperatures |
 | `core/logger.py` | Unchanged. The engine writes `room/room_round<N>.jsonl` and each agent's final percept to the game's log folder |
 | `scripts/hipergator/run_game.sbatch` | Done. Starts a vLLM server and times full games in each mode in `MODES` |

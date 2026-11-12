@@ -30,6 +30,50 @@ Despite their impressive capabilities, LLMs struggle to effectively utilize text
 - **Observer Pipeline:** Built-in classical ML classifier suite to calculate the "observer-player gap" on generated datasets.
 - **Phase-Dependent Memory:** Automated state management that filters context windows based on movement, discussion, and voting phases.
 
+## Situation room
+
+In the situation room, all agents of a meeting speak during the same timed window. Their speech overlaps, each agent hears only what was spoken before the current tick, and every agent has to vote before the meeting ends. The design, the P2 experiments and their results are in [docs/situation-room.md](docs/situation-room.md).
+
+The replay below is drawn from the logs of one recorded game by `scripts/make_replay.py`. Nine gpt-oss-120b agents meet in a timed room with interleaved overlap and a 180 s budget (scenario seed 3, round 1), and the clock runs 2.5 times faster than the meeting did. The seats show the last words each agent spoke, the right panel shows what was said, and the lanes at the bottom show who spoke when. The roles are shown to you, and the agents were not told them.
+
+<div align="center">
+  <a href="docs/media/situation-room-replay.mp4"><img src="docs/media/situation-room-replay.gif" alt="Replay of one meeting in the situation room, where nine agents speak at once and then vote"></a>
+  <br>
+  <em>The first 24 s of the replay. The full 84 s video is <a href="docs/media/situation-room-replay.mp4">situation-room-replay.mp4</a>.</em>
+</div>
+
+<div align="center">
+  <img src="docs/media/situation-room-replay-t002.png" alt="The meeting at 0:02, with all nine living agents starting to speak">
+  <br>
+  <em>0:02. Agent_5 was found dead and the nine living agents start to speak at once. The blue rings mark the seats that are speaking.</em>
+</div>
+
+<div align="center">
+  <img src="docs/media/situation-room-replay-t062.png" alt="The meeting at 1:02, with overlapping statements that mostly accuse Agent_0">
+  <br>
+  <em>1:02. Most statements on screen accuse Agent_0. Agent_0 and Agent_1 are the Byzantine agents, marked with a B. The lanes show that the statements overlap.</em>
+</div>
+
+<div align="center">
+  <img src="docs/media/situation-room-replay-votes.png" alt="The votes of the nine agents, drawn as arrows">
+  <br>
+  <em>After 3:00 each agent votes, and the arrows show who voted for whom. Agent_0 received 7 votes.</em>
+</div>
+
+<div align="center">
+  <img src="docs/media/situation-room-replay-result.png" alt="The result of the vote, with Agent_0 ejected">
+  <br>
+  <em>Agent_0, a Byzantine agent, is ejected. The two Byzantine agents voted for others, Agent_0 for Agent_6 and Agent_1 for Agent_2.</em>
+</div>
+
+To make a replay of another meeting, point the script at a game folder from a run of `scripts/run_p2.py`:
+
+```bash
+uv run --with matplotlib python -m scripts.make_replay logs/p2_<model>/Game_<tag>_interleaved-180_3_Run0 --round 1 --out docs/media
+```
+
+The video needs `ffmpeg`. Add `--no-video` for the still frames only, and `--stills 30,90,votes,result` to choose them.
+
 ## Installation
 
 Install dependencies with [uv](https://docs.astral.sh/uv/):
