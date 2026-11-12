@@ -30,6 +30,118 @@ Despite their impressive capabilities, LLMs struggle to effectively utilize text
 - **Observer Pipeline:** Built-in classical ML classifier suite to calculate the "observer-player gap" on generated datasets.
 - **Phase-Dependent Memory:** Automated state management that filters context windows based on movement, discussion, and voting phases.
 
+## Getting started
+
+The `situation-room` and `godot-world` branches have the same code, and `godot-world` adds the plan and the tile map of the Godot world. This section goes from a test on your laptop to the experiment runs on HiPerGator. The web UI in [Usage](#usage) plays a game in a browser.
+
+### Set up and test
+
+```bash
+git clone https://github.com/ufdatastudio/agents-among-us.git
+cd agents-among-us
+git checkout situation-room
+uv sync --extra api
+APP_MODE=navigator uv run --extra api --with pytest python -m pytest tests agents -q
+```
+
+The tests need no GPU and no key.
+
+### Play one game with no GPU
+
+UF Navigator serves the models of the experiments, and a key is at [ai.it.ufl.edu](https://ai.it.ufl.edu). A game reads its crew from `logs/game_configs/<name>.json`. This one has 4 honest agents and 1 Byzantine agent, all running Granite 3.3 8B.
+
+```bash
+mkdir -p logs/game_configs
+cat > logs/game_configs/quickstart.json <<'EOF'
+{"name": "quickstart", "honest_model": ["navigator:granite-3.3-8b-instruct"], "byzantine_model": ["navigator:granite-3.3-8b-instruct"], "honest_count": 4, "byzantine_count": 1, "capture_thoughts": false}
+EOF
+export NAVIGATOR_TOOLKIT_API_KEY=<your key>
+APP_MODE=api LLM_MODE=LOCAL uv run --extra api python -m main --composition_name quickstart --game_id quick1 \
+  --num_rounds 2 --seed 1 --room_seed 1 --discussion_mode timed --room_overlap interleaved --room_budget_s 60
+```
+
+`APP_MODE=api` reads no `.env` file, so the key comes from your shell. The game prints `Game Over. Result: ...` and writes its folder to `logs/quickstart/Game_quick1_Run0/`. That game took about a minute and used about 400,000 input tokens.
+
+| File | Content |
+|------|---------|
+| `discussion.log` | The statements of each meeting in the order they were spoken |
+| `room/` | For each meeting of a timed game, `room_round<N>.jsonl` with its events and `<agent>_round<N>_heard.log` with what each agent heard |
+| `votes.jsonl` | The vote of each agent in each meeting |
+| `roundResults.log` | Who was eliminated and who was ejected in each round |
+| `stats.csv` | One row per agent, with the vote counts, the result and the token use |
+| `thought.log` | Private reasoning, when `capture_thoughts` is true |
+
+The main flags of `main.py` are in the table below. A seed fixes the scenario, so games with the same seed start every agent in the same room.
+
+| Flag | Values | Meaning |
+|------|--------|---------|
+| `--discussion_mode` | `turns`, `timed` | Take turns, or speak at once in a timed room |
+| `--room_overlap` | `clean`, `interleaved`, `noisy` | How overlapping speech is shown to a listener |
+| `--room_budget_s` | seconds | Length of a timed meeting, 180 by default |
+| `--room_max_words` | words | Words kept from one statement, 40 by default |
+| `--num_rounds` | rounds | Rounds before the game ends, 10 by default |
+| `--seed`, `--room_seed` | integers | Scenario seed, and the seed of the onsets and shuffles in the room |
+
+Every agent has to vote, and a meeting with a missing vote is held again, up to 3 times (`--meeting_attempts`).
+
+### Play against your own model server
+
+Any OpenAI-compatible server works. `scripts/run_p2.py` plays the 11 protocols of the experiments, each on the same scenario seeds, against the server that `VLLM_BASE_URL` names. A model has to be on the eligible list in `config/eligible_models.py`, which lists the models that Navigator also serves and that do not come from a country of concern. The runner refuses the others.
+
+```bash
+uv run --no-project --with vllm vllm serve ibm-granite/granite-3.3-8b-instruct \
+  --max-model-len 32768 --served-model-name ibm-granite/granite-3.3-8b-instruct
+# In a second terminal:
+APP_MODE=api LLM_MODE=LOCAL VLLM_BASE_URL=http://127.0.0.1:8000/v1 uv run --extra api python -m scripts.run_p2 \
+  --model ibm-granite/granite-3.3-8b-instruct --tag try1 --games-per-cell 1 --protocols sequential,clean-60
+```
+
+The protocols are `sequential`, `none` (no discussion), and `clean`, `interleaved` and `noisy` at 60, 180 and 300 s. A game that is not finished in 3,600 s is stopped (`--game-timeout-s`). The runner appends each game to `results/p2/<model>_<tag>.jsonl`, and running it again with the same `--tag` plays only the games that did not finish.
+
+### Run the experiments on HiPerGator
+
+One job starts a vLLM server on 1 GPU and plays the grid against it. Replace the `/blue` folder, the account and the QoS with your own if you are not in the `ufdatastudios` group.
+
+```bash
+# Once. Set SR_BLUE in scripts/hipergator/env.sh to a folder of yours on /blue, then cache the weights on a login node.
+source scripts/hipergator/env.sh
+uv run --no-project --with huggingface_hub hf download ibm-granite/granite-3.3-8b-instruct
+
+# For each run, start from a fresh checkout so that later edits do not change games that are still to start.
+git fetch origin
+git worktree add --detach .worktrees/run1 origin/situation-room
+cd .worktrees/run1
+uv run --extra api python -c pass
+uv run --no-project python -m config.eligible_models granite-3.3-8b-instruct
+TAG=run1-granite GAMES_PER_CELL=5 sbatch scripts/hipergator/run_p2.sbatch granite-3.3-8b-instruct
+```
+
+These variables set the run, and the script header lists the rest.
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `TAG` | the job id | Name of the run and of its result file |
+| `GAMES_PER_CELL` | 5 | Seeds for each protocol |
+| `PROTOCOLS` | all 11 | Protocol names separated by commas, for a smaller test |
+| `WORKERS` | 6 | Games played at once on the server |
+| `AAU_MAX_TOKENS` | 160 | Reply limit in tokens. Gemma 4 needs 1024, and gpt-oss needs 768 with `VLLM_REASONING_EFFORT=low` and `--mem=128gb` |
+| `CAPTURE` | off | Set it to 1 for agents to write private reasoning before they answer |
+| `MAX_MODEL_LEN` | 32768 | Context of the server, which a 300 s meeting needs |
+
+Follow a run with `squeue -u $USER` and `tail -f logs/sr-p2-<job id>.out`. After the first games finish, check `api_errors`, `redone_meetings` and `stopped_for_votes` in the result file. Games are written to `logs/p2_<model>_<tag>/`, and the job ends by printing a summary table, which `uv run python -m scripts.summarize_p2 results/p2/*.jsonl` prints again for any result files. If a job runs out of time or a game times out, submit the same command again with the same `TAG`. The group account and QoS are shared, so look at `squeue -A ufdatastudios` before you submit a large run.
+
+`docs/situation-room.md` describes how the tables and figures of the results are made, and the replay below shows how to draw one meeting.
+
+### Try the audio and the world map
+
+The audio stack speaks each statement with Kokoro and listens with Whisper large-v3, and Nemotron 3 Diarization says who spoke when. Cache the models once with `hf download` as above (`hexgrad/Kokoro-82M`, `openai/whisper-large-v3` and `nvidia/Nemotron-3-Diarization`), then run the two pilots from the repository root.
+
+```bash
+sbatch scripts/hipergator/audio_pilot.sbatch        # speech recognition against overlap, in results/audio_pilot/
+sbatch scripts/hipergator/diarization_pilot.sbatch  # diarization error rate against overlap, in results/diarization_pilot/
+uv run python -m scripts.draw_world_map --out docs/media/godot-world-map.png   # the tile map of the Godot world
+```
+
 ## Situation room
 
 In the situation room, all agents of a meeting speak during the same timed window. Their speech overlaps, each agent hears only what was spoken before the current tick, and every agent has to vote before the meeting ends. The design, the P2 experiments and their results are in [docs/situation-room.md](docs/situation-room.md).
