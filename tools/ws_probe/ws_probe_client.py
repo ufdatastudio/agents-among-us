@@ -4,6 +4,8 @@ Usage:
     python ws_probe_client.py https://agents-among-us.rc.ufl.edu [--idle 75] [--no-quit]
 """
 
+from __future__ import annotations
+
 import argparse
 import base64
 import json
@@ -96,6 +98,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("url")
     parser.add_argument("--idle", type=float, default=75)
+    parser.add_argument("--rtt", type=int, default=50, help="echoes to time for the round trip")
     parser.add_argument("--no-quit", action="store_true")
     args = parser.parse_args()
     results = []
@@ -125,6 +128,15 @@ def main() -> None:
         send(sock, 1, f"burst {i}".encode())
     got = [receive(sock, 10)[1].decode() for _ in range(20)]
     results.append(report("20 messages in a burst, in order", got == [f"burst {i}" for i in range(20)]))
+    times = []
+    for _ in range(args.rtt):
+        start = time.perf_counter()
+        send(sock, 1, b"x" * 100)
+        receive(sock, 10)
+        times.append((time.perf_counter() - start) * 1000)
+    if times:
+        times.sort()
+        print(f"round trip of 100 bytes over {len(times)} echoes: median {times[len(times) // 2]:.1f} ms, 95th percentile {times[max(0, int(len(times) * 0.95) - 1)]:.1f} ms", flush=True)
     send(sock, 9, b"ping")
     results.append(report("ping answered with pong", receive(sock, 10) == (10, b"ping")))
 

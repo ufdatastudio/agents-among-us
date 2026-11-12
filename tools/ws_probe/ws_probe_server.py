@@ -19,7 +19,7 @@ import struct
 import time
 
 GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-STOP = asyncio.Event()
+STOP = None
 START = time.time()
 
 PAGE = """<!doctype html>
@@ -182,6 +182,8 @@ async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> 
 
 async def main(port: int, ttl: float) -> None:
     """Serves until /quit is requested or the time to live runs out."""
+    global STOP
+    STOP = asyncio.Event()
     server = await asyncio.start_server(handle, "0.0.0.0", port)
     print(f"probe listening on {port}, stops after {ttl:.0f} s", flush=True)
     try:
