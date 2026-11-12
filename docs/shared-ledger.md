@@ -43,7 +43,7 @@ The reader-side design leaves how agents speak unchanged. The writer-side design
 
 ## Other designs for shared agent state
 
-The descriptions come from the full text of S-Bus, PatchBoard, CoAgent and MAP-Graph and from the abstracts of the others, all read on 2026-11-12. Only S-Bus states a code release. PatchBoard, MAP-Graph and CoAgent ran their main results on Qwen or DeepSeek models, which the model rule of this project excludes, so a comparison has to reimplement their ideas on eligible models.
+The descriptions come from the full text of S-Bus, PatchBoard, CoAgent and MAP-Graph and from the abstracts of the others, all read on 2026-11-12. PatchBoard, MAP-Graph and CoAgent ran their main results on Qwen or DeepSeek models, which the model rule of this project excludes, so a comparison has to reimplement their ideas on eligible models. The code releases are listed under Code of the neighbours.
 
 | Work | Shared structure and mechanism | Fit for the room |
 |------|--------------------------------|------------------|
@@ -84,6 +84,22 @@ Four points set this work apart.
 Four parts are not new, and the plan uses them in place of claiming them. An append-only log with a sequencer is the shared log of AgileLog and of consensus systems. Validating the premises of a write is S-Bus and CoAgent. A kernel that checks writes against a schema is PatchBoard. A provenance graph with permission filtering and trust is MAP-Graph. The claim is limited to the combination for conversations among agents that include liars, and it is a claim to test. Nothing here shows yet that a board helps agents vote, and P6 is the test.
 
 The 3 closest designs also make comparison conditions. The ideas can be reimplemented in the room on eligible models. A state board with schema-checked writes and no speech follows PatchBoard, a board that ranks claims by the trust of their source follows MAP-Graph, and optimistic validation of world actions follows S-Bus and CoAgent if the Godot server ever needs it.
+
+## Code of the neighbours
+
+S-Bus and STORM link their code in the paper, and AgileLog and MAP-Graph do not, which I checked in their HTML versions. I did not check the paper of CodeCRDT. For the others I searched the GitHub accounts of the first authors and of their labs on 2026-11-12, so a negative result means that I found nothing, and nothing proves that no release exists.
+
+| Work | Code found | License |
+|------|------------|---------|
+| S-Bus | github.com/sajjadanwar0/sbus, linked in the paper and by Hugging Face | MIT |
+| STORM | github.com/dreamyang-liu/STORM, linked in a footnote of the paper, from the account of the first author, last pushed 2026-10-15 | none stated |
+| CodeCRDT | github.com/spugachev/CodeCRDT, from the account of the author | MIT |
+| AgileLog | github.com/dassl-uiuc/AgileLog-Proto, from the lab of the authors, whose README says that it contains the implementation and the artifact of the SOSP 2026 paper. The paper does not link it | Apache-2.0 |
+| MAP-Graph | github.com/xiaoqi-7/MAP-Graph, described as supplementary code, created 2026-10-25 by an account whose name matches the first author. The paper does not link it | none stated |
+| PatchBoard | None found. The first author has no profile that I could find, and the corresponding author is Lu Wang at Xidian University | |
+| CoAgent | None found. The first author has a GitHub account with 2 public repositories and neither is CoAgent, and the repositories of the lab account did not include it. The paper says that it is submitted to ATC 2026 | |
+
+The 2 designs that are closest to the board have the weakest releases. MAP-Graph has code with no license that the paper does not cite, and PatchBoard has none, so a comparison with them rests on reimplementing their ideas in the room.
 
 ## S-Bus
 
