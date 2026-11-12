@@ -23,11 +23,13 @@ from pathlib import Path
 from scripts.analyze_p2_text import (
     accusation_profile,
     claim_profile,
+    finished_ids,
     influence_profile,
     listening_profile,
     load_games,
     speech_profile,
 )
+from scripts.analyze_p2_thoughts import intent_profile, vote_profile
 from scripts.summarize_p2 import wilson
 
 SURFACE = "#fcfcfb"
@@ -81,6 +83,10 @@ def collect_p2(files: Sequence[Path]) -> dict:
                 cell["correct"] += stats.get("honest_correct_votes", 0)
                 cell["incorrect"] += stats.get("honest_incorrect_votes", 0)
                 cell["skipped"] += stats.get("honest_skipped_votes", 0)
+                cell["redone"] += record.get("redone_meetings", 0)
+                cell["wall_s"] += record.get("wall_s", 0)
+                for key in ("api_calls", "api_output_tokens", "api_reasoning_tokens", "api_errors", "api_truncated_calls", "api_empty_replies"):
+                    cell[key] += record.get("tokens", {}).get(key, 0)
     out: dict = {}
     for (model, kind, name), cell in cells.items():
         low, high = wilson(cell["wins"], cell["games"])
@@ -88,17 +94,19 @@ def collect_p2(files: Sequence[Path]) -> dict:
     return out
 
 
-def collect_text(folders: Sequence[Path]) -> dict:
+def collect_text(folders: Sequence[Path], only: set[str] | None = None) -> dict:
     """Measures the transcripts of P2 games, for the clean room and for turn-taking.
 
     Args:
         folders: Folders of game folders, one for each model.
+        only: Ids of the games to keep, or None for every game found. Games still running are left out when
+            the ids come from the result files.
 
     Returns:
         For each model and group (`clean` or `sequential`), the counters of the speech, claim, accusation, influence
         and listening profiles. The keys of the profiles are joined with a vertical bar.
     """
-    games = load_games(folders)
+    games = load_games(folders, only)
     keep = [g for g in games if g.statements and (g.protocol.startswith("clean") or g.protocol == "sequential")]
     out: dict = defaultdict(lambda: defaultdict(dict))
 
@@ -129,6 +137,23 @@ def collect_text(folders: Sequence[Path]) -> dict:
         for (model, grp), cell in merged.items():
             out[model][grp][name] = dict(cell)
     return {model: dict(groups) for model, groups in out.items()}
+
+
+def collect_thoughts(folders: Sequence[Path], only: set[str] | None = None) -> dict:
+    """Measures the private reasoning of a P2 run written with thought capture on.
+
+    Args:
+        folders: Folders of game folders of that run.
+        only: Ids of the games to keep, or None for every game found.
+
+    Returns:
+        The counters of the vote profile for each group of protocols under `votes`, and of the intent profile for
+        each role under `intent`.
+    """
+    return {
+        "votes": {group: dict(cell) for group, cell in vote_profile(folders, only).items()},
+        "intent": {role: dict(cell) for role, cell in intent_profile(folders, only).items()},
+    }
 
 
 def parse_table(text: str, header: str) -> list[list[str]]:
@@ -197,18 +222,29 @@ def collect_doc(doc: Path) -> dict:
     }
 
 
-def build_data(p2_files: Sequence[Path], log_folders: Sequence[Path], doc: Path) -> dict:
+def build_data(
+    p2_files: Sequence[Path],
+    log_folders: Sequence[Path],
+    doc: Path,
+    thought_files: Sequence[Path] = (),
+    thought_folders: Sequence[Path] = (),
+) -> dict:
     """Collects every number the figures need.
 
     Args:
-        p2_files: P2 result files.
+        p2_files: P2 result files. Only the games that finished in them are read from the folders.
         log_folders: Folders of P2 game folders.
         doc: The doc with the measurement tables.
+        thought_files: Result files of a run with private reasoning, or none.
+        thought_folders: Folders of the game folders of that run.
 
     Returns:
         The data of the figures, which `json.dump` can write.
     """
-    return {"p2": collect_p2(p2_files), "text": collect_text(log_folders), **collect_doc(doc)}
+    data = {"p2": collect_p2(p2_files), "text": collect_text(log_folders, finished_ids(p2_files)), **collect_doc(doc)}
+    if thought_folders:
+        data["thoughts"] = collect_thoughts(thought_folders, finished_ids(thought_files) if thought_files else None)
+    return data
 
 
 def rate(count: float, total: float) -> float | None:
@@ -296,6 +332,89 @@ def percent_axis(ax, axis="y", top=1.0):
         ax.xaxis.set_major_locator(MultipleLocator(0.2 if top > 0.5 else 0.1))
 
 
+def doc_tables(data: dict) -> dict[str, str]:
+    """Formats the numbers of the data as the Markdown tables of the doc.
+
+    Args:
+        data: The data written by `build_data`, as loaded from the JSON file.
+
+    Returns:
+        The tables by name: `p2`, `speech`, `beliefs`, `listening` and, when the data has reasoning, `thoughts`.
+    """
+    tables = {}
+    rows = ["| Model | Setting | Games | Honest wins | Honest vote accuracy | Meetings redone per game | API errors | Reasoning share | Minutes per game |", "|" + "---|" * 9]
+    for model in MODELS:
+        for setting in SETTINGS:
+            c = data["p2"][model]["settings"][setting]
+            cast = c["correct"] + c["incorrect"]
+            share = rate(c["api_reasoning_tokens"], c["api_output_tokens"])
+            rows.append(
+                f"| {model} | {setting} | {c['games']} | {c['wins']} ({pct(c['wins'] / c['games'])}) | {pct(rate(c['correct'], cast))} "
+                f"| {c['redone'] / c['games']:.2f} | {c['api_errors']} | {pct(share)} | {c['wall_s'] / c['games'] / 60:.1f} |"
+            )
+    tables["p2"] = "\n".join(rows)
+
+    rows = ["| Model | Setting | Role | Statements | Words | Accuse | Call a vote | Defend self | Report | Question | Cut at the limit | Opens with a name |", "|" + "---|" * 12]
+    for model in MODELS:
+        for group, name in (("clean", "clean"), ("sequential", "turns")):
+            speech = data["text"][model][group]["speech"]
+            for role in ("byzantine", "honest"):
+                c = speech[role]
+                cut = pct(rate(c.get("cut", 0), c.get("timed", 0))) if c.get("timed") else "-"
+                rows.append(
+                    f"| {model} | {name} | {role.capitalize()} | {int(c['n'])} | {c['words_total'] / c['n']:.0f} | "
+                    + " | ".join(pct(c.get(f"label_{k}", 0) / c["n"]) for k in ("accuse", "vote_call", "defend", "report", "question"))
+                    + f" | {cut} | {pct(c['tagged'] / c['n'])} |"
+                )
+    tables["speech"] = "\n".join(rows)
+
+    rows = [
+        "| Model | Honest false claims | Byzantine false claims | Honest accusations at a Byzantine (chance) | Same, turns | Byzantine accusations at a Byzantine (chance) | Honest vote for an honest candidate accused only by Byzantines | Same, only by honest agents | Same, by both | Honest votes for the most accused agent (turns) |",
+        "|" + "---|" * 10,
+    ]
+    for model in MODELS:
+        clean, turns = data["text"][model]["clean"], data["text"][model]["sequential"]
+
+        def false_rate(group, role):
+            c = group["claims"].get(role, {})
+            return f"{pct(rate(c.get('false', 0), c.get('claims', 0)))}" + (f" (n={int(c.get('claims', 0))})" if c.get("claims", 0) < 100 else "")
+
+        def acc(group, role):
+            c = group["accusations"][role]
+            return f"{pct(rate(c['at_byz'], c['accuse']))} ({pct(rate(c['chance_byz'], c['accuse']))})"
+
+        infl = clean["influence"]
+
+        def cell(who):
+            pairs = infl.get(f"honest|{who}|pairs", 0)
+            return f"{pct(rate(infl.get(f'honest|{who}|votes', 0), pairs))} (n={int(pairs)})"
+
+        plural = lambda g: pct(rate(g["influence"]["plurality_votes"], g["influence"]["plurality_meetings_votes"]))
+        rows.append(
+            f"| {model} | {false_rate(clean, 'honest')} | {false_rate(clean, 'byzantine')} | {acc(clean, 'honest')} | {acc(turns, 'honest')} | {acc(clean, 'byzantine')} "
+            f"| {cell('byzantine only')} | {cell('honest only')} | {cell('both')} | {plural(clean)} ({plural(turns)}) |"
+        )
+    tables["beliefs"] = "\n".join(rows)
+
+    rows = ["| Model | Accused agent speaks again, clean | Answer names the accuser, clean | Same, turns | Statements heard before speaking | Same tick, unheard |", "|" + "---|" * 6]
+    for model in MODELS:
+        c, s = data["text"][model]["clean"]["listening"], data["text"][model]["sequential"]["listening"]
+        rows.append(
+            f"| {model} | {pct(rate(c['answerable'], c['accused']))} | {pct(rate(c['answered'], c['answerable']))} | {pct(rate(s['answered'], s['answerable']))} "
+            f"| {c['heard_total'] / c['timed_statements']:.0f} | {c['concurrent_total'] / c['timed_statements']:.1f} |"
+        )
+    tables["listening"] = "\n".join(rows)
+    if "thoughts" in data:
+        from collections import Counter
+
+        from scripts.analyze_p2_thoughts import report as thoughts_report
+
+        tables["thoughts"] = thoughts_report(
+            {k: Counter(v) for k, v in data["thoughts"]["votes"].items()}, {k: Counter(v) for k, v in data["thoughts"]["intent"].items()}
+        )
+    return tables
+
+
 def fig_win_rate(plt, data, out):
     """Honest win rate by setting and model, with 95% Wilson intervals."""
     fig, ax = plt.subplots(figsize=(7.4, 3.6))
@@ -309,12 +428,14 @@ def fig_win_rate(plt, data, out):
             ax.errorbar(x, value, yerr=[[value - cell["ci_low"]], [cell["ci_high"] - value]], color=INK2, linewidth=1, capsize=2.5, capthick=1)
             ax.annotate(pct(value), (x, cell["ci_high"]), xytext=(0, 3), textcoords="offset points", ha="center", va="bottom", fontsize=7.5, color=INK2)
     ax.set_xticks(range(3), SETTINGS)
-    percent_axis(ax, "y", 1.05)
+    percent_axis(ax, "y", 1.1)
     ax.set_ylabel("Honest win rate")
-    model_legend(ax, loc="upper left", ncol=3)
+    handles = model_legend(ax, loc="upper left").legend_handles
+    ax.get_legend().remove()
+    fig.legend(handles=handles, labels=MODELS, loc="lower center", ncol=3, bbox_to_anchor=(0.5, 0.06))
     games = "; ".join(f"{m}: " + ", ".join(str(data["p2"][m]["settings"][s]["games"]) for s in SETTINGS) for m in MODELS)
     fig.text(0.01, 0.01, f"Games per bar (no discussion, turns, timed room). {games}.\nWhiskers are 95% Wilson intervals.", fontsize=7, color=INK2)
-    fig.tight_layout(rect=(0, 0.07, 1, 1))
+    fig.tight_layout(rect=(0, 0.14, 1, 1))
     fig.savefig(out / "p2_win_rate.png", dpi=200)
 
 
@@ -332,7 +453,9 @@ def fig_granite_cells(plt, data, out):
         ax.annotate(pct(value), (cell["ci_high"], y), xytext=(6, 0), textcoords="offset points", va="center", fontsize=7.5, color=INK2)
     ax.set_yticks(range(len(order)), order[::-1])
     percent_axis(ax, "x", 1.0)
-    ax.set_xlabel("Honest win rate with a 95% Wilson interval (20 games per protocol)")
+    games = sorted({cell["games"] for cell in cells.values()})
+    per_protocol = f"{games[0]}" if len(games) == 1 else f"{games[0]} to {games[-1]}"
+    ax.set_xlabel(f"Honest win rate with a 95% Wilson interval ({per_protocol} games per protocol)")
     ax.grid(axis="x", visible=True)
     ax.grid(axis="y", visible=False)
     fig.tight_layout()
@@ -340,7 +463,7 @@ def fig_granite_cells(plt, data, out):
 
 
 def fig_votes(plt, data, out):
-    """Accuracy of cast honest votes, and share of honest ballots skipped, by setting and model."""
+    """Accuracy of cast honest votes, and meetings rewound per game, by setting and model."""
     fig, axes = plt.subplots(1, 2, figsize=(8.2, 3.5))
     width = 0.24
     for j, model in enumerate(MODELS):
@@ -348,16 +471,18 @@ def fig_votes(plt, data, out):
             cell = data["p2"][model]["settings"][setting]
             cast = cell["correct"] + cell["incorrect"]
             x = i + (j - 1) * (width + 0.03)
-            for ax, value in ((axes[0], rate(cell["correct"], cast)), (axes[1], rate(cell["skipped"], cast + cell["skipped"]))):
-                rect = bar(ax, x, value or 0, width, MODEL_COLORS[model])
-                label = None if value is None else pct(value)
-                if ax is axes[0] and cast < 10:
-                    label = f"{label} (n={cast})"
-                label_tips(ax, rect, [label])
-    for ax, title in zip(axes, ("Honest votes that went to a Byzantine", "Honest ballots that were skips")):
+            accuracy = rate(cell["correct"], cast)
+            label = None if accuracy is None else pct(accuracy)
+            if cell["games"] < 10:
+                label = f"{label}\nn={cell['games']}"
+            label_tips(axes[0], bar(axes[0], x, accuracy or 0, width, MODEL_COLORS[model]), [label])
+            redone = cell["redone"] / cell["games"]
+            label_tips(axes[1], bar(axes[1], x, redone, width, MODEL_COLORS[model]), [f"{redone:.2f}"])
+    for ax, title in zip(axes, ("Honest votes that went to a Byzantine", "Meetings rewound per game for a missing vote")):
         ax.set_xticks(range(3), SETTINGS)
-        ax.set_title(title)
-        percent_axis(ax, "y", 1.12)
+        ax.set_title(title, fontsize=9)
+    percent_axis(axes[0], "y", 1.12)
+    axes[1].set_ylim(0, max(0.3, 1.2 * max(c["redone"] / c["games"] for m in MODELS for c in data["p2"][m]["settings"].values())))
     handles = model_legend(axes[0], loc="upper left").legend_handles
     axes[0].get_legend().remove()
     fig.legend(handles=handles, labels=MODELS, loc="lower center", ncol=3, bbox_to_anchor=(0.5, 0.0))
@@ -612,7 +737,58 @@ def fig_audio(plt, data, out):
     fig.savefig(out / "audio_overlap.png", dpi=200)
 
 
-FIGURES = (fig_concurrency, fig_reasoning, fig_audio, fig_win_rate, fig_granite_cells, fig_votes, fig_speech, fig_length, fig_claims, fig_accusations, fig_influence, fig_listening)
+def fig_thoughts(plt, data, out):
+    """What honest voters reason before they vote, and what Byzantine agents plan, in the run with private reasoning."""
+    if "thoughts" not in data:
+        return
+    votes, intent = data["thoughts"]["votes"], data["thoughts"]["intent"]
+    color = MODEL_COLORS["Granite 3.3 8B"]
+    fig, axes = plt.subplots(1, 3, figsize=(10.4, 3.6), gridspec_kw={"width_ratios": [1.5, 1, 0.8]})
+    timed = votes["timed"]
+    liars = timed["liar_byz"] + timed["liar_honest"]
+    rows = (
+        ("Calls someone a liar", rate(timed["flags_liar"], timed["votes"])),
+        ("Votes for the liar it called out", rate(timed["votes_liar"], timed["flags_liar"])),
+        ("Liars it called out who are Byzantine", rate(timed["liar_byz"], liars)),
+        ("Cites what several agents think", rate(timed["crowd"], timed["votes"])),
+    )
+    for i, (label, value) in enumerate(rows):
+        rect = bar(axes[0], len(rows) - 1 - i, value or 0, 0.5, color, horizontal=True)
+        label_tips(axes[0], rect, [pct(value)], vertical=False)
+    axes[0].set_yticks(range(len(rows)), [label for label, _ in rows][::-1])
+    percent_axis(axes[0], "x", 1.1)
+    axes[0].grid(axis="x", visible=True)
+    axes[0].grid(axis="y", visible=False)
+    axes[0].set_title(f"Honest voters in timed rooms ({int(timed['votes'])} votes)")
+    for k, (group, name) in enumerate((("timed", "timed room"), ("sequential", "turns"))):
+        cell = votes[group]
+        for j, (key, count, hatched) in enumerate((("crowd", "crowd_hit", False), ("no_crowd", "no_crowd_hit", True))):
+            value = rate(cell[count], cell[key]) or 0
+            rect = bar(axes[1], k + (-0.19 if j == 0 else 0.19), value, 0.34, color, hatched=hatched)
+            label_tips(axes[1], rect, [f"{pct(value)}\nn={int(cell[key])}"])
+    axes[1].set_xticks(range(2), ["timed room", "turns"])
+    axes[1].set_title("Votes that hit a Byzantine")
+    percent_axis(axes[1], "y", 0.9)
+    for j, (role, hatched) in enumerate((("honest", False), ("byzantine", True))):
+        cell = intent[role]
+        value = cell["intent"] / cell["n"]
+        rect = bar(axes[2], j, value, 0.5, color, hatched=hatched)
+        label_tips(axes[2], rect, [pct(value)])
+    axes[2].set_xticks(range(2), ["honest", "Byzantine"])
+    axes[2].set_title("Room reasoning that\nplans to deceive")
+    percent_axis(axes[2], "y", 0.8)
+    from matplotlib.patches import Patch
+
+    handles = [
+        Patch(facecolor=color, edgecolor=SURFACE, label="Reasoning cites several agents (middle), honest agents (right)"),
+        Patch(facecolor=tint(color), edgecolor=color, hatch="////", linewidth=0, label="Reasoning does not cite them (middle), Byzantine agents (right)"),
+    ]
+    fig.legend(handles=handles, loc="lower center", ncol=2, bbox_to_anchor=(0.5, 0.0), fontsize=8)
+    fig.tight_layout(rect=(0, 0.08, 1, 1))
+    fig.savefig(out / "thoughts_granite.png", dpi=200)
+
+
+FIGURES = (fig_concurrency, fig_reasoning, fig_audio, fig_win_rate, fig_granite_cells, fig_votes, fig_speech, fig_length, fig_claims, fig_accusations, fig_influence, fig_listening, fig_thoughts)
 
 
 def plot_all(data: dict, out: Path) -> list[Path]:
@@ -653,13 +829,20 @@ def main(argv: Sequence[str] | None = None) -> None:
     collect.add_argument("--logs", nargs="+", type=Path, required=True, help="folders of game folders")
     collect.add_argument("--doc", type=Path, default=Path("docs/situation-room.md"))
     collect.add_argument("--out", type=Path, default=Path("docs/figures/data.json"))
+    collect.add_argument("--thought-results", nargs="*", type=Path, default=[], help="result files of a run with private reasoning")
+    collect.add_argument("--thought-logs", nargs="*", type=Path, default=[], help="folders of game folders of that run")
+    show = sub.add_parser("tables", help="print the tables of the doc from the JSON file")
+    show.add_argument("--data", type=Path, default=Path("docs/figures/data.json"))
     draw = sub.add_parser("plot", help="draw the figures from the JSON file")
     draw.add_argument("--data", type=Path, default=Path("docs/figures/data.json"))
     draw.add_argument("--out", type=Path, default=Path("docs/figures"))
     args = parser.parse_args(argv)
     if args.command == "data":
         args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(json.dumps(build_data(args.p2, args.logs, args.doc), indent=1, sort_keys=True), encoding="utf-8")
+        args.out.write_text(json.dumps(build_data(args.p2, args.logs, args.doc, args.thought_results, args.thought_logs), indent=1, sort_keys=True), encoding="utf-8")
+    elif args.command == "tables":
+        for name, table in doc_tables(json.loads(args.data.read_text(encoding="utf-8"))).items():
+            print(f"## {name}\n\n{table}\n")
     else:
         for path in plot_all(json.loads(args.data.read_text(encoding="utf-8")), args.out):
             print(path)

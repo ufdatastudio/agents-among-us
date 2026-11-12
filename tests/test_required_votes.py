@@ -209,3 +209,12 @@ def test_an_agent_that_votes_for_itself_is_corrected_on_the_second_ask(tmp_path,
     corrected = [prompt for voter, _, prompt in stub.votes if voter == "Agent_2" and "not a valid vote" in prompt]
     assert len(corrected) == 1 and 'Your last reply was "Agent_2"' in corrected[0]
     assert engine.state.world_data["agents"]["Agent_0"]["stats"]["votes_received"] == 3
+
+
+def test_the_vote_prompt_tells_the_agent_that_it_cannot_vote_for_itself(tmp_path, monkeypatch):
+    stub = VoteStub()
+    engine = make_engine(tmp_path, monkeypatch, stub)
+    engine.run_discussion_phase(1)
+    for voter, _, prompt in stub.votes:
+        assert f"You are {voter}, so you cannot vote for yourself." in prompt
+    assert "You are Agent_0" not in require_vote("Note: Skipping your vote is an option. Your vote is ANONYMOUS.")

@@ -19,6 +19,8 @@
 # job that ran out of time can be resubmitted with the same TAG to play only the games that are missing.
 # A 300 s meeting in the interleaved rendering gives a prompt of more than 16k tokens, so the server's context is 32k by default.
 # For a gpt-oss model also set AAU_MAX_TOKENS (a larger reply limit) and VLLM_REASONING_EFFORT.
+# Gemma 4 writes a think block inside its reply, and the default limit of 160 tokens cuts it before the answer, which
+# leaves an empty reply. Set AAU_MAX_TOKENS=1024 for it.
 set -euo pipefail
 source "${SLURM_SUBMIT_DIR}/scripts/hipergator/env.sh"
 MODEL=$(uv run --no-project python -m config.eligible_models "${1:-granite-3.3-8b-instruct}")

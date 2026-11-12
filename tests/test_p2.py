@@ -18,6 +18,7 @@ from scripts.run_p2 import (
     read_redone,
     read_stats,
     read_tokens,
+    scenario_name,
 )
 from scripts.summarize_p2 import format_table, summarize, wilson
 
@@ -247,3 +248,9 @@ def test_summarize_reports_api_errors_per_game():
     (row,) = summarize([game(4), game(0)])
     assert row["errors_per_game"] == 2.0
     assert "| 2.0 |" in format_table([row])
+
+
+def test_two_runs_of_one_model_get_different_scenarios_and_config_files():
+    model = "ibm-granite/granite-3.3-8b-instruct"
+    assert scenario_name(model, "v7-granite") == "p2_ibm-granite_granite-3.3-8b-instruct_v7-granite"
+    assert scenario_name(model, "v7-granite") != scenario_name(model, "v7-granite-think")

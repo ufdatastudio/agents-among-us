@@ -121,6 +121,7 @@ class Game:
         ejected: Agent ejected after each meeting, by round.
         rooms: Room each agent was in at each tick, as (round, tick, room).
         beside: Agents each agent saw in the same room at each tick, by agent and (round, tick).
+        path: The game folder, or None.
     """
 
     game_id: str
@@ -134,6 +135,7 @@ class Game:
     ejected: dict[int, str | None] = field(default_factory=dict)
     rooms: dict[str, list[tuple[int, int, str]]] = field(default_factory=dict)
     beside: dict[str, dict[tuple[int, int], set[str]]] = field(default_factory=dict)
+    path: Path | None = None
 
     def meetings(self) -> list[int]:
         """Lists the rounds that had a meeting with statements."""
@@ -234,6 +236,7 @@ def parse_game(path: Path) -> Game | None:
         protocol=named["protocol"],
         seed=int(named["seed"]),
         roles=roles,
+        path=path,
     )
     counters: Counter = Counter()
     by_round: dict[int, list[dict]] = defaultdict(list)
@@ -749,11 +752,31 @@ def report(games: list[Game]) -> str:
     return "\n".join(out)
 
 
-def load_games(folders: Iterable[Path]) -> list[Game]:
+def finished_ids(results: Iterable[Path]) -> set[str]:
+    """Lists the games that finished in P2 result files.
+
+    Args:
+        results: JSON lines files written by scripts/run_p2.py.
+
+    Returns:
+        The ids of the games with a result. A game folder of a game that is still running or that stopped has
+        none, and its discussion is partial.
+    """
+    ids = set()
+    for path in results:
+        for line in Path(path).read_text(encoding="utf-8").splitlines():
+            record = json.loads(line)
+            if record.get("result"):
+                ids.add(record["game_id"])
+    return ids
+
+
+def load_games(folders: Iterable[Path], only: set[str] | None = None) -> list[Game]:
     """Reads every game folder under the given paths.
 
     Args:
         folders: Paths of game folders, or of folders that contain them.
+        only: Ids of the games to keep, or None to keep every game that parsed.
 
     Returns:
         The games that parsed.
@@ -761,7 +784,7 @@ def load_games(folders: Iterable[Path]) -> list[Game]:
     games = []
     for folder in folders:
         paths = [folder] if folder.name.endswith("_Run0") else sorted(folder.glob("Game_*_Run0"))
-        games.extend(g for g in (parse_game(p) for p in paths) if g is not None)
+        games.extend(g for g in (parse_game(p) for p in paths) if g is not None and (only is None or g.game_id in only))
     return games
 
 
@@ -773,8 +796,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     """
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("folders", nargs="+", type=Path)
+    parser.add_argument("--results", nargs="+", type=Path, default=None, help="result files whose finished games are kept")
     args = parser.parse_args(argv)
-    print(report(load_games(args.folders)))
+    print(report(load_games(args.folders, finished_ids(args.results) if args.results else None)))
 
 
 if __name__ == "__main__":

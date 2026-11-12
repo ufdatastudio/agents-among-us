@@ -128,3 +128,20 @@ def test_an_empty_reply_is_logged_with_its_finish_reason():
     finally:
         logger.remove(handler)
     assert any("empty reply" in m and "finish_reason=stop" in m and "completion_tokens=0" in m for m in messages)
+
+
+def test_a_think_block_in_the_reply_counts_as_reasoning():
+    text = "<think>" + "x" * 300 + "</think>" + "y" * 100
+    # The block with its tags is 315 of 415 characters.
+    assert reasoning_tokens_of(completion(text), text, 100) == (76, True)
+    cut = "<think>" + "x" * 200
+    assert reasoning_tokens_of(completion(cut), cut, 160) == (160, True)
+
+
+def test_a_reply_that_is_only_an_unclosed_think_block_is_empty():
+    """Gemma 4 thinks in its reply, and the token limit can cut it before the answer."""
+    client = make_client(completion("<think>\nAgent_8 (me) is an honest agent.\nI saw", finish="length", completion_tokens=160))
+    reply = client.generate("m", "s", "u", 0.1, 160)
+    assert reply.empty and reply.truncated and reply.reasoning_tokens == 160
+    answered = make_client(completion("<think>short</think>Agent_3", completion_tokens=10)).generate("m", "s", "u", 0.1, 160)
+    assert not answered.empty and answered.reasoning_tokens > 0

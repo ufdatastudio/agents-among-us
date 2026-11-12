@@ -9,6 +9,8 @@ from scripts.make_figures import (
     FIGURES,
     collect_doc,
     collect_p2,
+    collect_thoughts,
+    doc_tables,
     numbers,
     parse_table,
     plot_all,
@@ -73,8 +75,28 @@ def test_tint_mixes_a_color_with_the_surface():
     assert tint("#2a78d6", 0.0) == "#fcfcfb"
 
 
+def test_the_reasoning_of_a_run_is_collected_by_group_and_role(tmp_path):
+    from test_analyze_p2_thoughts import VOTE_THINK, write_thoughts
+    from test_analyze_p2_text import write_game_folder
+
+    folder = write_game_folder(tmp_path)
+    write_thoughts(folder, [{"round": 1, "phase": "VOTING", "agent": "Agent_1", "role": "honest", "think": VOTE_THINK, "output": "Agent_0"}])
+    data = collect_thoughts([tmp_path])
+    assert data["votes"]["timed"]["votes"] == 1 and data["votes"]["timed"]["votes_liar"] == 1
+    assert data["intent"] == {}
+
+
 def test_every_figure_is_drawn_from_the_committed_data(tmp_path):
     pytest.importorskip("matplotlib")
     files = plot_all(json.loads(DATA.read_text(encoding="utf-8")), tmp_path)
-    assert len(files) == len(FIGURES)
+    data = json.loads(DATA.read_text(encoding="utf-8"))
+    assert len(files) == len(FIGURES) - (0 if "thoughts" in data else 1)
     assert all(f.stat().st_size > 10_000 for f in files)
+
+
+def test_the_doc_tables_come_from_the_committed_data():
+    tables = doc_tables(json.loads(DATA.read_text(encoding="utf-8")))
+    assert set(tables) >= {"p2", "speech", "beliefs", "listening"}
+    assert tables["p2"].count("\n") == 9 + 1
+    assert "| Granite 3.3 8B | timed room |" in tables["p2"]
+    assert all(row.count("|") == tables["speech"].splitlines()[0].count("|") for row in tables["speech"].splitlines())
