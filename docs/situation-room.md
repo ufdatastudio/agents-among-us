@@ -681,7 +681,7 @@ What the world has to do.
 
 Why Godot. It is scriptable, it exports to the browser, and the same project can run without a display for experiments. A browser build that uses threads needs the page to be cross-origin isolated, which means serving it with the `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` headers. Players in different places also need a server that stores the game state. Both points are to be checked against the Godot version when the work starts, together with what the PubApps proxy allows.
 
-Decided. The first version is 2D and top-down, written in GDScript, on the condition that a conversation stays within its walls. Speech is heard in its room, muffled through a wall and heard through an open door, and the server computes this from the map, since Godot's 2D audio has no occlusion of its own. The test of the condition is in the plan.
+Decided. The first version is 2D and top-down, written in GDScript on Godot 4.7, on the condition that a conversation stays within its walls. It is both a playable game and a watchable simulation on one server, which runs on either the demo site or HiPerGator. Speech is heard in its room, muffled through a wall and heard through an open door, and the server computes this from the map, since Godot's 2D audio has no occlusion of its own. The test of the condition is in the plan.
 
 Open design questions.
 
