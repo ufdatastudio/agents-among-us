@@ -74,6 +74,22 @@ uv run --with matplotlib python -m scripts.make_replay logs/p2_<model>/Game_<tag
 
 The video needs `ffmpeg`. Add `--no-video` for the still frames only, and `--stills 30,90,votes,result` to choose them.
 
+## Godot world
+
+The plan for a 2D top-down world in Godot, where agents walk through rooms, hear speech within walls and meet in the situation room, is in [docs/godot-world.md](docs/godot-world.md). No Godot project exists yet. The first piece of code is the tile map, which `core/world_map.py` builds and `scripts/draw_world_map.py` draws.
+
+<div align="center">
+  <img src="docs/media/godot-world-map.png" alt="The tile map of the first world, with 14 rooms laid out like the ship of the simulation, joined by corridors with walls and doors">
+  <br>
+  <em>The first map is 80 by 45 tiles. The 14 rooms are laid out like the ship in <code>frontend/static/images/Skeld.png</code>, the amber bars mark the doors, and the walls are one layer that blocks bodies, views and voices.</em>
+</div>
+
+The corridors and doors give each room the same neighbours as `ROOMS` in `config/settings.py`, and a test checks it. To draw the map again:
+
+```bash
+uv run python -m scripts.draw_world_map --out docs/media/godot-world-map.png
+```
+
 ## Installation
 
 Install dependencies with [uv](https://docs.astral.sh/uv/):

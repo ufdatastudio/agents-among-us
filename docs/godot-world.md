@@ -1,6 +1,6 @@
 # A Godot world for Agents Among Us
 
-This is a plan and not an implementation. It lives on the branch `godot-world`, which starts from `situation-room` because the world reuses the situation room, the agent adapters, the audio stack and the transcript analysis of that branch.
+This is a plan. The only code so far is the tile map of the first world and its picture, see The first map. The work started on the branch `godot-world`, which was built on `situation-room` because the world reuses the situation room, the agent adapters, the audio stack and the transcript analysis of that branch, and the two have been merged.
 
 ## Goal
 
@@ -97,10 +97,24 @@ Godot's 2D audio players give a gain from distance and a maximum distance, and a
 
 - 2D and top-down for the first version, decided. It is cheaper to render, easier on agents that read frames, and the existing maps are room graphs that fit a tile map. It depends on keeping a conversation inside its walls, see Speech and walls. A 3D ship can follow if it is worth the cost.
 - One wall layer. Movement, the sight of each agent and the sound read the same wall tiles, so one map says what blocks a body, a view and a voice.
-- Maps come from the room graphs of `config/settings.py`, laid out as tile maps with corridors and doors. Rooms keep their names, so a claim such as "I was in Storage" is still checkable.
+- Maps come from the room graphs of `config/settings.py`, laid out as tile maps with corridors and doors. Rooms keep their names, so a claim such as "I was in Storage" is still checkable. The first map is drawn below.
 - Movement uses `CharacterBody2D` at a fixed physics rate. The rules that count in a round (3 moves, kills, bodies, reports) are rebuilt in terms of time and distance, and a test ties them to the Python engine's rules.
 - The language is GDScript, decided. Godot 4 has no web export for C# projects, which would end the browser client, and the first test confirms it.
 - The Godot version is 4.7, the latest stable release (June 2026), decided. Development follows the latest stable release and moves to a later one only between phases, after a read of its migration notes, so the tests of a phase run on one version. The single-threaded web export came with 4.3, and G0 checks the 4.7 notes for any change to web threads and C# export.
+
+### The first map
+
+![The tile map of the first world. It has the 14 rooms of the simulation with their corridors, walls and doors.](media/godot-world-map.png)
+
+The picture shows the map that `core/world_map.py` builds and `scripts/draw_world_map.py` draws. Its layout follows the ship of the simulation in `frontend/static/images/Skeld.png`, with the rooms in the same places, the octagonal Cafeteria at the top and the Reactor at the far left. The 14 rooms keep their names and their neighbours.
+
+- Grid. The map is 80 by 45 tiles, and each tile is floor, corridor, wall or door. A room is a rectangle of floor tiles with cut corners and a corridor is a rectangle of floor. A wall is any empty tile next to a floor tile, and a door is a wall tile with a room on one side and a corridor on the other. The layout lists only rooms and corridors, so the walls and the doors follow from it. This is the one wall layer of Speech and walls.
+- Neighbours. Two rooms are neighbours when a walk through doors and one corridor network leads from one to the other without crossing a third room. The map has 7 corridor networks and 65 door tiles. A test checks that this gives the lists of `config/settings.py` with no room missing and none added, so the world and the Python engine agree on who can reach whom.
+- Doors. Every door joins a room and a corridor, so two rooms never open into each other. The picture marks the door tiles with a bar. Open and closed doors are not drawn, since they come with G1.
+- Tests. `tests/test_world_map.py` also checks that every floor tile is enclosed by walls, that a floor tile never touches a corridor tile without a wall between them, that every room is reachable from every other, and that the picture has the size and the door color it should.
+- Not final. The rooms have no furniture, tasks or start points yet, and their sizes are read off `Skeld.png`, so G1 can change them. The size of a tile in game units and the number of tiles an agent walks in a step are set in G1, so that a round has the same rules as in the Python engine.
+
+To draw it again, run `uv run python -m scripts.draw_world_map --out docs/media/godot-world-map.png`.
 
 ## Browser and multiplayer
 

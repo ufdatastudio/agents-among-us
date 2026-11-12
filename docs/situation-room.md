@@ -302,6 +302,7 @@ The SGD, SVM and LR classifiers were trained on sequential transcripts, so their
 | `scripts/make_figures.py` | Draws the figures of this doc from `docs/figures/data.json`. `data` collects the numbers from the P2 results, the game folders and the doc's tables, and `plot` draws the PNG files with `uv run --with matplotlib python -m scripts.make_figures plot` |
 | `scripts/analyze_p2_text.py` | Reads the transcripts of P2 games and measures speech acts, claims about places checked against the agents' own observation logs, accusations, the influence of accusations on honest votes, and what agents pick up from the room |
 | `scripts/make_replay.py` | Renders one meeting of a recorded game as an MP4, a GIF and still frames, with Pillow and ffmpeg. It draws the seats, the speech as it was spoken, the lanes of who spoke when, the votes and the result. The replay of seed 3 of gpt-oss-120b in `interleaved-180` is in `docs/media/` and in the README |
+| `core/world_map.py`, `scripts/draw_world_map.py` | The tile map of the first Godot world and a drawing of it in `docs/media/godot-world-map.png`. `build_map()` turns room and corridor rectangles into floor, corridor, wall and door tiles, and `adjacency()` finds the neighbours of each room by walking the corridors. A test checks them against `config/settings.py` |
 | `core/voting.py` | `ask_until_valid()` asks again while a reply names no candidate, at rising temperatures |
 | `core/logger.py` | Unchanged. The engine writes `room/room_round<N>.jsonl` and each agent's final percept to the game's log folder |
 | `scripts/hipergator/run_game.sbatch` | Done. Starts a vLLM server and times full games in each mode in `MODES` |
@@ -668,7 +669,7 @@ These tasks start after the current ones (the P2 reruns with required votes, the
 
 ### A visual world in Godot
 
-The plan is on the branch `godot-world`, in `docs/godot-world.md`. This section keeps the summary.
+The plan is in `docs/godot-world.md`, and the first map is drawn in `docs/media/godot-world-map.png`. This section keeps the summary.
 
 The goal is a world that people can watch and play in, and that agents can live in. Rooms have sprites and sounds, humans can join as players, and the same world runs as a visible simulation or as a headless one for experiments. The situation room stays the place where meetings happen.
 
@@ -683,6 +684,8 @@ What the world has to do.
 Why Godot. It is scriptable, it exports to the browser, and the same project can run without a display for experiments. A browser build that uses threads needs the page to be cross-origin isolated, which means serving it with the `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` headers. Players in different places also need a server that stores the game state. Both points are to be checked against the Godot version when the work starts. A test on 2026-11-11 showed that the PubApps proxy passes WebSockets over `wss://`, and a game on HiPerGator reaches browsers through a reverse SSH tunnel to the VM, because a browser outside the cluster cannot reach a compute node. A test on 2026-11-12 showed that the tunnel works. Players of a hosted game use their own Navigator keys, and the owner of a key pays for the agents it funds.
 
 Decided. The first version is 2D and top-down, written in GDScript on Godot 4.7, on the condition that a conversation stays within its walls. It is both a playable game and a watchable simulation on one server, which runs on either the demo site or HiPerGator. Speech is heard in its room, muffled through a wall and heard through an open door, and the server computes this from the map, since Godot's 2D audio has no occlusion of its own. The test of the condition is in the plan.
+
+The first map is a tile map of 80 by 45 tiles with the 14 rooms and the neighbours of the simulation, laid out like the ship in `frontend/static/images/Skeld.png`. Its walls and doors give the same neighbours as `config/settings.py`, which a test checks.
 
 Open design questions.
 
