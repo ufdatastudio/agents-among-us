@@ -12,6 +12,10 @@ Three things are new compared with the Python engine.
 - An agent perceives. It receives video and audio streams, and it writes its own memory of what is happening. The Python engine writes a text observation log for the agent, so the agent never has to notice anything.
 - Humans and agents share one game with the same rules.
 
+## First version
+
+The first version is both a playable game and a watchable simulation, on one server. A game has seats. An agent or a human in a browser takes each seat, and anyone else can watch as a spectator. A game with only agents is the watchable simulation, and a game with a human is the playable game. Both use phases G1 to G3 below. They have oracle text perception, speech as text that stays within walls, and meetings in turns, where the human seat already exists in the Python engine. Sound, video and the human seat in timed meetings come after it.
+
 ## What stays in Python
 
 The experiments stay in the Python stack. The world is a body for the agents, and the room controller, the adapters, the vote reading, the logging and the analysis do not move.
@@ -86,6 +90,7 @@ Godot's 2D audio players give a gain from distance and a maximum distance, and a
 - Doorways. A straight line through a wall misses the sound that goes around through an open doorway. The gain is the larger of the straight line and the path through the nearest open door, with the distance taken along that path. A listener in the corridor beside an open door hears the room, and a listener behind the wall does not.
 - Settings. The wall loss, the closed door loss, the attenuation exponent and the maximum distance are parameters of the world, so the experiments on distance and information can change them, and each run records them.
 - Speech and noise. A listener gets words from a source only when it is louder than the other sounds that reach the listener. The mix for a listener goes through the ASR step, and a source below the level of the noise arrives as missing words.
+- First version. Speech is text in the first version. The server delivers a message to the listeners for whom the gain from the grid walk is above a threshold, so a conversation stays within its walls before any audio exists. The audio of G4 uses the same gain.
 - Meetings. In a meeting every agent is in the meeting room, and the situation room decides what each agent hears. The wall rules apply to talk in the world outside meetings.
 
 ## The world
@@ -95,7 +100,7 @@ Godot's 2D audio players give a gain from distance and a maximum distance, and a
 - Maps come from the room graphs of `config/settings.py`, laid out as tile maps with corridors and doors. Rooms keep their names, so a claim such as "I was in Storage" is still checkable.
 - Movement uses `CharacterBody2D` at a fixed physics rate. The rules that count in a round (3 moves, kills, bodies, reports) are rebuilt in terms of time and distance, and a test ties them to the Python engine's rules.
 - The language is GDScript, decided. Godot 4 has no web export for C# projects, which would end the browser client, and the first test confirms it.
-- The Godot version is 4.3 or later, because the single-threaded web export came with 4.3.
+- The Godot version is 4.7, the latest stable release (June 2026), decided. Development follows the latest stable release and moves to a later one only between phases, after a read of its migration notes, so the tests of a phase run on one version. The single-threaded web export came with 4.3, and G0 checks the 4.7 notes for any change to web threads and C# export.
 
 ## Browser and multiplayer
 
@@ -103,8 +108,8 @@ The web client runs the same project exported to HTML, WebAssembly and a pack fi
 
 - Headers. A web export without threads needs no special headers, which is the 4.3 default. An export with thread support needs the page to be cross-origin isolated, which means the response headers `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`, or the service worker of the PWA export mode that supplies them. The plan starts without threads and moves to threads only if the browser audio is poor, since the Godot documentation notes that audio can suffer in single-threaded mode on some systems.
 - Network. Browsers cannot send raw UDP, so the client talks to the server over WebSocket. Whether Godot's high-level multiplayer works over a WebSocket peer from a web export is to be tested in the first step. Voice over WebRTC is a later option.
-- Hosting. Players in different places need a server that is reachable from the browser. The PubApps VM runs containers behind a proxy, and the plan needs to know whether that proxy passes WebSocket upgrades and custom headers. This is a question for Research Computing. HiPerGator compute nodes are for the headless simulations, not for public players.
-- Players. Players join with a code and a chosen name, and the server stores no personal data.
+- Hosting. The server is one headless Godot process that takes its port, seed, agent endpoints and settings from environment variables, so the same build runs on the demo site and on HiPerGator, and the choice is made for each deployment. On the demo site (the PubApps VM) it runs as a Quadlet container next to the demo, and the static web export is served with it. The proxy has to pass WebSocket upgrades. On HiPerGator it runs as a job, and a compute node normally has no address that a browser outside the cluster can reach, so this needs a route in, such as a web proxy of Research Computing, a forward from the VM, or play from the campus network only. The static client and the join page can stay on the site in both cases, with the server address as a setting of the page. The agents' models run on HiPerGator or on Navigator, and the server should sit close to them, since each agent step waits for a model. Three questions go to Research Computing. Does the PubApps proxy pass WebSocket upgrades. Can a browser reach a server in a HiPerGator job, and by what route. Can a game on the VM use models served in a HiPerGator job.
+- Seats and spectators. A game has seats for agents and humans. A human joins with a code and a chosen name and takes a free seat, and a spectator joins with the same code and takes none. The server stores no personal data. A live spectator sees the map and the public actions and not the roles, since a spectator could pass roles to a player, and a replay shows everything.
 
 ## Phases
 
@@ -113,21 +118,22 @@ Each phase ends with a test that can fail.
 | Phase | Work | Test that ends it |
 |-------|------|-------------------|
 | G0 | Spike on the open technical questions below | Each question has a written answer and a decision |
-| G1 | World core. Map, movement, doors, bodies, tasks, kills, meeting call, fixed-step clock, recorder, the oracle text perception and the Python bridge | A scripted game runs headless, and the same actions in the Python engine and in Godot give the same rounds, bodies and ejections |
+| G1 | World core. Map with one wall layer, movement, doors, bodies, tasks, kills, meeting call, fixed-step clock, recorder, the oracle text perception, text speech within walls and the Python bridge | A scripted game runs headless, the same actions in the Python engine and in Godot give the same rounds, bodies and ejections, and a message in a room reaches a listener in the room and not one behind a closed door |
 | G2 | Agents in the world with oracle text and the memory update | The existing agents finish games, and the memory accuracy and win rates have a baseline next to the P2 results |
-| G3 | Sound events, distance and wall gain, per-listener mixes, speech in the world | A listener behind a wall hears a source at the gain the physics predicts, and an ASR check recovers the words at the distances the mixes give. A conversation in a room is recovered by a listener in the room and not by a listener behind a closed door, and a listener at an open door gets a gain between the two |
-| G4 | Video frames per agent and a vision model | The same games run with oracle text, audio, video and audio with video, and the memory accuracy of each is measured |
-| G5 | Browser client, join codes, human text chat, humans and agents in one game | Two humans in two places finish a game with agents on the hosted server |
+| G3 | Browser client with a player seat and a spectator view, join codes, human text chat, meetings in turns with a human seat, the server on the demo site and on HiPerGator. This ends the first version | Two humans in two places finish a game with agents while a spectator watches, on each of the two hosts |
+| G4 | Sound events, distance and wall gain, per-listener mixes, speech in the world | A listener behind a wall hears a source at the gain the physics predicts, and an ASR check recovers the words at the distances the mixes give. A conversation in a room is recovered by a listener in the room and not by a listener behind a closed door, and a listener at an open door gets a gain between the two |
+| G5 | Video frames per agent and a vision model | The same games run with oracle text, audio, video and audio with video, and the memory accuracy of each is measured |
 | G6 | The situation room in the world. Humans in timed meetings, with text and then voice | A mixed meeting runs through the timed room, and the human seat works in `core/timed_discussion.py` |
 
 ## First test (G0)
 
-- Web export. A single-threaded export of a small scene runs in Chrome and Firefox, with audio, and its audio quality is judged. Check whether the 4.3 or later behavior matches the documentation.
+- Web export. A single-threaded export of a small scene runs in Chrome and Firefox, with audio, and its audio quality is judged. Check the behavior against the 4.7 documentation and release notes.
 - Headless. `godot --headless` runs the simulation faster than the wall clock. Rendering is a dummy under `--headless`, so video frames need a display driver. Check what runs on a compute node, for example a virtual display or an offscreen renderer, and the cost of a frame.
 - Per-listener audio. Whether one Godot process can give each agent its own audio mix, for example one viewport and listener per agent with the bus captured through `AudioEffectCapture`, or whether the mixes have to be built in Python.
 - Browser multiplayer. A browser client and a native server exchange state over a WebSocket peer, and the round trip time is measured.
+- Two hosts. The same headless build starts from environment variables in a container on the VM and in a HiPerGator job, and a browser reaches each one. If a browser cannot reach a job, the answer from Research Computing says so, and that host serves headless runs only.
 - Walls. On a toy map of two rooms, a corridor and a door, the grid walk gives the gain the physics predicts for a listener in the room, behind the wall, in the corridor with the door open and in the corridor with it closed. If a 2D map cannot keep a conversation inside its walls, the choice of 2D is reconsidered.
-- Language. A GDScript project exports to the web, and a C# project does not.
+- Language. A GDScript project exports to the web, and a C# project does not in 4.7.
 - Determinism. The same seed and the same actions give the same states on two machines.
 - Tests of GDScript. A test framework such as GUT or gdUnit4 runs in a headless job.
 
@@ -143,10 +149,12 @@ Each phase ends with a test that can fail.
 
 - Human participants. A study with human players needs review by the university's human subjects board before any data is collected. Demo play without recorded data is a separate matter, and the decision is with the research team.
 - Video cost. A vision model reads every frame it is shown. At 10 agents and 2 frames a second a game makes about 20 frames a second of model input, so the rate and the resolution are the main levers, and a cheaper path is to describe the frames in text with one small model.
-- Eligible models. The Nemotron Omni model, which reads video and audio, waits for an answer from Research Computing. Until a vision model is approved, G4 cannot start, and G3 can use the existing ASR.
+- Eligible models. The Nemotron Omni model, which reads video and audio, waits for an answer from Research Computing. Until a vision model is approved, G5 cannot start, and G4 can use the existing ASR.
 - Wall clock against virtual time. A human game runs at the wall clock rate, and an agent needs seconds to answer. The controller grants steps and waits for the agents, so a human game with slow agents pauses between steps. The plan needs a rule for how long it waits and what a slow agent does.
 - Rendering on a cluster. Frames need a renderer on a node without a display. If this is hard, video runs on a node with a GPU and a virtual display.
-- Hosting. The proxy question above, and whether the game server runs on the VM or on a separate host.
+- Hosting. The three questions for Research Computing under Browser and multiplayer. A route into a HiPerGator job may not exist, and then that host serves headless experiments and play from the campus network.
+- Agent calls on the site. The demo asks each visitor for a Navigator key. A hosted game with agents needs the same arrangement or a model served by the project, and the model rule applies to either.
+- Spectators. A live view with the roles hidden is less interesting to watch than one with the roles shown, and the choice affects whether spectators can leak to players.
 - Wall settings. The loss in decibels for a wall and for a closed door are guesses that need calibration. A loss that is too high makes every room soundproof and removes what an agent overhears, and a loss that is too low removes private talk. The runs report the settings, and the experiments vary them.
 - Scope. G1 is a rebuild of the rules in a new engine, and the equivalence test is what keeps it honest.
 
@@ -156,9 +164,12 @@ Decided.
 
 - 2D top-down for the first version, on the condition that a conversation stays within its walls. The G0 test of walls checks the condition.
 - GDScript.
+- Godot 4.7, developed on the latest stable release.
+- The first version is both the playable game and the watchable simulation, on one server (G1 to G3).
+- The server runs on either the demo site or HiPerGator, as one build that takes its settings from the environment.
 
 For the research team.
 
-- The Godot version, which should be a stable 4.x release from 4.3 on.
-- Whether the first public milestone is the watchable simulation (G1 and G2 with a browser viewer) or the playable game (G5).
-- Where the server is hosted.
+- Whether the Research Computing questions on hosting go together with the Nemotron Omni question to the same contact.
+- What a live spectator sees, and who pays for agent calls on the site.
+- Whether play by people outside the project, with any data recorded, goes to the human subjects board before G3 is public.
