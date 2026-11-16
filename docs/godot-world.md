@@ -221,7 +221,7 @@ Each phase ends with a test that can fail.
 
 - Human participants. A study with human players needs review by the university's human subjects board before any data is collected. Demo play without recorded data is a separate matter, and the decision is with the research team.
 - Video cost. A vision model reads every frame it is shown. At 10 agents and 2 frames a second a game makes about 20 frames a second of model input, so the rate and the resolution are the main levers, and a cheaper path is to describe the frames in text with one small model.
-- Eligible models. The Nemotron Omni model, which reads video and audio, waits for an answer from Research Computing. Until a vision model is approved, G5 cannot start, and G4 can use the existing ASR.
+- Eligible models. Research Computing approved the Nemotron Omni model, which reads video and audio, on a support ticket. G5 can use it, and G4 can use it or the existing ASR.
 - Wall clock against virtual time. A human game runs at the wall clock rate, and an agent needs seconds to answer. The controller grants steps and waits for the agents, so a human game with slow agents pauses between steps. The plan needs a rule for how long it waits and what a slow agent does.
 - Rendering on a cluster. Frames need a renderer on a node without a display. If this is hard, video runs on a node with a GPU and a virtual display.
 - Hosting. A game on HiPerGator depends on a tunnel from the job, and the policy of Research Computing may not allow a standing one. Then HiPerGator serves headless experiments and the VM serves the people who play.
@@ -244,5 +244,5 @@ Decided.
 
 For the research team.
 
-- Whether to ask Research Computing about a standing tunnel from a HiPerGator job to the VM, after the G0 test. The Nemotron Omni question can go in the same email.
+- Whether to ask Research Computing about a standing tunnel from a HiPerGator job to the VM, after the G0 test.
 - Whether play by people outside the project, with any data recorded, goes to the human subjects board before G3 is public.

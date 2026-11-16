@@ -1,7 +1,8 @@
 """Models the situation room experiments may run on HiPerGator.
 
 A model is eligible when UF Navigator also serves it and neither the model nor its
-post-training comes from a country of concern. That rules out the Qwen family,
+post-training comes from a country of concern. APPROVED lists the models that Navigator
+does not serve and that Research Computing approved. That rules out the Qwen family,
 DeepSeek and the other families in BLOCKED, and any model whose card says it was
 improved using or built on them. The audit of the public model cards, dated
 2026-11-10, is described in docs/situation-room.md.
@@ -32,6 +33,15 @@ ELIGIBLE = {
     "meta-muse-glimmer-30b": "meta-models/Muse-Glimmer-30B",
     "llama-3.3-70b-instruct": "meta-llama/Llama-3.3-70B-Instruct",
     "gpt-oss-120b": "openai/gpt-oss-120b",
+}
+
+# Name -> (Hugging Face checkpoint, source of the approval). These models are not on Navigator. Each
+# was approved by Research Computing, and the group reported the approval in chat. Nothing else goes here.
+APPROVED = {
+    "nemotron-3-nano-omni": (
+        "nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16",
+        "approved by Research Computing on a support ticket, reported by the group on 2026-11-16",
+    ),
 }
 
 # Navigator model name -> (Hugging Face checkpoint, reason for exclusion).
@@ -106,6 +116,9 @@ def check_eligible(model: str, override: str | None = None) -> str:
         warnings.warn(f"Running {model} under the typed Qwen override", stacklevel=2)
         return model
     for name, checkpoint in ELIGIBLE.items():
+        if model in (name, checkpoint):
+            return checkpoint
+    for name, (checkpoint, _) in APPROVED.items():
         if model in (name, checkpoint):
             return checkpoint
     for name, (checkpoint, reason) in EXCLUDED.items():

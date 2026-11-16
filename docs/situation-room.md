@@ -200,9 +200,9 @@ The audio pipeline.
 
 Whisper large-v3 (speech recognition) and Kokoro (speech synthesis) are both in Navigator's catalog, so the audio stack follows the same rule as the language models. Both run from the `/blue` cache on HiPerGator, as the P1b measurements below show.
 
-Three components are not on Navigator. Research Computing approved the diarization model on 2026-11-12, and the native ear and the speech separation model wait for approval.
+Three components are not on Navigator. Research Computing approved the diarization model on 2026-11-12 (request 85601) and the Nemotron Omni model for the native ear through a support ticket, which the group reported on 2026-11-16. The speech separation model waits for approval.
 
-- Native ear. None of Navigator's language models takes audio, and the Gemma 4 31B config has `audio_config: null`. The one candidate found, `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, is not in Navigator's catalog, builds on a Nemotron 3 Nano backbone that is itself excluded, and its card says it was improved using Qwen models. It is excluded, and a question about it is with Research Computing. The native ear has no model until an eligible one is found.
+- Native ear. None of Navigator's language models takes audio, and the Gemma 4 31B config has `audio_config: null`. The one candidate found, `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, is not in Navigator's catalog, builds on a Nemotron 3 Nano backbone that is excluded as a language model, and its card says it was improved using Qwen models. Research Computing approved running it through a support ticket, which the group reported on 2026-11-16, so it joins the eligible list as the one model that Navigator does not serve.
 - Model-based diarization. `nvidia/Nemotron-3-Diarization` is a streaming Sortformer with the OpenMDW license and no gating. Research Computing approved it on 2026-11-12 (request 85601) after finding no Chinese models involved. `core/audio/diarize.py` runs it and the P1c pilot below measures it. The `estimated` labels can also come from the oracle labels with errors injected at a chosen diarization error rate, which makes that rate a controlled factor.
 - Speech separation. The mix ear needs it to do better than Whisper alone.
 
@@ -524,6 +524,7 @@ Florida Statute [288.860](https://www.flsenate.gov/Laws/Statutes/2025/288.860) d
 The experiments follow two rules. The model must also be served by Navigator, so results apply to the Navigator demo. Neither the model nor its post-training may come from a country of concern. That excludes the Qwen family and DeepSeek, models built on them (Athene V2, Arcee Nova and OpenPipe Qwen3 14B), and any model whose card says it was improved using them. It removes most of the HW and LW lists in `config/model_composition.py`.
 `config/eligible_models.py` enforces the rules. It lists the eligible models, matches Qwen, DeepSeek and other family names, and gives the reason for each exclusion. The HiPerGator job scripts run `python -m config.eligible_models <model>` before they start a server, and the job fails for any model that is not on the list.
 A Qwen checkpoint gets a warning and does not start unless someone types the override phrase, as `--override "<phrase>"` on the command or `QWEN_OVERRIDE="<phrase>"` on the `sbatch` line. The warning prints the phrase and advises confirming with Research Computing first. The override opens Qwen names only. DeepSeek and the other families, and the models excluded for a card that cites Qwen, stay refused.
+One model is an approved exception to the Navigator rule. Research Computing approved `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16` on a support ticket, which the group reported on 2026-11-16, so it is on the eligible list although Navigator does not serve it. Results with it apply to that checkpoint and not to the Navigator demo. The file lists it in `APPROVED` with the source of the approval, and no other model is added that way.
 The table lists the eligible models with the Hugging Face checkpoint to use. Navigator may serve a different revision or quantization, so each run records the checkpoint revision.
 
 | Navigator model | Hugging Face checkpoint | Class | On /blue |
@@ -537,15 +538,16 @@ The table lists the eligible models with the Hugging Face checkpoint to use. Nav
 | `meta-muse-glimmer-30b` | `meta-models/Muse-Glimmer-30B`, which Navigator's lifecycle page may list as legacy | 30B | no |
 | `llama-3.3-70b-instruct` | `meta-llama/Llama-3.3-70B-Instruct` | 70B | yes |
 | `gpt-oss-120b` | `openai/gpt-oss-120b` | 117B MoE | yes |
+| `nemotron-3-nano-omni` (not on Navigator) | `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, which takes audio, image and video | 31B MoE | no |
 
-The audit on 2026-11-10 read the public model card of every Navigator open-weight model and of the audio models, looking for a Qwen, DeepSeek or other Chinese-origin base, teacher or reward model. The 9 models above are clean. Their cards mention Qwen or DeepSeek only in benchmark tables and Chinese only as a supported language. The Llama 3.3 70B card is gated, so its check rests on the base model in its metadata, Llama 3.1 70B, and Muse Glimmer 30B lists no base model.
+The audit on 2026-11-10 read the public model card of every Navigator open-weight model and of the audio models, looking for a Qwen, DeepSeek or other Chinese-origin base, teacher or reward model. The 9 Navigator models above are clean. Their cards mention Qwen or DeepSeek only in benchmark tables and Chinese only as a supported language. The Llama 3.3 70B card is gated, so its check rests on the base model in its metadata, Llama 3.1 70B, and Muse Glimmer 30B lists no base model.
 
 Excluded after the audit.
 
 - `llama-3.1-nemotron-nano-8B`. The card says "Improved using Qwen".
 - `nemotron-3-nano-30b-a3b`. The card says "Improved using Qwen", and its reinforcement learning used a reward model built on Qwen3.
 - `nemotron-3-super-120b-a12b`. The card names GPT-OSS-120B as one teacher and leaves the others unnamed, so Qwen or DeepSeek outputs cannot be ruled out. It returns to the list if its dataset card shows otherwise.
-- `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, the native-ear candidate. The card says it was improved using Qwen3-VL-30B-A3B-Instruct, Qwen3.5-122B-A10B, Qwen3.5-397B-A17B, Qwen2.5-VL-72B-Instruct and gpt-oss-120b. Its architecture section names the excluded Nemotron 3 Nano 30B-A3B as the language backbone. The training data table lists Qwen models as annotators for most of its public datasets, and also DeepSeek OCR, GLM-4.1V-9B-Thinking and Kimi-K2.5 for a few. Navigator does not list it. The license is the NVIDIA Open Model Agreement.
+- `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, the native-ear candidate. The card says it was improved using Qwen3-VL-30B-A3B-Instruct, Qwen3.5-122B-A10B, Qwen3.5-397B-A17B, Qwen2.5-VL-72B-Instruct and gpt-oss-120b. Its architecture section names the excluded Nemotron 3 Nano 30B-A3B as the language backbone. The training data table lists Qwen models as annotators for most of its public datasets, and also DeepSeek OCR, GLM-4.1V-9B-Thinking and Kimi-K2.5 for a few. Navigator does not list it. The license is the NVIDIA Open Model Agreement. Research Computing approved running it through a support ticket, which the group reported on 2026-11-16.
 - `medgemma-27b-it`, which is tuned for medicine and not used in the game.
 
 The audio stack passed. Whisper large-v3 (OpenAI) and Kokoro (built on StyleTTS 2) have no Chinese-origin base, and the audio environment has no packages from the Qwen or DeepSeek ecosystems. `nvidia/Nemotron-3-Diarization` is an NVIDIA model, but it trains on Mandarin meeting corpora (AISHELL-4 and AliMeeting), and Research Computing approved it on 2026-11-12 (request 85601) after finding no Chinese models involved.
@@ -756,7 +758,7 @@ Open design questions.
 
 - How often an agent samples video, and what a frame costs, since a vision model reads every frame it is shown.
 - What the memory update looks like, for example a short text summary written after each interval, and how it is kept comparable across models.
-- Which models may read video and audio. The Nemotron Omni model is waiting for an answer from Research Computing, and the model rule of this project applies to every model in the loop.
+- Which models may read video and audio. Research Computing approved the Nemotron Omni model on a support ticket, and the model rule of this project applies to every other model in the loop.
 - Whether the game server is authoritative, and how a seed fixes a run so that experiments repeat.
 - The art and sound assets. They have to be original or licensed for this use.
 
@@ -764,7 +766,7 @@ Open design questions.
 
 - Shared state. Whether a typed ledger, in place of per-agent text logs and rendered transcripts, helps agents inside and outside a meeting, with a comparison to run, is in [shared-ledger.md](shared-ledger.md).
 - Wall-clock scenario, to measure what inference latency costs a model. Adapters would hear continuously and post when ready.
-- Approval for models that are not on Navigator. A speech separation model for the mix ear, and an eligible audio-capable model for the native ear, for which none is known yet. The diarization model is approved.
+- Approval for models that are not on Navigator. A speech separation model for the mix ear. The diarization model and the Nemotron Omni model are approved.
 - Human seat in timed mode. The current human input path uses a 30 s timeout per message.
 - Default for `quiet_close_ticks`, to be set from the P1 pilot.
 - The movement phase is still sequential. Making it simultaneous is a separate change.

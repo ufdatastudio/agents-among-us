@@ -2,7 +2,7 @@
 
 import pytest
 
-from config.eligible_models import BLOCKED, ELIGIBLE, EXCLUDED, OVERRIDE_PHRASE, STATUTE_URL, check_eligible, main
+from config.eligible_models import APPROVED, BLOCKED, ELIGIBLE, EXCLUDED, OVERRIDE_PHRASE, STATUTE_URL, check_eligible, main
 
 
 def test_no_eligible_model_matches_a_blocked_family():
@@ -14,6 +14,27 @@ def test_no_eligible_model_matches_a_blocked_family():
 def test_eligible_and_excluded_models_do_not_overlap():
     assert not set(ELIGIBLE) & set(EXCLUDED)
     assert not set(ELIGIBLE.values()) & {checkpoint for checkpoint, _ in EXCLUDED.values()}
+    assert not set(APPROVED) & (set(ELIGIBLE) | set(EXCLUDED))
+    assert not {checkpoint for checkpoint, _ in APPROVED.values()} & ({c for c, _ in EXCLUDED.values()} | set(ELIGIBLE.values()))
+
+
+def test_the_approved_model_is_clean_of_blocked_names_and_says_where_the_approval_came_from():
+    for name, (checkpoint, source) in APPROVED.items():
+        assert not BLOCKED.search(name) and not BLOCKED.search(checkpoint)
+        assert "Research Computing" in source
+
+
+def test_the_approved_model_is_found_by_name_or_checkpoint():
+    checkpoint = "nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16"
+    assert check_eligible("nemotron-3-nano-omni") == checkpoint
+    assert check_eligible(checkpoint) == checkpoint
+
+
+def test_the_approval_covers_only_the_models_in_the_list():
+    with pytest.raises(ValueError, match="excluded"):
+        check_eligible("nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16")
+    with pytest.raises(ValueError, match="not on the eligible list"):
+        check_eligible("nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-FP8")
 
 
 def test_an_eligible_model_is_found_by_name_or_checkpoint():
