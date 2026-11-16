@@ -18,6 +18,8 @@
 # and the runner checks the model again. TAG names the output file results/p2/<model>_<TAG>.jsonl, and a
 # job that ran out of time can be resubmitted with the same TAG to play only the games that are missing.
 # A 300 s meeting in the interleaved rendering gives a prompt of more than 16k tokens, so the server's context is 32k by default.
+# VLLM_WITH replaces the vllm package spec and VLLM_EXTRA adds server arguments, split on spaces, for a model that needs them. SERVER_WAIT_TRIES
+# (5 s each, 180 by default) is how long to wait for the server, and a first load of a large model may need more.
 # For a gpt-oss model also set AAU_MAX_TOKENS (a larger reply limit) and VLLM_REASONING_EFFORT.
 # Gemma 4 writes a think block inside its reply, and the default limit of 160 tokens cuts it before the answer, which
 # leaves an empty reply. Set AAU_MAX_TOKENS=1024 for it.
@@ -29,22 +31,22 @@ PORT=$((20000 + SLURM_JOB_ID % 20000))
 mkdir -p logs results/p2
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
-uv run --no-project --with vllm vllm serve "${MODEL}" \
+uv run --no-project --with "${VLLM_WITH:-vllm}" vllm serve "${MODEL}" \
   --host 127.0.0.1 --port "${PORT}" \
   --max-model-len "${MAX_MODEL_LEN:-32768}" \
   --enable-prompt-tokens-details \
-  --served-model-name "${MODEL}" > "logs/vllm-${SLURM_JOB_ID}.log" 2>&1 &
+  --served-model-name "${MODEL}" ${VLLM_EXTRA:-} > "logs/vllm-${SLURM_JOB_ID}.log" 2>&1 &
 SERVER_PID=$!
 trap 'kill ${SERVER_PID} 2>/dev/null || true' EXIT
 
-# Wait up to 15 minutes for the server to answer.
+# Wait up to 15 minutes, or SERVER_WAIT_TRIES times 5 s, for the server to answer.
 READY=0
-for ((i = 0; i < 180; i++)); do
+for ((i = 0; i < ${SERVER_WAIT_TRIES:-180}; i++)); do
   if curl -sf "http://127.0.0.1:${PORT}/v1/models" > /dev/null; then READY=1; break; fi
   if ! kill -0 "${SERVER_PID}" 2>/dev/null; then echo "server exited early"; tail -60 "logs/vllm-${SLURM_JOB_ID}.log"; exit 1; fi
   sleep 5
 done
-if [ "${READY}" -ne 1 ]; then echo "server not ready after 15 minutes"; tail -60 "logs/vllm-${SLURM_JOB_ID}.log"; exit 1; fi
+if [ "${READY}" -ne 1 ]; then echo "server not ready after $((i * 5)) s"; tail -60 "logs/vllm-${SLURM_JOB_ID}.log"; exit 1; fi
 echo "server ready on ${PORT} after about $((i * 5)) s"
 
 # APP_MODE=api loads no .env file and imports no torch, and the games only talk to the local server.
