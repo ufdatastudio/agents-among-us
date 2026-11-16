@@ -163,6 +163,7 @@ class Replay:
         roles: Role of each agent, `honest` or `byzantine`.
         rounds: The rounds in order.
         winner: `honest` or `byzantine`, or None when the stats say nothing.
+        room: Settings of the timed room as the first meeting recorded them, or empty when no meeting had a room.
     """
 
     game_id: str
@@ -172,6 +173,7 @@ class Replay:
     roles: dict[str, str]
     rounds: list[RoundLog]
     winner: str | None = None
+    room: dict = field(default_factory=dict)
 
 
 def parse_acts(text: str) -> tuple[dict[int, list[Act]], dict[int, tuple[str, str]]]:
@@ -216,6 +218,16 @@ def read_room(path: Path) -> tuple[float | None, list[Spoken]]:
     return closed, sorted(spoken, key=lambda s: (s.start_s, s.author))
 
 
+def read_room_options(path: Path) -> dict:
+    """Reads the settings row of a timed room record, or an empty dict when there is none."""
+    if not path.exists():
+        return {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip() and json.loads(line).get("type") == "room":
+            return json.loads(line)
+    return {}
+
+
 def winner_of(path: Path) -> str | None:
     """Reads which side won from `stats.csv`, or None."""
     stats = path / "stats.csv"
@@ -253,12 +265,14 @@ def load_replay(path: Path) -> Replay:
     victims = parse_victims(path / "roundResults.log")
     numbers = sorted({n for a in acts.values() for n in a} | set(victims))
     rounds = []
+    options: dict = {}
     for number in numbers:
         entry = RoundLog(number, {agent: by_round[number] for agent, by_round in acts.items() if number in by_round}, victims=victims.get(number, []))
         if number in game.votes or number in game.meetings():
             if number in causes:
                 entry.reporter, entry.body = causes[number].most_common(1)[0][0]
             closed, spoken = read_room(path / "room" / f"room_round{number}.jsonl")
+            options = options or read_room_options(path / "room" / f"room_round{number}.jsonl")
             if not spoken:
                 spoken = _paced(game, number)
             entry.meeting = MeetingLog(
@@ -266,7 +280,7 @@ def load_replay(path: Path) -> Replay:
                 spoken=spoken, votes=dict(game.votes.get(number, {})), ejected=game.ejected.get(number),
             )
         rounds.append(entry)
-    return Replay(game.game_id, game.model, game.protocol, game.seed, dict(game.roles), rounds, winner_of(path))
+    return Replay(game.game_id, game.model, game.protocol, game.seed, dict(game.roles), rounds, winner_of(path), options)
 
 
 def _paced(game, number: int) -> list[Spoken]:
