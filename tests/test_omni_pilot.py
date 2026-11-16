@@ -91,6 +91,7 @@ def test_a_listener_that_writes_every_word_gets_full_recall_and_the_right_counts
     assert one["speakers_recovered_share"] == 1.0 and three["speakers_recovered_share"] == 1.0
     assert one["count_right_share"] == 0.0 and three["count_right_share"] == 1.0
     assert one["labeled_speakers_mean"] == 1.0
+    assert [(x["speakers"], x["transcript"]) for x in result["trials"]] == [(1, f"Speaker 1: {everything}")] * 2 + [(3, f"Speaker 1: {everything}")] * 2
 
 
 def test_a_listener_that_hears_nothing_scores_zero_and_failures_are_counted(clips):

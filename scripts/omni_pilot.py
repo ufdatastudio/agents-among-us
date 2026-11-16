@@ -260,14 +260,14 @@ def run_trials(
         seed: Seed of the pilot. Trials draw with `seed + 1`, as the Whisper pilot does.
 
     Returns:
-        The clean measurements and one row for each level.
+        The clean measurements, one row for each level and every trial with its transcript.
     """
     clean = []
     for name in NAMES:
         raw, count, text, seconds, failed = listen(ask, audio[name])
         clean.append({"agent": name, "wer": round(word_error_rate(texts[name], text), 4), "count": count, "seconds": round(seconds, 2), "failed": failed})
     rng = random.Random(seed + 1)
-    rows = []
+    rows, every = [], []
     for level in levels:
         trials = []
         for _ in range(reps):
@@ -282,6 +282,7 @@ def run_trials(
                 "references": {c.speaker: texts[c.speaker] for c in chosen}, "transcript": raw,
             })
         rows.append(summarize(level, trials))
+        every.extend(trials)
         logger.info(
             "k={} recall={} precision={} speakers_recovered={} counted_right={} labeled={}",
             level, rows[-1]["recall"], rows[-1]["precision"], rows[-1]["speakers_recovered_share"],
@@ -294,6 +295,7 @@ def run_trials(
             "seconds_mean": round(statistics.mean(c["seconds"] for c in clean), 2), "rows": clean,
         },
         "overlap": rows,
+        "trials": every,
     }
 
 

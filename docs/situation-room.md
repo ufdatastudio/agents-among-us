@@ -202,7 +202,7 @@ Whisper large-v3 (speech recognition) and Kokoro (speech synthesis) are both in 
 
 Three components are not on Navigator. Research Computing approved the diarization model on 2026-11-12 (request 85601) and the Nemotron Omni model for the native ear through a support ticket, which the group reported on 2026-11-16. The speech separation model waits for approval.
 
-- Native ear. None of Navigator's language models takes audio, and the Gemma 4 31B config has `audio_config: null`. The one candidate found, `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, is not in Navigator's catalog, builds on a Nemotron 3 Nano backbone that is excluded as a language model, and its card says it was improved using Qwen models. Research Computing approved running it through a support ticket, which the group reported on 2026-11-16, so it joins the eligible list as the one model that Navigator does not serve.
+- Native ear. None of Navigator's language models takes audio, and the Gemma 4 31B config has `audio_config: null`. The one candidate found, `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16`, is not in Navigator's catalog, builds on a Nemotron 3 Nano backbone that is excluded as a language model, and its card says it was improved using Qwen models. Research Computing approved running it through a support ticket, which the group reported on 2026-11-16, so it joins the eligible list as the one model that Navigator does not serve. P1d measured it on room mixes and found it no better than Whisper at overlap.
 - Model-based diarization. `nvidia/Nemotron-3-Diarization` is a streaming Sortformer with the OpenMDW license and no gating. Research Computing approved it on 2026-11-12 (request 85601) after finding no Chinese models involved. `core/audio/diarize.py` runs it and the P1c pilot below measures it. The `estimated` labels can also come from the oracle labels with errors injected at a chosen diarization error rate, which makes that rate a controlled factor.
 - Speech separation. The mix ear needs it to do better than Whisper alone.
 
@@ -518,6 +518,28 @@ What this means for the design.
 - The labels are arrival-order indices from 0 to 7, not names. The roll call binds a label to a name, and a listener who hears 9 voices has to cope with 8 labels.
 - The numbers come from one synthetic voice set, 10 trials per cell and a reference taken from clip energy, so they say how this stack behaves and say little about human speech. The next steps are labeling in a live game tick by tick and relating the diarization error rate of each reader to the outcome of the game (P5).
 
+### Measured native ear (P1d)
+
+`scripts/omni_pilot.py` repeats the Whisper pilot of P1b with `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16` as the listener. It uses the statements, the voices, the speaker subsets and the onsets of the Whisper run for seed 7. Omni gets each mix as audio with thinking off, which is the instruct setting of its card (temperature 0.2 and top-k 1). It is asked for a transcript with a line for each voice it can tell apart, and in a second request for the number of people. Scoring is the text scoring of P1b, so the two tables compare directly. Job 51657329 ran on one RTX PRO 6000 with vLLM 0.33.0 and `--trust-remote-code`. The server took 200 s to start, and the 10 clean clips and 100 trials took 38 s with no failed request. The result file is `results/omni_pilot/summary_51657329.json`.
+
+- Clean speech is recognized without an error. The word error rate is 0 on all 10 clips, against 0.5% for Whisper. Asked how many people talk in a clean clip, Omni says 1 for 7 of the 10.
+- The table gives Omni first and Whisper in brackets. Each row averages 10 trials, and the standard deviation of recall is between 0.05 and 0.10.
+
+| Speakers at once | Word recall | Precision | Speakers recovered | People counted right |
+|------------------|-------------|-----------|--------------------|----------------------|
+| 1 | 100% (99.6%) | 100% (99.6%) | 100% (100%) | 70% |
+| 2 | 62% (52%) | 96% (99.6%) | 65% (55%) | 80% |
+| 3 | 47% (44%) | 90% (97%) | 47% (50%) | 20% |
+| 5 | 22% (24%) | 72% (90%) | 21% (26%) | 0% |
+| 10 | 9% (12%) | 50% (62%) | 8% (6%) | 0% |
+
+- Omni hears overlapped speech about as Whisper does. It recovers 10 points more at 2 speakers, the same at 3, and less at 5 and 10. Its precision falls faster, so more of what it writes is in no speaker's text.
+- It does not separate the voices. With Green and Brown speaking, it wrote "Speaker 1: I was in storage. Speaker 2: I was in medical with Lina. Speaker 1: And we both finished our tasks.", which cuts the two statements into alternating turns and turns Lime into Lina.
+- It cannot count voices in a mix. It answers 2.2 people on average whether 2, 3, 5 or 10 speak. At 5 speakers the transcripts had 11.9 different labels on average, so some transcripts had long runs of labels. The first run kept only the first transcript of each level, and the report now keeps every trial.
+- The run covers 10 trials per level, one synthetic voice set, one prompt and thinking off. A prompt that asks for the voices one at a time, or reasoning on, is not tested.
+
+What this means for the design. A native ear gains nothing over Whisper from hearing the mix at this overlap, and it matches Whisper on a single voice. The separated ear stays the default, and a speech separation model is still the next step for a mix ear that does better.
+
 ### Model eligibility
 
 Florida Statute [288.860](https://www.flsenate.gov/Laws/Statutes/2025/288.860) defines the foreign countries of concern as the People's Republic of China, the Russian Federation, Iran, North Korea, Cuba, the Maduro regime in Venezuela and Syria, with the entities they control. The byzantine-agents README records that UF Research Computing's acceptable-use policy (new user training, Module 4) bars large language models from organizations in those countries on any UF computing resource, and that fine-tuning does not make them acceptable. Qwen comes from Alibaba in China, so it falls under that policy.
@@ -563,6 +585,7 @@ The reasoning models (gpt-oss and Magistral) spend part of `max_tokens` on think
 | P1 | What does a game cost and does it read well | 1 GPU, 1 small model, 5 games per protocol. Measure minutes per game and parse failures, check that `interleaved` is legible, tune defaults. Run one game with each agent on its own GPU to confirm the barrier works across processes | about 25 |
 | P1b | Does the audio stack work | Done once on 1 RTX PRO 6000 with Kokoro and Whisper large-v3, see Measured audio stack. Still to do. Map word recall against overlap share with wider onsets, cap Whisper's generation length, and test a speech separation model once it is approved | 0 |
 | P1c | Does model-based diarization work on room mixes | Done once on 1 RTX PRO 6000 with Kokoro mixes and Nemotron 3 Diarization, see Measured diarization. Scores its labels against the true segments by number of speakers, overlap and meeting length. Still to do. Label a live game tick by tick, and relate the error of each reader to the outcome | 0 |
+| P1d | Can a native-audio model hear who said what in a mix | Done once on 1 RTX PRO 6000 with Kokoro mixes and Nemotron Omni, see Measured native ear. Same statements, voices, subsets and onsets as P1b, so the result compares with Whisper. Still to do. Prompt it for one voice at a time, turn reasoning on, and keep every transcript | 0 |
 | P2 | How much does the protocol matter | 3 models (small, medium, large), homogeneous. Sequential, timed `clean`, `interleaved` and `noisy` at budgets 60, 180 and 300 s, and no discussion. 11 cells per model, 50 games per cell | 1,650 |
 | P3 | How does each model perform | Each of the 9 eligible models as crew against a fixed reference model as impostors, then swapped, under sequential, timed `clean` and timed `interleaved`. 50 games per cell | 2,700 |
 | P4 | Which knobs matter | `tick_s` 5, 10, 20. Impostors 1, 2, 3. `dropout` 0, 0.1, 0.3. 9 cells per model, 50 games per cell, on 1 or 2 models | 450 per model |
