@@ -2,7 +2,16 @@
 
 import pytest
 
-from config.eligible_models import APPROVED, BLOCKED, ELIGIBLE, EXCLUDED, OVERRIDE_PHRASE, STATUTE_URL, check_eligible, main
+from config.eligible_models import (
+    APPROVED,
+    BLOCKED,
+    ELIGIBLE,
+    EXCLUDED,
+    OVERRIDE_PHRASE,
+    STATUTE_URL,
+    check_eligible,
+    main,
+)
 
 
 def test_no_eligible_model_matches_a_blocked_family():

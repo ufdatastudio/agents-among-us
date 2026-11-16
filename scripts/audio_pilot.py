@@ -22,14 +22,29 @@ import random
 import statistics
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from loguru import logger
 import numpy as np
+from loguru import logger
 
-from core.audio.asr import Transcriber
-from core.audio.metrics import normalize_words, word_error_rate, word_precision, word_recall
-from core.audio.mix import SAMPLE_RATE, Clip, mix_for_reader, overlap_fraction, speakers_at, write_wav
+from core.audio.metrics import (
+    normalize_words,
+    word_error_rate,
+    word_precision,
+    word_recall,
+)
+from core.audio.mix import (
+    SAMPLE_RATE,
+    Clip,
+    mix_for_reader,
+    overlap_fraction,
+    speakers_at,
+    write_wav,
+)
 from core.audio.tts import Synthesizer, assign_voices
+
+if TYPE_CHECKING:
+    from core.audio.asr import Transcriber
 
 # Spoken names. The game's agent colors are easy to pronounce and to recognize.
 NAMES = ["Red", "Orange", "Yellow", "Lime", "Green", "Cyan", "Blue", "Purple", "Brown", "Pink"]
@@ -87,7 +102,7 @@ def unique_recall(speaker: str, chosen: list[Clip], texts: dict[str, str], trans
 def overlap_trial(
     audio: dict[str, np.ndarray],
     texts: dict[str, str],
-    transcriber: Transcriber,
+    transcriber: "Transcriber",
     level: int,
     rng: random.Random,
     wav_path: Path | None,
@@ -179,6 +194,9 @@ def summarize_trials(level: int, trials: list[dict]) -> dict:
 
 def main() -> None:
     """Runs the clean, overlap and tick measurements and writes a JSON report."""
+    # Whisper loads here so that the helpers of this module can be imported without torch and transformers.
+    from core.audio.asr import Transcriber
+
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--wav-dir", type=Path)
