@@ -115,17 +115,17 @@ def speakers_at(clips: Sequence[Clip], time_s: float, exclude: str | None = None
 
 
 def write_wav(path: Path, samples: np.ndarray, sample_rate: int = SAMPLE_RATE) -> None:
-    """Writes mono float samples as a 16-bit PCM WAV file.
+    """Writes float samples as a 16-bit PCM WAV file.
 
     Args:
         path: Output file.
-        samples: Float samples in [-1, 1].
+        samples: Float samples in [-1, 1], either mono as shape (n,) or with channels as shape (n, channels).
         sample_rate: Sampling rate in hertz.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     pcm = (np.clip(samples, -1.0, 1.0) * 32767).astype("<i2")
     with wave.open(str(path), "wb") as handle:
-        handle.setnchannels(1)
+        handle.setnchannels(1 if samples.ndim == 1 else samples.shape[1])
         handle.setsampwidth(2)
         handle.setframerate(sample_rate)
         handle.writeframes(pcm.tobytes())

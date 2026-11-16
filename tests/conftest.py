@@ -3,7 +3,10 @@
 import os
 from pathlib import Path
 
+import numpy as np
 import pytest
+
+from core.audio.mix import SAMPLE_RATE
 
 # The navigator image has no torch or transformers. Match its mode so the tests
 # import the game engine without the GPU dependencies.
@@ -69,3 +72,22 @@ def write_game(root: Path) -> Path:
 def mini_game(tmp_path: Path) -> Path:
     """A finished game of 4 agents with one tag, one report and one meeting, written in the format of the engine."""
     return write_game(tmp_path)
+
+
+class FakeVoice:
+    """A synthesizer that speaks every word for a fixed time, at a level that depends on the voice."""
+
+    def __init__(self, seconds_per_word: float = 0.5) -> None:
+        self.seconds_per_word = seconds_per_word
+        self.calls: list[tuple[str, str, float]] = []
+
+    def synthesize(self, text: str, voice: str, speed: float = 1.0) -> np.ndarray:
+        self.calls.append((text, voice, speed))
+        length = round(len(text.split()) * self.seconds_per_word / speed * SAMPLE_RATE)
+        return np.full(length, 0.5 if voice == "v0" else 0.25, dtype=np.float32)
+
+
+@pytest.fixture()
+def fake_voice() -> FakeVoice:
+    """A synthesizer with no speech model."""
+    return FakeVoice()

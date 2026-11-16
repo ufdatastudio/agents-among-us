@@ -3,9 +3,8 @@
 import random
 from collections.abc import Sequence
 
-from kokoro import KPipeline
-from loguru import logger
 import numpy as np
+from loguru import logger
 
 # American English voices only, because the pipeline uses the American text front end.
 VOICES = (
@@ -42,6 +41,9 @@ class Synthesizer:
             repo_id: Hugging Face repository with the weights and voices.
             device: Torch device, or None to let Kokoro choose.
         """
+        # Kokoro and its torch stack load here so that `assign_voices` works on a machine without them.
+        from kokoro import KPipeline
+
         self._pipeline = KPipeline(lang_code="a", repo_id=repo_id, device=device)
         logger.info("Kokoro pipeline ready on {}", device or "default device")
 
