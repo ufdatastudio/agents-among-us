@@ -120,7 +120,7 @@ To draw it again, run `uv run python -m scripts.draw_world_map --out docs/media/
 
 ![Round 1 of a recorded game on the map. Agents walk to their rooms, Agent_1 tags Agent_5 in Communications, and Agent_2 reports the body.](media/world-gemma-4-31b-it-interleaved-180-seed3.gif)
 
-`scripts/make_world_replay.py` plays a finished game of the Python engine on the tile map as a video, and `scripts/world_replay.py` plans the walks. Agents walk through doors and corridors to their rooms, a tag leaves a body, a report calls the agents in play to the Cafeteria, the statements of the meeting appear as they were spoken, and the votes and the ejection follow. The viewer sees the roles, which the agents never saw.
+`scripts/make_world_replay.py` plays a finished game of the Python engine on the tile map as a video, and `scripts/world_replay.py` plans the walks. Agents walk through doors and corridors to their rooms, a tag leaves a body, a report calls the agents in play to the Cafeteria, the statements of the meeting appear as they were spoken, and the votes and the ejection follow. The viewer sees every role. Honest agents never knew who was Byzantine, and Byzantine agents knew their teammates.
 
 The videos are animations of games that already ran, and no Godot simulation produced them. The engine logs the room of each agent at each tick and nothing in between. The replay draws the route from one room to the next, the spot of each agent inside a room and the seat at the table, and none of these came from the game. Every walk takes 1.6 s whatever its length.
 
@@ -131,20 +131,34 @@ The videos are animations of games that already ran, and no Godot simulation pro
 
 | Video | Game | Rounds | Result | Length |
 |-------|------|--------|--------|--------|
-| [world-gemma-4-31b-it-interleaved-180-seed3.mp4](media/world-gemma-4-31b-it-interleaved-180-seed3.mp4) | Gemma 4 31B, P2, scenario seed 3 | 2 | Byzantine agents win | 2:16 |
-| [world-gpt-oss-120b-interleaved-180-seed2.mp4](media/world-gpt-oss-120b-interleaved-180-seed2.mp4) | gpt-oss-120b, run `p6-gptoss`, seed 2 | 5 | Honest agents win | 4:24 |
-| [world-granite-3-3-8b-instruct-interleaved-180-seed16.mp4](media/world-granite-3-3-8b-instruct-interleaved-180-seed16.mp4) | Granite 3.3 8B, run `p6-granite`, seed 16 | 5 | Byzantine agents win | 4:28 |
+| [world-gemma-4-31b-it-interleaved-180-seed3.mp4](media/world-gemma-4-31b-it-interleaved-180-seed3.mp4) | Gemma 4 31B, P2, scenario seed 3 | 2 | Byzantine agents win | 2:30 |
+| [world-gpt-oss-120b-interleaved-180-seed2.mp4](media/world-gpt-oss-120b-interleaved-180-seed2.mp4) | gpt-oss-120b, run `p6-gptoss`, seed 2 | 5 | Honest agents win | 4:38 |
+| [world-granite-3-3-8b-instruct-interleaved-180-seed16.mp4](media/world-granite-3-3-8b-instruct-interleaved-180-seed16.mp4) | Granite 3.3 8B, run `p6-granite`, seed 16 | 5 | Byzantine agents win | 4:42 |
+| [world-gemma-4-31b-it-interleaved-180-seed3-with-sound.mp4](media/world-gemma-4-31b-it-interleaved-180-seed3-with-sound.mp4) | The Gemma game above, with a voice for each agent | 2 | Byzantine agents win | 7:00 |
 
 All 3 games use `interleaved-180`, 10 agents and 2 Byzantine agents. The Gemma game ends after the second meeting with 2 honest and 2 Byzantine agents in play. Round 4 of the 2 longer games has no report. A tag in that round of the gpt-oss-120b game leaves a body that waits for the next meeting, and nobody is tagged in that round of the Granite game.
+
+Each video starts with a setup screen of 14 s (`--intro`, and 0 leaves it out). The screen lists the models, the locations and the options of the game, and then fades into the first frame. The model and its reasoning settings come from the row that `scripts/run_p2.py` wrote for the game (`--run`), how the model was served comes from `--served`, the settings of the timed room come from the game folder, and the rooms come from the map. A line whose source is missing is left out, and `--card` writes the screen as a picture.
+
+![The setup screen of a recorded game, with the map and its rooms on the left and the models, the game and the options on the right.](media/world-gemma-4-31b-it-interleaved-180-seed3-with-sound-setup.png)
+
+The video with sound is the Gemma game with a voice for each agent. It is 7:00 long because the meetings play at the speed they happened (`--speed 1`), since a voice cannot be sped up with the meeting. `scripts/world_audio.py` speaks each logged statement with Kokoro (`hexgrad/Kokoro-82M`, American English) in the voice of its author, and `--speech` lays the clips on the video with a pan for each seat at the table. The agents of the game read text and never heard these voices, so the sound is for the viewer. The game logged speakers talking over each other, and the video keeps that overlap. In this game 91% of the speaking time has 2 or more voices at once, with a mean of 3.6 voices while anyone speaks, so the speech is hard to follow without the captions.
+
+Each clip is fitted to the time the game logged for its statement. Kokoro speaks at 0.85 first, which matches the 2.5 words per second of the room, and faster up to 1.5 when the clip runs long. A clip that still runs long may play on for 30% of its slot and 0.5 s more, but never into the next statement of the same author, and 1 clip of 166 lost 0.2 s of its end. A statement of 1 word is logged as lasting 0.4 s, and it gets 1.2 s. The voice says `Agent_3` as "Agent 3" and `UpperEngine` as "Upper Engine". The track has a level of -18 dB below full scale while anyone speaks, with a soft limit above that.
+
+Kokoro runs on HiPerGator, where the weights are cached, so the synthesis is its own job. `scripts/hipergator/world_audio.sbatch` took about 40 s on one RTX PRO 6000 for the 166 statements, and the clips are 58 MB of WAV files that stay out of git. The video renders on any machine that has the clips folder.
 
 To record another game, point the script at a game folder from a run of `scripts/run_p2.py`. A game of 5 rounds and 10 agents renders about 5,300 frames in 1 minute on 8 cores, and `ffmpeg` has to be on the path.
 
 ```bash
 uv run --with matplotlib python -m scripts.make_world_replay logs/p2_<model>/Game_<tag>_interleaved-180_3_Run0 --out docs/media
 uv run --with matplotlib python -m scripts.make_world_replay GAME --still 12.5 --still 60 --out /path/for/pictures
+uv run --with matplotlib python -m scripts.make_world_replay GAME --card --out /path/for/pictures
+mkdir -p logs && GAME=/path/to/Game_<id>_Run0 OUT=results/speech/<name> sbatch scripts/hipergator/world_audio.sbatch
+uv run --with matplotlib python -m scripts.make_world_replay GAME --speech results/speech/<name> --run results/p2/<file>.jsonl --served "vLLM on UF HiPerGator" --out docs/media
 ```
 
-The replay has no tasks, sound or sight, and it shows only what the logs record. `tests/test_world_replay.py` checks the rules above on a game of 4 agents, and `tests/test_make_world_replay.py` checks the frames, the pictures and the video.
+The replay has no tasks or sight, its only sound is the speech above, and it shows only what the logs record. `tests/test_world_replay.py` checks the rules above on a game of 4 agents, and `tests/test_make_world_replay.py` checks the frames, the pictures, the setup screen and a video with an audio stream, and `tests/test_speech.py`, `tests/test_world_audio.py` and `tests/test_world_setup.py` check the clips, the track and the setup text with a fake voice.
 
 ## Browser and multiplayer
 

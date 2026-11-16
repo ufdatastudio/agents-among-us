@@ -202,12 +202,12 @@ The corridors and doors give each room the same neighbours as `ROOMS` in `config
 uv run python -m scripts.draw_world_map --out docs/media/godot-world-map.png
 ```
 
-Recorded games play on the map as videos. The agents walk through doors and corridors, a tag leaves a body, a report calls everyone to the Cafeteria, and the statements, the votes and the ejection follow. These are animations of games that the Python engine already ran, so the engine's room logs decide where agents are and the replay draws the walks. [docs/godot-world.md](docs/godot-world.md#recorded-games-on-the-map) lists the 3 videos and what the replay leaves out.
+Recorded games play on the map as videos. The agents walk through doors and corridors, a tag leaves a body, a report calls everyone to the Cafeteria, and the statements, the votes and the ejection follow. These are animations of games that the Python engine already ran, so the engine's room logs decide where agents are and the replay draws the walks. Each video starts with a setup screen that lists the models, the rooms and the options of the game, and a video can have sound, with each logged statement spoken in its own voice. [docs/godot-world.md](docs/godot-world.md#recorded-games-on-the-map) lists the videos and what the replay leaves out.
 
 <div align="center">
   <a href="docs/media/world-gemma-4-31b-it-interleaved-180-seed3.mp4"><img src="docs/media/world-gemma-4-31b-it-interleaved-180-seed3.gif" alt="Round 1 of a recorded game on the tile map, where agents walk to their rooms, one tags another and a third reports the body"></a>
   <br>
-  <em>The first 14 s of a Gemma 4 31B game. The full 2:16 video is <a href="docs/media/world-gemma-4-31b-it-interleaved-180-seed3.mp4">world-gemma-4-31b-it-interleaved-180-seed3.mp4</a>. Red rings mark the Byzantine agents, whom the viewer can see and the agents could not.</em>
+  <em>The first 14 s of the game after the setup screen, from a Gemma 4 31B game. The full 2:30 video is <a href="docs/media/world-gemma-4-31b-it-interleaved-180-seed3.mp4">world-gemma-4-31b-it-interleaved-180-seed3.mp4</a>. Red rings mark the Byzantine agents, whom the viewer can see and the honest agents could not.</em>
 </div>
 
 ```bash
