@@ -1,8 +1,11 @@
 """Tests for the typed append-only ledger."""
 
+import asyncio
+import threading
+
 import pytest
 
-from core.ledger import CLAIM, FACT, NOTE, Ledger
+from core.ledger import CHUNK, CLAIM, FACT, NOTE, Ledger
 
 
 def test_records_get_the_next_id_and_keep_their_order():
@@ -49,3 +52,91 @@ def test_the_ledger_is_written_and_read_back_with_the_same_ids(tmp_path):
     ledger.write_jsonl(path)
     again = Ledger.read_jsonl(path)
     assert [r.to_dict() for r in again.records] == [r.to_dict() for r in ledger.records]
+
+
+def test_a_chunk_is_a_record_type():
+    ledger = Ledger()
+    record = ledger.append(CHUNK, "Agent_1", {"stream": "Agent_1/1"}, time_s=2.0)
+    assert (record.type, record.time_s) == (CHUNK, 2.0)
+
+
+def test_a_subscription_returns_each_record_once_and_only_to_its_reader():
+    ledger = Ledger()
+    heard = ledger.subscribe("Agent_1")
+    ledger.append(CLAIM, "Agent_2", {})
+    ledger.append(FACT, "engine", {}, visible_to=("Agent_3",))
+    ledger.append(CLAIM, "Agent_3", {})
+    assert [r.id for r in heard.poll()] == [1, 3]
+    assert heard.poll() == []
+    ledger.append(CLAIM, "Agent_2", {})
+    assert [r.id for r in heard.poll()] == [4]
+
+
+def test_a_subscription_can_follow_some_types_and_start_late():
+    ledger = Ledger()
+    ledger.append(CLAIM, "Agent_2", {})
+    ledger.append(CHUNK, "Agent_2", {})
+    ledger.append(CHUNK, "Agent_3", {})
+    chunks = ledger.subscribe("Agent_1", types=[CHUNK], after=2)
+    assert [r.id for r in chunks.poll()] == [3]
+
+
+def test_a_record_is_not_heard_before_it_is_fully_spoken_and_holds_back_later_ones():
+    ledger = Ledger()
+    heard = ledger.subscribe("Agent_1")
+    ledger.append(CHUNK, "Agent_2", {}, time_s=2.0)
+    ledger.append(CHUNK, "Agent_3", {}, time_s=4.0)
+    ledger.append(CHUNK, "Agent_2", {}, time_s=2.5)
+    assert [r.id for r in heard.poll(until_s=2.0)] == [1]
+    assert heard.poll(until_s=3.0) == []
+    assert [r.id for r in heard.poll(until_s=4.0)] == [2, 3]
+
+
+def test_a_record_with_no_time_is_heard_at_once():
+    ledger = Ledger()
+    heard = ledger.subscribe("Agent_1")
+    ledger.append(FACT, "engine", {})
+    assert len(heard.poll(until_s=0.0)) == 1
+
+
+def test_wait_returns_when_a_visible_record_arrives_from_another_thread():
+    ledger = Ledger()
+    heard = ledger.subscribe("Agent_1")
+
+    async def run():
+        timer = threading.Timer(0.05, lambda: ledger.append(CLAIM, "Agent_2", {}))
+        timer.start()
+        return await heard.wait(timeout_s=2.0)
+
+    assert asyncio.run(run()) is True
+    assert len(heard.poll()) == 1
+
+
+def test_wait_returns_at_once_for_a_record_already_there_and_times_out_for_none():
+    ledger = Ledger()
+    heard = ledger.subscribe("Agent_1")
+    assert asyncio.run(heard.wait(timeout_s=0.05)) is False
+    ledger.append(CLAIM, "Agent_2", {})
+    assert asyncio.run(heard.wait(timeout_s=0.05)) is True
+
+
+def test_wait_ignores_a_record_the_reader_may_not_read():
+    ledger = Ledger()
+    heard = ledger.subscribe("Agent_1")
+
+    async def run():
+        timer = threading.Timer(0.02, lambda: ledger.append(FACT, "engine", {}, visible_to=("Agent_3",)))
+        timer.start()
+        return await heard.wait(timeout_s=0.2)
+
+    assert asyncio.run(run()) is False
+
+
+def test_a_listener_hears_every_append_until_it_is_removed():
+    ledger = Ledger()
+    seen = []
+    remove = ledger.listen(seen.append)
+    ledger.append(CLAIM, "Agent_1", {})
+    remove()
+    ledger.append(CLAIM, "Agent_1", {})
+    assert [r.id for r in seen] == [1]
