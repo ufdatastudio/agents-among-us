@@ -1,0 +1,493 @@
+<title>Duplex Replay</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: a console. Transport and lane timeline across the top, the transcript on the left, one agent's beat on the right. */
+:root {
+  --bg: #0d1117; --panel: #141a22; --panel-2: #1a222c; --line: #27313c;
+  --ink: #e7ebf0; --ink-2: #aeb7c3; --muted: #7e8a98; --focus: #7db4ff;
+  --a1: #6ea8fe; --a2: #f2a65a; --a3: #5fd0a5; --a4: #e879a9; --a5: #b29bff; --a6: #e3d25f; --a7: #4fd1e0; --a8: #f07b6e; --a9: #8b95a3;
+  --font-display: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f2f5f8; --panel: #ffffff; --panel-2: #eef2f6; --line: #d5dce5;
+    --ink: #141a21; --ink-2: #3c4856; --muted: #66727f; --focus: #1f64d8;
+    --a1: #2f6fd6; --a2: #c26a12; --a3: #1b8a62; --a4: #c2417a; --a5: #6b4fd1; --a6: #8f7a00; --a7: #0d8aa0; --a8: #c4432f; --a9: #66727f;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f2f5f8; --panel: #ffffff; --panel-2: #eef2f6; --line: #d5dce5;
+  --ink: #141a21; --ink-2: #3c4856; --muted: #66727f; --focus: #1f64d8;
+  --a1: #2f6fd6; --a2: #c26a12; --a3: #1b8a62; --a4: #c2417a; --a5: #6b4fd1; --a6: #8f7a00; --a7: #0d8aa0; --a8: #c4432f; --a9: #66727f;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.5; padding-block: 16px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: -0.01em; margin: 0; }
+h2 { font-family: var(--font-display); font-weight: 500; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+.top .sub { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.runpick { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 28px 6px 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; display: flex; flex-direction: column; min-width: 92px; }
+.chip b { font-family: var(--font-mono); font-weight: 500; font-size: 16px; font-variant-numeric: tabular-nums; }
+.chip span { font-size: 11px; color: var(--muted); }
+
+.transport { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px 16px; padding: 12px 14px; }
+.buttons { display: flex; gap: 6px; align-items: center; }
+.btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; min-width: 40px; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 600; min-width: 76px; }
+.readout { font-family: var(--font-mono); font-size: 20px; font-variant-numeric: tabular-nums; text-align: right; line-height: 1.1; }
+.readout small { display: block; font-size: 11px; color: var(--muted); font-family: var(--font-body); margin-top: 2px; }
+input[type=range] { width: 100%; accent-color: var(--ink); height: 28px; margin: 0; cursor: pointer; }
+.speed { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+
+.timeline { padding: 12px 14px 10px; }
+.timeline header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; gap: 12px; flex-wrap: wrap; }
+.timeline header span { color: var(--muted); font-size: 12px; }
+.lanes { display: grid; grid-template-columns: var(--label-w, 84px) minmax(0, 1fr); gap: 0 10px; }
+.labels { display: flex; flex-direction: column; }
+.labels button { height: 24px; margin: 1px 0; background: none; border: 0; padding: 0 4px; text-align: left; cursor: pointer; color: var(--ink-2); font-family: var(--font-mono); font-size: 12px; border-radius: 4px; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
+.labels button i { width: 8px; height: 8px; border-radius: 2px; background: var(--c); flex: none; }
+.labels button[aria-pressed=true] { color: var(--ink); background: var(--panel-2); }
+.labels .gap-row { height: 48px; }
+.tracks { position: relative; cursor: ew-resize; touch-action: pan-y; user-select: none; }
+.lane { position: relative; height: 24px; margin: 1px 0; background: var(--panel-2); border-radius: 4px; }
+.lane.sel { outline: 1px solid var(--line); }
+.seg { position: absolute; top: 4px; bottom: 4px; background: var(--c); border-radius: 2px; opacity: 0.2; }
+.seg.past { opacity: 0.85; }
+.seg.now { opacity: 1; top: 1px; bottom: 1px; box-shadow: 0 0 0 1px var(--ink); z-index: 1; }
+.overlap { position: relative; height: 40px; margin: 6px 0 2px; display: flex; align-items: end; gap: 1px; border-top: 1px solid var(--line); padding-top: 4px; }
+.overlap div { flex: 1 1 0; background: var(--muted); opacity: 0.25; min-width: 1px; border-radius: 1px 1px 0 0; }
+.overlap div.past { opacity: 0.8; }
+.playhead { position: absolute; top: -4px; bottom: 0; width: 2px; background: var(--ink); pointer-events: none; z-index: 3; margin-left: -1px; }
+.axis { position: relative; height: 16px; margin-top: 2px; }
+.axis span { position: absolute; font-size: 10px; color: var(--muted); transform: translateX(-50%); font-family: var(--font-mono); }
+.axis span.first { transform: none; }
+.axis span.last { transform: translateX(-100%); }
+.axis-label { font-size: 11px; color: var(--muted); align-self: start; padding: 8px 4px 0; line-height: 1.2; }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 12px; }
+th, td { padding: 7px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent); font-variant-numeric: tabular-nums; }
+th { font-weight: 500; color: var(--muted); font-size: 11px; letter-spacing: 0.04em; cursor: help; }
+th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+td { font-family: var(--font-mono); }
+td:nth-child(2) { font-family: var(--font-body); color: var(--ink-2); }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--panel-2); }
+tbody tr[aria-current=true] { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--ink); }
+.cols { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.panel > header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--line); gap: 8px; flex-wrap: wrap; }
+.transcript .body { max-height: 62vh; overflow-y: auto; padding: 6px 14px 12px; }
+.line { display: grid; grid-template-columns: 44px 76px minmax(0, 1fr); gap: 8px; padding: 5px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent); align-items: baseline; }
+.line .when { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.line .who { font-family: var(--font-mono); font-size: 12px; color: var(--c); display: flex; gap: 4px; align-items: baseline; flex-wrap: wrap; }
+.line .say { white-space: pre-wrap; overflow-wrap: anywhere; }
+.line .now { background: color-mix(in srgb, var(--c) 24%, transparent); border-radius: 3px; }
+.line .caret { display: inline-block; width: 6px; height: 1em; vertical-align: text-bottom; background: var(--c); margin-left: 2px; border-radius: 1px; }
+.seg-ctl { display: flex; gap: 0; }
+.seg-ctl .btn { padding: 2px 10px; font-size: 12px; min-width: 0; border-radius: 0; }
+.seg-ctl .btn:first-child { border-radius: 6px 0 0 6px; }
+.seg-ctl .btn:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
+.seg-ctl .btn[aria-pressed=true] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.beatrow { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; padding: 5px 4px; border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent); align-items: baseline; }
+.beatrow.cur { background: color-mix(in srgb, var(--ink) 7%, transparent); border-radius: 4px; }
+.beatrow .when { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.piece { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.piece .who { font-family: var(--font-mono); font-size: 12px; color: var(--c); }
+.piece .say { white-space: pre-wrap; overflow-wrap: anywhere; }
+.tag { font-family: var(--font-body); font-size: 10px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; }
+.empty { color: var(--muted); padding: 18px 0; }
+
+.inspector .body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 14px; }
+.who-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.who-head b { font-family: var(--font-mono); font-weight: 500; font-size: 15px; color: var(--c); }
+.block h3 { margin: 0 0 4px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.heard, .wrote, .raw { background: var(--panel-2); border-radius: 6px; padding: 8px 10px; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: 12px; line-height: 1.55; margin: 0; }
+.wrote { color: var(--ink); border-left: 3px solid var(--c); }
+.heard .dim, .wrote .dim { color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ink-2); margin-top: 6px; font-family: var(--font-mono); }
+.pill { border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; font-size: 11px; font-family: var(--font-mono); color: var(--ink-2); }
+.pill.cut { border-color: var(--a2); color: var(--a2); }
+details summary { cursor: pointer; color: var(--ink-2); font-size: 12px; }
+.raw { max-height: 280px; overflow: auto; margin-top: 6px; }
+.raw .tok { color: var(--a5); }
+.counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.counts div { background: var(--panel-2); border-radius: 6px; padding: 6px 10px; }
+.counts b { display: block; font-family: var(--font-mono); font-weight: 500; font-size: 15px; font-variant-numeric: tabular-nums; }
+.counts span { font-size: 11px; color: var(--muted); }
+.note { font-size: 12px; color: var(--muted); margin: 0; }
+
+@media (max-width: 900px) {
+  .cols { grid-template-columns: minmax(0, 1fr); }
+  .transport { grid-template-columns: 1fr auto; }
+  .transport .scrub { grid-column: 1 / -1; order: 3; }
+  .transcript .body { max-height: 46vh; }
+}
+@media (max-width: 520px) {
+  .lanes { --label-w: 62px; }
+  .piece { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .line { grid-template-columns: 36px minmax(0, 1fr); }
+  .line .who { grid-column: 2; }
+  .line .say { grid-column: 1 / -1; }
+  .counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+</style>
+
+<div class="app">
+  <div class="top">
+    <div>
+      <h1>Duplex replay</h1>
+      <p class="sub" id="meta"></p>
+    </div>
+    <label class="runpick" for="runSel">Run <select id="runSel"></select></label>
+  </div>
+  <div class="chips" id="chips"></div>
+
+  <section class="panel compare" aria-label="Compare runs">
+    <header><h2>Runs</h2><span class="note">Pick a row to open that run. The measures describe the channel and the behavior of the models, and none says the talk was good.</span></header>
+    <div class="tablewrap"><table id="cmp"></table></div>
+  </section>
+
+  <section class="panel transport" aria-label="Playback">
+    <div class="buttons">
+      <button class="btn" id="back" title="Previous beat (Left arrow)" aria-label="Previous beat">&#8249;</button>
+      <button class="btn primary" id="play">Play</button>
+      <button class="btn" id="next" title="Next beat (Right arrow)" aria-label="Next beat">&#8250;</button>
+    </div>
+    <div class="scrub"><input type="range" id="slider" min="0" max="0" step="1" value="0" aria-label="Beat"></div>
+    <div>
+      <div class="readout" id="readout">00:00<small>beat 0</small></div>
+    </div>
+    <div class="speed" style="grid-column: 1 / -1">
+      <label for="speed">Speed</label>
+      <select id="speed">
+        <option value="1">1&times; room time</option>
+        <option value="4" selected>4&times;</option>
+        <option value="16">16&times;</option>
+      </select>
+      <span id="hint">Space plays or pauses. Arrow keys step one beat.</span>
+    </div>
+  </section>
+
+  <section class="panel timeline" aria-label="Who spoke when">
+    <header><h2>Who spoke when</h2><span id="tlnote">Each block is the words one agent wrote in one beat. The bars at the bottom count how many agents spoke at once.</span></header>
+    <div class="lanes" id="lanes">
+      <div class="labels" id="labels"></div>
+      <div class="tracks" id="tracks"></div>
+    </div>
+  </section>
+
+  <div class="cols">
+    <section class="panel transcript" aria-label="Transcript">
+      <header><h2>Said so far</h2><div class="seg-ctl" role="group" aria-label="Transcript view"><button type="button" class="btn" id="vStatement" aria-pressed="true">By statement</button><button type="button" class="btn" id="vBeat" aria-pressed="false">By beat</button></div><span class="note" id="trnote"></span></header>
+      <div class="body" id="transcript"></div>
+    </section>
+    <aside class="panel inspector" aria-label="Agent at this beat">
+      <header><h2>This beat</h2><span class="note" id="insnote"></span></header>
+      <div class="body" id="inspector"></div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const RUNS = /*__RUNS__*/[];
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const mmss = (t) => { const w = Math.floor(t + 1e-6); return String(Math.floor(w / 60)).padStart(2, "0") + ":" + String(w % 60).padStart(2, "0"); };
+const EPS = 1e-6;
+const SILENT = /<silent\s*\/?>/i;
+const num = (n) => Number(n).toLocaleString("en-US");
+
+let run = null, beats = 0, beat = 0, playing = false, timer = null, agent = null, view = "statement";
+let segs = [], bars = [], streams = [];
+
+function colorOf(name) { const i = run.agents.indexOf(name); return `var(--a${i < 8 ? i + 1 : 9})`; }
+
+function setRun(index) {
+  run = RUNS[index];
+  const sessionBeats = Math.max(0, ...Object.values(run.sessions).map((rows) => rows.length));
+  beats = Math.max(1, sessionBeats, Math.round(run.budget / run.beat));
+  beat = 0;
+  agent = run.live[0] || run.agents[0];
+  buildStreams();
+  buildTimeline();
+  $("slider").max = String(beats - 1);
+  $("slider").value = "0";
+  buildHeader();
+  renderCompare();
+  $("runSel").value = String(index);
+  stop();
+  render();
+  try { history.replaceState(null, "", "#" + run.name); } catch (e) { /* the hash is a convenience */ }
+}
+
+function buildHeader() {
+  const total = run.total || {};
+  const spoke = total.spoke || 0, ran = total.beats || 0;
+  const live = run.mode === "replay" ? `${run.live.join(", ")} live, others replayed from a recording` + (run.audio ? ", heard as audio" : ", heard as words") : `${run.live.length} agents live`;
+  $("meta").textContent = `${run.model.split("/").pop()} · ${run.beat} s beats · ${live}`;
+  const chips = [
+    [`${num(beats)}`, "beats"],
+    [`${Math.round(run.wall_s)} s`, "wall time"],
+    [ran ? `${Math.round((100 * spoke) / ran)}%` : "n/a", "beats with speech"],
+    [num(total.words || 0), "words written"],
+    [num(total.prompt_tokens || 0), "tokens sent"],
+    [ran ? `${(total.engine_s / ran).toFixed(2)} s` : "n/a", "engine time per beat"],
+  ];
+  $("chips").innerHTML = chips.map(([v, l]) => `<div class="chip"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join("");
+}
+
+const COLUMNS = [
+  ["run", "Run", "Name of the result folder."],
+  ["model", "Model", "Checkpoint that every live agent used."],
+  ["live", "Live", "Agents that ran in a session. The others were recorded."],
+  ["beats", "Beats", "Beats of room time in the meeting."],
+  ["speech_beats", "Beats with words", "Share of beats in which a session wrote words and not only the silent tag. Near 100% means nobody listened."],
+  ["cut_bursts", "Cut at limit", "Share of bursts that reached the token limit, so the sentence goes on in the next beat."],
+  ["statements", "Statements", "Streams with words, each from the first burst to silence or the end of the model's message."],
+  ["words_per_statement", "Words each", "Mean words in a statement."],
+  ["repeated_statements", "Repeats", "Share of statements whose words, ignoring case and punctuation, match an earlier statement. High values mean echo loops."],
+  ["voices_at_once", "Voices at once", "Mean number of agents talking in a beat."],
+  ["overlap_beats", "Beats with 2+", "Share of beats in which two or more agents talked."],
+  ["engine_s_per_beat", "Engine s/beat", "Mean seconds a session waited for the engine in a beat."],
+  ["tokens_sent", "Tokens sent", "Tokens added to the sessions by their input chunks."],
+];
+const pct = (v) => (v == null ? "n/a" : Math.round(v * 100) + "%");
+
+function renderCompare() {
+  const cells = (r) => {
+    const m = r.metrics || {};
+    const live = r.mode === "replay" ? `${r.live.length} + replay${r.audio ? " (audio)" : ""}` : String(r.live.length);
+    return [r.name, r.model.split("/").pop(), live, num(m.beats || 0), pct(m.speech_beats), pct(m.cut_bursts), num(m.statements || 0),
+      m.words_per_statement == null ? "n/a" : m.words_per_statement.toFixed(1), pct(m.repeated_statements),
+      m.voices_at_once == null ? "n/a" : m.voices_at_once.toFixed(2), pct(m.overlap_beats),
+      m.engine_s_per_beat == null ? "n/a" : m.engine_s_per_beat.toFixed(2), num(m.tokens_sent || 0)];
+  };
+  $("cmp").innerHTML = "<thead><tr>" + COLUMNS.map(([, label, tip]) => `<th title="${esc(tip)}">${esc(label)}</th>`).join("") + "</tr></thead><tbody>" +
+    RUNS.map((r, i) => `<tr data-i="${i}" ${r === run ? 'aria-current="true"' : ""}>${cells(r).map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+}
+
+function buildStreams() {
+  const map = new Map();
+  for (const c of run.chunks) {
+    if (!map.has(c.stream)) map.set(c.stream, { id: c.stream, agent: c.agent, modality: c.modality, chunks: [] });
+    map.get(c.stream).chunks.push(c);
+  }
+  streams = [...map.values()].sort((a, b) => a.chunks[0].start - b.chunks[0].start || a.agent.localeCompare(b.agent));
+}
+
+function buildTimeline() {
+  const dur = run.budget;
+  $("labels").innerHTML = run.agents.map((a) => `<button type="button" data-a="${a}" style="--c:${colorOf(a)}" aria-pressed="false"><i></i>${esc(a)}</button>`).join("") + '<div class="gap-row axis-label">voices at once</div>';
+  const lanes = run.agents.map((a) => `<div class="lane" data-a="${a}" style="--c:${colorOf(a)}"></div>`).join("");
+  const step = dur <= 120 ? 10 : dur <= 300 ? 20 : 60;
+  let ticks = "";
+  const stops = [];
+  for (let t = 0; t <= dur + EPS; t += step) stops.push(t);
+  if (dur - stops[stops.length - 1] > step / 3) stops.push(dur);
+  stops.forEach((t, i) => { ticks += `<span class="${i === 0 ? "first" : i === stops.length - 1 ? "last" : ""}" style="left:${(100 * t) / dur}%">${mmss(t)}</span>`; });
+  $("tracks").innerHTML = lanes + '<div class="overlap" id="overlap"></div><div class="axis">' + ticks + '</div><div class="playhead" id="playhead"></div>';
+  segs = [];
+  for (const c of run.chunks) {
+    if (!c.text.trim()) continue;
+    const lane = $("tracks").querySelector(`.lane[data-a="${c.agent}"]`);
+    const el = document.createElement("div");
+    el.className = "seg";
+    el.style.left = (100 * c.start) / dur + "%";
+    el.style.width = Math.max(0.3, (100 * (c.end - c.start)) / dur - 0.15) + "%";
+    el.title = `${c.agent} ${mmss(c.start)}-${mmss(c.end)}: ${c.text.trim()}`;
+    lane.appendChild(el);
+    segs.push({ c, el });
+  }
+  const counts = new Array(beats).fill(0);
+  for (let b = 0; b < beats; b++) {
+    const lo = b * run.beat, hi = lo + run.beat;
+    const who = new Set(run.chunks.filter((c) => c.text.trim() && c.start < hi - EPS && c.end > lo + EPS).map((c) => c.agent));
+    counts[b] = who.size;
+  }
+  const top = Math.max(1, ...counts);
+  $("overlap").innerHTML = counts.map((n, b) => `<div data-b="${b}" style="height:${(100 * n) / top}%" title="${mmss(b * run.beat)}: ${n} speaking"></div>`).join("");
+  bars = [...$("overlap").children];
+}
+
+function stateTime() { return beat * run.beat; }
+
+function heardAt(name, b) {
+  const t = b * run.beat, lo = t - run.beat;
+  const order = [], by = {};
+  for (const c of run.chunks) {
+    if (c.agent === name || !c.text.trim() || c.end <= lo + EPS || c.end > t + EPS) continue;
+    if (!by[c.agent]) { by[c.agent] = { start: c.start, text: "" }; order.push(c.agent); }
+    by[c.agent].text += c.text;
+  }
+  return order.map((a) => `[${mmss(by[a].start)}] ${a}: ${by[a].text.split(/\s+/).filter(Boolean).join(" ")}`);
+}
+
+function render() {
+  const t = stateTime(), hi = t + run.beat;
+  $("slider").value = String(beat);
+  $("readout").innerHTML = `${mmss(t)}<small>beat ${beat + 1} of ${beats}</small>`;
+  $("playhead").style.left = (100 * (t + run.beat / 2)) / run.budget + "%";
+  for (const { c, el } of segs) {
+    const past = c.start < hi - EPS;
+    el.classList.toggle("past", past);
+    el.classList.toggle("now", past && c.start >= t - EPS);
+  }
+  bars.forEach((el, b) => el.classList.toggle("past", b <= beat));
+  document.querySelectorAll("#labels button").forEach((el) => el.setAttribute("aria-pressed", String(el.dataset.a === agent)));
+  document.querySelectorAll("#tracks .lane").forEach((el) => el.classList.toggle("sel", el.dataset.a === agent));
+  renderTranscript(t, hi);
+  renderInspector(t);
+}
+
+function beatRows(hi) {
+  const buckets = new Map();
+  for (const c of run.chunks) {
+    if (!c.text.trim() || c.start >= hi - EPS) continue;
+    const b = Math.floor((c.start + EPS) / run.beat);
+    if (!buckets.has(b)) buckets.set(b, []);
+    buckets.get(b).push(c);
+  }
+  return [...buckets.keys()].sort((x, y) => x - y).map((b) => {
+    const order = [], by = {};
+    for (const c of buckets.get(b)) { if (!by[c.agent]) { by[c.agent] = ""; order.push(c.agent); } by[c.agent] += c.text; }
+    const pieces = order.map((a) => `<div class="piece" style="--c:${colorOf(a)}"><span class="who">${esc(a)}</span><span class="say">${esc(by[a].replace(/^\s+/, ""))}</span></div>`).join("");
+    return `<div class="beatrow${b === beat ? " cur" : ""}"><div class="when">${mmss(b * run.beat)}</div><div>${pieces}</div></div>`;
+  });
+}
+
+function renderTranscript(t, hi) {
+  const box = $("transcript");
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  if (view === "beat") {
+    const rows = beatRows(hi);
+    box.innerHTML = rows.length ? rows.join("") : '<p class="empty">Nobody has spoken yet.</p>';
+    $("trnote").textContent = `${rows.length} beats with speech`;
+    if (playing || atBottom) box.scrollTop = box.scrollHeight;
+    return;
+  }
+  const rows = [];
+  for (const s of streams) {
+    const shown = s.chunks.filter((c) => c.start < hi - EPS);
+    if (!shown.some((c) => c.text.trim())) continue;
+    const done = shown.some((c) => c.final);
+    let html = "";
+    for (const c of shown) {
+      if (!c.text) continue;
+      const fresh = c.start >= t - EPS;
+      html += fresh ? `<span class="now">${esc(c.text)}</span>` : esc(c.text);
+    }
+    const audio = s.modality === "audio" ? '<span class="tag">audio</span>' : "";
+    rows.push(`<div class="line" style="--c:${colorOf(s.agent)}"><div class="when">${mmss(shown[0].start)}</div><div class="who">${esc(s.agent)}${audio}</div><div class="say">${html.replace(/^\s+/, "")}${done ? "" : '<span class="caret"></span>'}</div></div>`);
+  }
+  box.innerHTML = rows.length ? rows.join("") : '<p class="empty">Nobody has spoken yet.</p>';
+  $("trnote").textContent = `${rows.length} statements`;
+  if (playing || atBottom) box.scrollTop = box.scrollHeight;
+}
+
+function highlightTokens(text) {
+  return esc(text).replace(/&lt;[^&\s]{1,28}?&gt;/g, (m) => `<span class="tok">${m}</span>`);
+}
+
+function renderInspector(t) {
+  const box = $("inspector");
+  const rows = run.sessions[agent];
+  const role = run.roles[agent];
+  const roleTag = role ? `<span class="pill" title="The viewer sees roles. Honest agents never knew them, and a Byzantine agent knows its teammates.">${role}</span>` : "";
+  const chips = run.agents.map((a) => `<button type="button" class="btn" data-a="${a}" style="--c:${colorOf(a)};${a === agent ? "border-color:var(--c);" : ""}padding:2px 8px;font-size:12px;font-family:var(--font-mono)">${esc(a.replace("Agent_", "A"))}</button>`).join("");
+  let html = `<div style="display:flex;flex-wrap:wrap;gap:4px">${chips}</div><div class="who-head" style="--c:${colorOf(agent)}"><b>${esc(agent)}</b>${roleTag}</div>`;
+  if (!rows) {
+    const mine = streams.filter((s) => s.agent === agent);
+    html += `<p class="note">${esc(agent)} is a recorded speaker with ${mine.length} statements. It has no live session, so there is nothing sent to or written by a model.</p>`;
+    $("insnote").textContent = "";
+    box.innerHTML = html;
+    return;
+  }
+  const row = rows[beat];
+  const heard = heardAt(agent, beat);
+  let spoke = 0, quiet = 0, ctx = 0, out = 0;
+  for (let i = 0; i <= beat && i < rows.length; i++) {
+    const r = rows[i];
+    const silent = !r.burst.trim() || (SILENT.test(r.burst) && !r.burst.replace(SILENT, "").trim());
+    if (silent) quiet++; else spoke++;
+    ctx += r.prompt_tokens + r.output_tokens;
+    out += r.output_tokens;
+  }
+  $("insnote").textContent = `${mmss(t)} · beat ${beat + 1}`;
+  if (!row) {
+    html += '<p class="note">This agent has no row for this beat.</p>';
+  } else {
+    html += `<div class="block"><h3>Heard before this beat</h3><p class="heard">${heard.length ? esc(heard.join("\n")) : '<span class="dim">Nothing. The room was quiet.</span>'}</p></div>`;
+    const cut = row.finish === "length";
+    html += `<div class="block" style="--c:${colorOf(agent)}"><h3>Wrote</h3><p class="wrote">${row.burst.trim() ? esc(row.burst) : '<span class="dim">(empty)</span>'}</p>
+      <div class="meta"><span class="pill ${cut ? "cut" : ""}" title="${cut ? "Reached the token limit of a beat, so the sentence may go on in the next beat." : "The model ended its message."}">${cut ? "cut at limit" : "ended itself"}</span><span>${row.output_tokens} tokens out</span><span>${row.prompt_tokens} in</span><span>${row.wall_s.toFixed(2)} s</span></div></div>`;
+    html += `<details><summary>Exact input to the model</summary><pre class="raw">${highlightTokens(row.sent)}</pre></details>`;
+  }
+  html += `<div class="counts"><div><b>${spoke}</b><span>beats with words</span></div><div><b>${quiet}</b><span>silent beats</span></div><div><b>${num(ctx)}</b><span>tokens in its context</span></div></div>`;
+  box.innerHTML = html;
+}
+
+function go(b) { beat = Math.max(0, Math.min(beats - 1, b)); render(); }
+function stop() { playing = false; clearInterval(timer); timer = null; $("play").textContent = "Play"; }
+function play() {
+  if (beat >= beats - 1) beat = 0;
+  playing = true;
+  $("play").textContent = "Pause";
+  const perSecond = Number($("speed").value) / run.beat;
+  clearInterval(timer);
+  timer = setInterval(() => { if (beat >= beats - 1) { stop(); render(); } else go(beat + 1); }, 1000 / perSecond);
+  render();
+}
+
+function seek(ev) {
+  const r = $("tracks").getBoundingClientRect();
+  const frac = Math.max(0, Math.min(0.9999, (ev.clientX - r.left) / r.width));
+  go(Math.floor((frac * run.budget) / run.beat));
+}
+
+function init() {
+  if (!RUNS.length) { document.querySelector(".app").innerHTML = '<p class="empty">No runs in this file.</p>'; return; }
+  $("runSel").innerHTML = RUNS.map((r, i) => `<option value="${i}">${esc(r.name)}</option>`).join("");
+  $("runSel").addEventListener("change", (e) => setRun(Number(e.target.value)));
+  $("cmp").addEventListener("click", (e) => { const tr = e.target.closest("tbody tr"); if (tr) setRun(Number(tr.dataset.i)); });
+  $("slider").addEventListener("input", (e) => go(Number(e.target.value)));
+  $("back").addEventListener("click", () => { stop(); go(beat - 1); });
+  $("next").addEventListener("click", () => { stop(); go(beat + 1); });
+  $("play").addEventListener("click", () => (playing ? stop() : play()));
+  for (const [id, mode] of [["vStatement", "statement"], ["vBeat", "beat"]]) {
+    $(id).addEventListener("click", () => { view = mode; $("vStatement").setAttribute("aria-pressed", String(mode === "statement")); $("vBeat").setAttribute("aria-pressed", String(mode === "beat")); render(); });
+  }
+  $("speed").addEventListener("change", () => { if (playing) play(); });
+  let drag = false;
+  $("tracks").addEventListener("pointerdown", (e) => { drag = true; $("tracks").setPointerCapture(e.pointerId); stop(); seek(e); });
+  $("tracks").addEventListener("pointermove", (e) => { if (drag) seek(e); });
+  $("tracks").addEventListener("pointerup", () => { drag = false; });
+  $("labels").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { agent = b.dataset.a; render(); } });
+  $("inspector").addEventListener("click", (e) => { const b = e.target.closest("button[data-a]"); if (b) { agent = b.dataset.a; render(); } });
+  document.addEventListener("keydown", (e) => {
+    if (e.target.matches("select, input[type=text]")) return;
+    if (e.key === " " && e.target.tagName !== "BUTTON") { e.preventDefault(); playing ? stop() : play(); }
+    else if (e.key === "ArrowRight" && e.target.id !== "slider") { stop(); go(beat + 1); }
+    else if (e.key === "ArrowLeft" && e.target.id !== "slider") { stop(); go(beat - 1); }
+  });
+  const wanted = RUNS.findIndex((r) => "#" + r.name === location.hash);
+  $("runSel").value = String(Math.max(0, wanted));
+  setRun(Math.max(0, wanted));
+}
+init();
+</script>
