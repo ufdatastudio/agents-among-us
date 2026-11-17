@@ -157,6 +157,7 @@ TAG=p6-granite PROTOCOLS=board-180 GAMES_PER_CELL=20 sbatch scripts/hipergator/r
 3. Done for facts of positions. Events such as bodies and kills, and readers computed from the tile map, come later.
 4. Next. Play `board-180` on the 3 models against the P2 rows of `interleaved-180`, with paired seeds.
 5. Writer-side checks, then forks for paired runs, then the Godot server as the sequencer with spectators as readers.
+6. Built. Chunk records and subscriptions let a reader follow the ledger while speech is still being spoken, and agents keep streaming sessions with their models. See `docs/duplex.md`.
 
 ## Open decisions
 
