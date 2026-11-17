@@ -91,3 +91,31 @@ class FakeVoice:
 def fake_voice() -> FakeVoice:
     """A synthesizer with no speech model."""
     return FakeVoice()
+
+
+class ScriptedHandle:
+    """A session that answers each chunk with the next burst of a script, and stays silent when the script ends."""
+
+    def __init__(self, script: list) -> None:
+        from core.duplex import Burst
+
+        self._burst = Burst
+        self.script = list(script)
+        self.prompts = []
+        self.limits = []
+        self.closed = False
+
+    async def send(self, prompt, max_tokens):
+        self.prompts.append(prompt)
+        self.limits.append(max_tokens)
+        item = self.script.pop(0) if self.script else "<silent/>"
+        return item if isinstance(item, self._burst) else self._burst(item, "stop")
+
+    async def close(self):
+        self.closed = True
+
+
+@pytest.fixture
+def scripted():
+    """Makes a scripted session from a list of bursts or strings."""
+    return ScriptedHandle
